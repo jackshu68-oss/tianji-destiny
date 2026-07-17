@@ -516,6 +516,7 @@
 
   /* ---------- 八字合婚 ---------- */
   let genderA = 'male', genderB = 'male';
+  let lastHehun = null;
 
   function initHehun() {
     const sc = ['子','丑','丑','寅','寅','卯','卯','辰','辰','巳','巳','午','午','未','未','申','申','酉','酉','戌','戌','亥','亥','子'];
@@ -554,6 +555,7 @@
     try { ca = TianjiEngine.buildChart(A.y, A.m, A.d, A.h, A.mi, genderA); } catch (e) { alert('甲方日期无效，请检查。'); return; }
     try { cb = TianjiEngine.buildChart(B.y, B.m, B.d, B.h, B.mi, genderB); } catch (e) { alert('乙方日期无效，请检查。'); return; }
     const res = TianjiEngine.hehun(ca, cb);
+    lastHehun = { a: ca, b: cb, result: res };
     renderHehun(res);
     $('#hh-result').classList.remove('hidden');
     setTimeout(() => $('#hh-result').scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
@@ -699,13 +701,17 @@
     },
     dayun(c) {
       const nowY = new Date().getFullYear();
+      const analysis = TianjiEngine.analyze(c);
       const cells = c.daYun.map(d => {
         const active = nowY >= d.startYear && nowY <= d.endYear ? ' <b style="color:var(--gold)">（当前大运）</b>' : '';
-        return `<li><b style="color:${d.color}">${d.ganZhi}</b>　${d.startAge}–${d.endAge}岁（${d.startYear}–${d.endYear}）· 十神「${d.god}」${active}</li>`;
+        const knowledge = window.TianjiKnowledge ? TianjiKnowledge.tenGod(d.god) : null;
+        const detail = knowledge ? `主题为${knowledge.core}。事业：${knowledge.career} 财务：${knowledge.wealth}` : (TEN_GOD_DESC[d.god] || '结合命局喜忌参看。');
+        const support = (analysis.yong || []).includes(d.wx) ? '此运天干五行属于喜用，整体更易借力。' : (analysis.ji || []).includes(d.wx) ? '此运天干五行属于忌神，宜控制风险和节奏。' : '此运需结合地支与流年共同判断。';
+        return `<li><b style="color:${d.color}">${d.ganZhi}</b>　${d.startAge}–${d.endAge}岁（${d.startYear}–${d.endYear}）· 十神「${d.god}」${active}<br><span>${detail} ${support}</span></li>`;
       }).join('');
       return sec('什么是大运', `<p>大运是十年一变的运势阶段，由出生月柱顺逆排布。你约 <b>${c.startInfo.year}岁${c.startInfo.month}个月</b> 起运，之后每十年换一柱大运。</p>`)
         + sec('你的大运轨迹', `<ul class="dm-ul">${cells}</ul>`)
-        + sec('怎么看', `<p>大运干支与日主生克，决定这十年的整体气场；天干主前半段、地支主后半段。当「用神」大运来临时，往往顺势而为、事半功倍。</p>`);
+        + sec('怎么看', `<p>大运干支与日主生克，决定这十年的整体气场；天干常作为显性主题，地支还要结合藏干、刑冲合害和每年流年。上面的解释是阶段提示，不代表十年内每件事都会相同。</p>`);
     },
     liunian(c) {
       const Solar = window.Solar; const nowY = new Date().getFullYear();
@@ -727,10 +733,17 @@
           return '比肩';
         })(c.dayGan, gz[0]);
         const cur = y === nowY ? ' <b style="color:var(--gold)">（今年）</b>' : '';
-        items.push(`<li><b>${y}</b>年（${gz} ${lunar.getYearShengXiao()}）· 流年十神「${god}」${cur}：${(TEN_GOD_DESC[god] || '').slice(0, 18)}</li>`);
+        const knowledge = window.TianjiKnowledge ? TianjiKnowledge.tenGod(god) : null;
+        const yearZhi = gz[1], selfZhi = c.pillars[2].zhi;
+        const chong = { 子:'午',午:'子',丑:'未',未:'丑',寅:'申',申:'寅',卯:'酉',酉:'卯',辰:'戌',戌:'辰',巳:'亥',亥:'巳' };
+        const liuhe = { 子:'丑',丑:'子',寅:'亥',亥:'寅',卯:'戌',戌:'卯',辰:'酉',酉:'辰',巳:'申',申:'巳',午:'未',未:'午' };
+        const branchNote = chong[selfZhi] === yearZhi ? '流年支冲本命日支，关系、居所或节奏更易变化。' : liuhe[selfZhi] === yearZhi ? '流年支与本命日支六合，人际协作与关系议题更突出。' : '流年支与本命日支无直接六冲六合，仍需结合当前大运。';
+        const detail = knowledge ? `主题为${knowledge.core}。${knowledge.career} ${knowledge.wealth}` : (TEN_GOD_DESC[god] || '结合大运参看。');
+        items.push(`<li><b>${y}</b>年（${gz} ${lunar.getYearShengXiao()}）· 流年十神「${god}」${cur}<br><span>${detail} ${branchNote}</span></li>`);
       }
       return sec('什么是流年', `<p>流年即「当年的太岁干支」，是每一年叠加在大运之上的气场。流年十神是相对于你日主（${c.dayGan}）而论的生克关系，用来判断该年事业、财情、健康的主题。</p>`)
-        + sec('近年流年', `<ul class="dm-ul">${items.join('')}</ul>`);
+        + sec('近年流年', `<ul class="dm-ul">${items.join('')}</ul>`)
+        + sec('判断次序', `<p>先看当前十年大运提供的背景，再看流年干支如何触发本命。流年主题只表示当年更容易出现的议题，具体选择仍应以现实条件和风险承受能力为准。</p>`);
     },
     hehunPrinciple() {
       return sec('测算原理', `<p>八字合婚从五个维度综合评分，基础分 50 分，各维度按吉凶加减，最终落在 5–100 分：</p>
@@ -742,11 +755,28 @@
           <li><b>地支刑冲（±12）</b>：双方八个地支两两配对，统计合局、六冲、相刑、相害。</li>
         </ul>`)
         + sec('分数与判语', `<p>≥80 天作之合；≥65 上等姻缘；≥50 中平相配；≥35 略有波折；<35 缘分较浅。分数仅供文化娱乐参考，婚姻幸福更在于彼此的理解与经营。</p>`);
+    },
+    hehun(data) {
+      if (!data) return Detail.hehunPrinciple() + sec('本次结果', '<p>请先填写甲乙双方生辰并完成测算，随后这里会显示双方逐项详解。</p>');
+      const A = TianjiEngine.analyze(data.a), B = TianjiEngine.analyze(data.b), result = data.result;
+      const label = good => good > 0 ? '有利' : good < 0 ? '需磨合' : '中性';
+      const factors = result.factors.map(f => {
+        const advice = f.name === '生肖配对' ? '生肖只代表年支层面，权重低于双方现实沟通与共同目标。' :
+          f.name === '年命纳音' ? '纳音作辅助象义，不应替代日主、用神与地支整体关系。' :
+          f.name === '日主五行' ? '相生也要看是否一方长期耗泄；相克也可通过角色分工形成制衡。' :
+          f.name === '用神互补' ? '互补高表示双方元素可彼此补位，仍要落实到生活方式和责任分配。' :
+          '合局利协作，刑冲常表现为节奏、表达或生活习惯差异，可通过规则和沟通减轻。';
+        return `<b>${f.name} · ${label(f.good)}</b>：${f.detail}。${advice}`;
+      });
+      return sec('本次合婚概览', `<p>综合分 <b>${result.score}</b>，判语为“<b>${result.verdict}</b>”。甲方日主 ${data.a.dayGan}${data.a.dayWx}、喜用 ${A.yong.join('、')}；乙方日主 ${data.b.dayGan}${data.b.dayWx}、喜用 ${B.yong.join('、')}。</p>`)
+        + sec('五个维度逐项解释', `<ul class="dm-ul">${factors.map(item => `<li>${item}</li>`).join('')}</ul>`)
+        + sec('双方相处提示', `<ul class="dm-ul"><li><b>甲方表达重点</b>：日主${data.a.dayWx}，当前命局${A.level}，在关系中宜把需求说成可执行的请求。</li><li><b>乙方表达重点</b>：日主${data.b.dayWx}，当前命局${B.level}，在关系中宜明确边界与回应时间。</li><li><b>共同校验</b>：把分歧落到金钱、时间、家庭责任、居住与长期目标五个现实议题逐一讨论。</li></ul>`)
+        + Detail.hehunPrinciple();
     }
   };
 
   function buildDetail(type) {
-    if (type === 'hehun') return Detail.hehunPrinciple();
+    if (type === 'hehun') return Detail.hehun(lastHehun) + (window.TianjiKnowledge ? TianjiKnowledge.sourceBadge('bazi') : '');
     if (!chart) return '<p class="dm-empty">请先生成命盘后再查看详解。</p>';
     const a = TianjiEngine.analyze(chart);
     const map = {
@@ -759,7 +789,15 @@
       dayun: () => Detail.dayun(chart),
       liunian: () => Detail.liunian(chart)
     };
-    return (map[type] && map[type]()) || '<p class="dm-empty">暂无详解。</p>';
+    const body = (map[type] && map[type]()) || '<p class="dm-empty">暂无详解。</p>';
+    return body + (window.TianjiKnowledge ? TianjiKnowledge.sourceBadge('bazi') : '');
+  }
+
+  function openCustomDetail(title, body) {
+    $('#detail-modal .dm-title').textContent = title || '详解';
+    $('#detail-modal .dm-body').innerHTML = body || '<p class="dm-empty">暂无详解。</p>';
+    $('#detail-modal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
   }
 
   function openDetail(type) {
@@ -770,15 +808,14 @@
     };
     const body = buildDetail(type);
     if (body === null) return;
-    $('#detail-modal .dm-title').textContent = titles[type] || '详解';
-    $('#detail-modal .dm-body').innerHTML = body;
-    $('#detail-modal').classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
+    openCustomDetail(titles[type] || '详解', body);
   }
   function closeDetail() {
     $('#detail-modal').classList.add('hidden');
     document.body.style.overflow = '';
   }
+
+  window.TianjiDetail = { open: openCustomDetail, close: closeDetail };
 
   function injectDetailButtons() {
     $$('[data-detail]').forEach(sec => {

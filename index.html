@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>道法自然 · 每日命理</title>
-  <meta name="description" content="输入生辰，洞见每日宜忌、流年大运、紫微命盘。融合八字四柱、紫微斗数、五行、黄历宜忌之智慧。" />
+  <title>道法自然 · 传统术数排盘</title>
+  <meta name="description" content="四柱八字、紫微斗数、梅花易数、奇门遁甲、流年大运、合婚与黄历择吉，本地排盘并提供逐项详解。" />
   <!-- 字体使用系统字体栈（见 css/style.css），不依赖外部网络，大陆/离线均可秒开 -->
-  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/style.css?v=20260718-4" />
 </head>
 <body>
   <canvas id="stars"></canvas>
@@ -17,8 +17,9 @@
       <div class="nav-links">
         <a href="#compute">排盘</a>
         <a href="#hehun">合婚</a>
+        <a href="#meihua">梅花</a>
+        <a href="#qimen">奇门</a>
         <a href="#zeji">择吉</a>
-        <a href="#about">关于</a>
       </div>
     </div>
   </nav>
@@ -310,13 +311,80 @@
     </div>
   </section>
 
+  <!-- 梅花易数 -->
+  <section class="divination-section" id="meihua">
+    <div class="section-head">
+      <p class="eyebrow">梅花易数</p>
+      <h2>一念起卦 · 观体用消长</h2>
+      <p class="sub">以本卦、互卦、变卦与体用生克，分辨事情的初段、中段与后势。</p>
+    </div>
+    <div class="divination-card">
+      <div class="method-switch" role="group" aria-label="梅花易数起卦方式">
+        <button type="button" class="method-btn active" data-mh-method="time">时间起卦</button>
+        <button type="button" class="method-btn" data-mh-method="number_pair">两数起卦</button>
+      </div>
+      <div class="divination-form-grid">
+        <div class="field field-wide">
+          <label for="mh-question">所问之事</label>
+          <textarea id="mh-question" rows="3" maxlength="120" placeholder="一事一问，例如：这次合作接下来三个月的发展如何？"></textarea>
+        </div>
+        <div class="field">
+          <label for="mh-datetime">起卦时间</label>
+          <input type="datetime-local" id="mh-datetime" />
+        </div>
+        <div class="number-pair hidden" id="mh-number-pair">
+          <div class="field"><label for="mh-number-a">第一数</label><input type="number" id="mh-number-a" min="1" step="1" inputmode="numeric" placeholder="任意正整数" /></div>
+          <div class="field"><label for="mh-number-b">第二数</label><input type="number" id="mh-number-b" min="1" step="1" inputmode="numeric" placeholder="任意正整数" /></div>
+        </div>
+      </div>
+      <button class="btn-primary btn-block" id="btn-meihua">生成梅花卦 ✦</button>
+      <p class="form-hint">起卦与解读均在当前浏览器完成，问题与时间不会上传。</p>
+      <div class="divination-result hidden" id="mh-result"></div>
+    </div>
+  </section>
+
+  <!-- 奇门遁甲 -->
+  <section class="divination-section" id="qimen">
+    <div class="section-head">
+      <p class="eyebrow">奇门遁甲</p>
+      <h2>时家转盘 · 九宫观局</h2>
+      <p class="sub">从值符、值使、九星、八门、八神与天地盘组合，查看全局趋势和各方位状态。</p>
+    </div>
+    <div class="divination-card">
+      <div class="divination-form-grid qimen-form-grid">
+        <div class="field field-wide">
+          <label for="qm-question">所问之事</label>
+          <textarea id="qm-question" rows="3" maxlength="120" placeholder="一事一问，例如：本月事业推进应优先处理什么？"></textarea>
+        </div>
+        <div class="field">
+          <label for="qm-datetime">起局时间</label>
+          <input type="datetime-local" id="qm-datetime" />
+        </div>
+        <div class="field">
+          <label for="qm-purpose">问事类别</label>
+          <select id="qm-purpose">
+            <option value="综合">综合</option>
+            <option value="事业">事业</option>
+            <option value="财运">财运</option>
+            <option value="感情">感情</option>
+            <option value="出行">出行</option>
+            <option value="健康">健康</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn-primary btn-block" id="btn-qimen">生成奇门局 ✦</button>
+      <p class="form-hint">采用时家转盘法；点击九宫中的任一宫位可查看该宫完整依据。</p>
+      <div class="divination-result hidden" id="qm-result"></div>
+    </div>
+  </section>
+
   <!-- 关于 -->
   <footer class="about" id="about">
     <div class="about-inner">
       <h4>关于 · 道法自然</h4>
       <p>
-        道法自然 汇集中华传统命理智慧——四柱八字、紫微斗数、五行生克、十神、大运流年，
-        以及沿用千年的黄历宜忌体系。我们用现代的方式，让古老的智慧每天陪伴你，
+        道法自然 汇集中华传统术数——四柱八字、紫微斗数、梅花易数、奇门遁甲、五行十神与大运流年，
+        以及黄历宜忌体系。我们用现代的方式，让古老的文化每天陪伴你，
         帮你在合适的时机，做合适的事。
       </p>
       <p class="copyright">© 道法自然 DAOFA · 传统文化 · 娱乐参考</p>
@@ -339,11 +407,15 @@
     </div>
   </div>
 
-  <script src="js/lunar.js"></script>
-  <script src="js/ziwei-gt.global.js"></script>
-  <script src="js/engine.js"></script>
-  <script src="js/ziwei.js"></script>
-  <script src="js/html2canvas.min.js"></script>
-  <script src="js/app.js"></script>
+  <script src="js/lunar.js?v=20260718-4"></script>
+  <script src="js/vendor/qimen-core.min.js?v=20260718-4"></script>
+  <script src="js/meihua.js?v=20260718-4"></script>
+  <script src="js/knowledge.js?v=20260718-4"></script>
+  <script src="js/ziwei-gt.global.js?v=20260718-4"></script>
+  <script src="js/engine.js?v=20260718-4"></script>
+  <script src="js/ziwei.js?v=20260718-4"></script>
+  <script src="js/html2canvas.min.js?v=20260718-4"></script>
+  <script src="js/app.js?v=20260718-4"></script>
+  <script src="js/divination.js?v=20260718-4"></script>
 </body>
 </html>
