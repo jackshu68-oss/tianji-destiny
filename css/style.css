@@ -509,3 +509,47 @@ body {
   .pillar .p-gz { font-size: 34px; }
   .date-nav { width: 100%; margin-top: 10px; }
 }
+
+/* ============================ 八字合婚 ============================ */
+.hehun-card {
+  margin-top: 46px;
+  background: var(--panel);
+  border: 1px solid var(--panel-line);
+  border-radius: var(--radius);
+  padding: 40px;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 30px 80px rgba(0,0,0,0.4);
+}
+.hehun-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 34px; margin-bottom: 30px; }
+.hehun-person { background: rgba(0,0,0,0.18); border: 1px solid var(--panel-line); border-radius: 16px; padding: 24px; }
+.hehun-person h4 { font-family: var(--serif); font-size: 18px; color: var(--gold); margin-bottom: 18px; letter-spacing: 2px; font-weight: 600; }
+.hehun-person .form-grid { grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 0; }
+.hh-g-btn {
+  flex: 1; background: rgba(0,0,0,0.25); border: 1px solid var(--panel-line);
+  color: var(--ink-soft); padding: 11px; border-radius: 12px; cursor: pointer;
+  font-family: var(--sans); font-size: 13px; letter-spacing: 1px; transition: all .3s;
+}
+.hh-g-btn.active { background: linear-gradient(135deg, rgba(232,206,151,0.9), rgba(203,163,92,0.9)); color: #1a1710; border-color: transparent; font-weight: 500; }
+
+.hehun-result { margin-top: 34px; }
+.hh-score-wrap { display: flex; align-items: center; gap: 34px; padding: 26px; background: rgba(0,0,0,0.2); border: 1px solid var(--panel-line); border-radius: 18px; }
+.hh-ring { position: relative; width: 132px; height: 132px; flex: none; }
+.hh-ring svg { transform: rotate(-90deg); width: 132px; height: 132px; }
+.hh-ring .ring-bg { fill: none; stroke: rgba(255,255,255,0.08); stroke-width: 9; }
+.hh-ring .ring-fg { fill: none; stroke: var(--gold); stroke-width: 9; stroke-linecap: round; transition: stroke-dashoffset 1s ease; }
+.hh-num { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.hh-num span { font-family: var(--serif); font-size: 44px; font-weight: 700; color: var(--gold); line-height: 1; }
+.hh-num em { font-style: normal; font-size: 13px; color: var(--ink-soft); margin-top: 4px; }
+.hh-verdict { font-family: var(--serif); font-size: 24px; color: var(--ink); letter-spacing: 2px; font-weight: 600; }
+.hh-verdict-sub { font-size: 14px; color: var(--ink-mute); margin-top: 8px; font-weight: 300; }
+
+.hh-factors { margin-top: 22px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.hh-factor { display: flex; flex-direction: column; gap: 4px; padding: 16px 18px; border-radius: 14px; background: rgba(0,0,0,0.18); border: 1px solid var(--panel-line); }
+.hh-factor .hf-name { font-size: 14px; color: var(--ink-soft); letter-spacing: 1px; display: flex; align-items: center; gap: 8px; }
+.hh-factor .hf-name::before { content: ''; width: 8px; height: 8px; border-radius: 50%; }
+.hh-factor.good .hf-name::before { background: var(--jade); }
+.hh-factor.bad .hf-name::before { background: var(--red); }
+.hh-factor.flat .hf-name::before { background: var(--ink-mute); }
+.hh-factor .hf-detail { font-size: 14px; color: var(--ink); }
+.hh-factor.good .hf-detail { color: var(--jade); }
+.hh-factor.bad .hf-detail { color: var(--red); }

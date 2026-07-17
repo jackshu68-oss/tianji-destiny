@@ -512,9 +512,88 @@
     $('#saved-reset').addEventListener('click', () => $('#compute').scrollIntoView({ behavior: 'smooth' }));
   }
 
+  /* ---------- 八字合婚 ---------- */
+  let genderA = 'male', genderB = 'male';
+
+  function initHehun() {
+    const sc = ['子','丑','丑','寅','寅','卯','卯','辰','辰','巳','巳','午','午','未','未','申','申','酉','酉','戌','戌','亥','亥','子'];
+    ['a','b'].forEach(who => {
+      const sel = $('#hh-hour-' + who);
+      for (let h = 0; h < 24; h++) {
+        const o = document.createElement('option');
+        o.value = h; o.textContent = `${String(h).padStart(2,'0')}:00 — ${String(h).padStart(2,'0')}:59 · ${sc[h]}时`;
+        sel.appendChild(o);
+      }
+      sel.value = 12;
+    });
+    $$('.hh-g-btn').forEach(b => b.addEventListener('click', () => {
+      const who = b.dataset.who;
+      $$(`.hh-g-btn[data-who="${who}"]`).forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      if (who === 'a') genderA = b.dataset.g; else genderB = b.dataset.g;
+    }));
+    $('#btn-hehun').addEventListener('click', onHehun);
+  }
+
+  function readPerson(who) {
+    const y = parseInt($('#hh-year-' + who).value, 10),
+          m = parseInt($('#hh-month-' + who).value, 10),
+          d = parseInt($('#hh-day-' + who).value, 10),
+          h = parseInt($('#hh-hour-' + who).value, 10),
+          mi = parseInt($('#hh-minute-' + who).value, 10) || 0;
+    return { y, m, d, h, mi, ok: y && m && d && y >= 1901 && y <= 2099 && m >= 1 && m <= 12 && d >= 1 && d <= 31 };
+  }
+
+  function onHehun() {
+    const A = readPerson('a'), B = readPerson('b');
+    if (!A.ok) { alert('请填写甲方正确的出生年月日。'); return; }
+    if (!B.ok) { alert('请填写乙方正确的出生年月日。'); return; }
+    let ca, cb;
+    try { ca = TianjiEngine.buildChart(A.y, A.m, A.d, A.h, A.mi, genderA); } catch (e) { alert('甲方日期无效，请检查。'); return; }
+    try { cb = TianjiEngine.buildChart(B.y, B.m, B.d, B.h, B.mi, genderB); } catch (e) { alert('乙方日期无效，请检查。'); return; }
+    const res = TianjiEngine.hehun(ca, cb);
+    renderHehun(res);
+    $('#hh-result').classList.remove('hidden');
+    setTimeout(() => $('#hh-result').scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
+  }
+
+  function renderHehun(res) {
+    const C = 2 * Math.PI * 52;
+    const off = C * (1 - res.score / 100);
+    const factors = res.factors.map(f => {
+      const cls = f.good > 0 ? 'good' : f.good < 0 ? 'bad' : 'flat';
+      const tag = f.good > 0 ? '吉' : f.good < 0 ? '凶' : '平';
+      return `<div class="hh-factor ${cls}">
+        <div class="hf-name">${f.name} · ${tag}</div>
+        <div class="hf-detail">${f.detail}</div>
+      </div>`;
+    }).join('');
+    $('#hh-result').innerHTML = `
+      <div class="hh-score-wrap">
+        <div class="hh-ring">
+          <svg viewBox="0 0 120 120">
+            <circle cx="60" cy="60" r="52" class="ring-bg"></circle>
+            <circle cx="60" cy="60" r="52" class="ring-fg" style="stroke-dasharray:${C};stroke-dashoffset:${C}"></circle>
+          </svg>
+          <div class="hh-num"><span>${res.score}</span><em>分</em></div>
+        </div>
+        <div>
+          <div class="hh-verdict">${res.verdict}</div>
+          <div class="hh-verdict-sub">综合生肖、纳音、日主五行、喜用神互补与地支刑冲五维测算</div>
+        </div>
+      </div>
+      <div class="hh-factors">${factors}</div>
+      <div class="disclaimer">八字合婚源自传统民俗，仅供文化娱乐参考，婚姻幸福更在于彼此的理解与经营。</div>
+    `;
+    requestAnimationFrame(() => {
+      const fg = $('#hh-result').querySelector('.ring-fg');
+      if (fg) fg.style.strokeDashoffset = off;
+    });
+  }
+
   /* ---------- 启动 ---------- */
   window.addEventListener('DOMContentLoaded', () => {
-    initStars(); initForm(); initDateNav(); initShare(); initZeji(); initFloat();
+    initStars(); initForm(); initDateNav(); initShare(); initZeji(); initFloat(); initHehun();
     refreshSavedBar();
   });
 })();

@@ -401,5 +401,104 @@ const TianjiEngine = (function () {
     };
   }
 
-  return { buildChart, dailyFortune, zeji, analyze, WUXING_COLOR, GAN_WUXING, ZHI_WUXING };
+  /* ---------- 八字合婚 ---------- */
+  const LIUHE = [['子','丑'],['寅','亥'],['卯','戌'],['辰','酉'],['巳','申'],['午','未']];
+  const SANHE = [['申','子','辰'],['亥','卯','未'],['寅','午','戌'],['巳','酉','丑']];
+  const LIUCHONG = [['子','午'],['丑','未'],['寅','申'],['卯','酉'],['辰','戌'],['巳','亥']];
+  const XIANGHAI = [['子','未'],['丑','午'],['寅','巳'],['卯','辰'],['申','亥'],['酉','戌']];
+  const SANXING = [['寅','巳','申'],['丑','戌','未']];
+  const ZIWUXING = ['子','卯'];      // 无礼之刑
+  const ZIXING = ['辰','午','酉','亥']; // 自刑
+
+  function inPair(z1, z2, pairs) {
+    return pairs.some(p => (p[0] === z1 && p[1] === z2) || (p[0] === z2 && p[1] === z1));
+  }
+  function inTriple(z1, z2, triples) {
+    return triples.some(t => t.includes(z1) && t.includes(z2) && z1 !== z2);
+  }
+  // 地支两两关系：返回 {label, good}
+  function branchPairRel(z1, z2) {
+    if (inPair(z1, z2, LIUHE)) return { label: '六合', good: 1 };
+    if (inTriple(z1, z2, SANHE)) return { label: '三合', good: 1 };
+    if (inPair(z1, z2, LIUCHONG)) return { label: '六冲', good: -1 };
+    if (inPair(z1, z2, XIANGHAI)) return { label: '相害', good: -1 };
+    if (inTriple(z1, z2, SANXING)) return { label: '相刑', good: -1 };
+    if (ZIWUXING.includes(z1) && ZIWUXING.includes(z2) && z1 !== z2) return { label: '相刑', good: -1 };
+    if (z1 === z2 && ZIXING.includes(z1)) return { label: '自刑', good: -1 };
+    return { label: '普通', good: 0 };
+  }
+  // 五行关系：相生/比和为吉，相克为凶
+  function elementRel(x, y) {
+    if (x === y) return { label: '比和', good: 1 };
+    if (SHENG[x] === y) return { label: '相生(' + x + '生' + y + ')', good: 1 };
+    if (SHENG[y] === x) return { label: '相生(' + y + '生' + x + ')', good: 1 };
+    if (KE[x] === y) return { label: '相克(' + x + '克' + y + ')', good: -1 };
+    if (KE[y] === x) return { label: '相克(' + y + '克' + x + ')', good: -1 };
+    return { label: '无关', good: 0 };
+  }
+  // 用神互补度 0~1：对方八字五行能量是否补足本方喜用神
+  function complement(yong, energy) {
+    if (!yong || !yong.length) return 0.5;
+    let s = 0;
+    yong.forEach(e => { s += Math.min(1, (energy[e] || 0) / 1.2); });
+    return s / yong.length;
+  }
+  // 八字合婚：输入两张命盘（buildChart 结果）
+  function hehun(a, b) {
+    const A = analyze(a), B = analyze(b);
+    const factors = [];
+    let score = 50;
+
+    // 1. 生肖（年支）
+    const zbA = a.pillars[0].zhi, zbB = b.pillars[0].zhi;
+    const zr = branchPairRel(zbA, zbB);
+    factors.push({ name: '生肖配对', detail: `生肖 ${zbA} 与 ${zbB}：${zr.label}`, good: zr.good, weight: 12 });
+    score += zr.good * 12;
+
+    // 2. 年命纳音
+    const nA = (a.pillars[0].naYin || '').slice(-1);
+    const nB = (b.pillars[0].naYin || '').slice(-1);
+    const nr = elementRel(nA, nB);
+    factors.push({ name: '年命纳音', detail: `年柱纳音 ${nA} 与 ${nB}：${nr.label}`, good: nr.good, weight: 10 });
+    score += nr.good * 10;
+
+    // 3. 日主五行
+    const dr = elementRel(a.dayWx, b.dayWx);
+    factors.push({ name: '日主五行', detail: `日主 ${a.dayWx} 与 ${b.dayWx}：${dr.label}`, good: dr.good, weight: 12 });
+    score += dr.good * 12;
+
+    // 4. 用神互补
+    const comp = (complement(A.yong, B.energy) + complement(B.yong, A.energy)) / 2;
+    const compGood = comp > 0.6 ? 1 : comp > 0.35 ? 0 : -1;
+    factors.push({ name: '用神互补', detail: `喜用神互补度 ${Math.round(comp * 100)}%`, good: compGood, weight: 14 });
+    score += compGood * 14;
+
+    // 5. 地支刑冲统计（8 支两两配对）
+    const zhisA = a.pillars.map(p => p.zhi), zhisB = b.pillars.map(p => p.zhi);
+    let he = 0, chong = 0, xing = 0, hai = 0;
+    zhisA.forEach(za => zhisB.forEach(zb => {
+      const r = branchPairRel(za, zb);
+      if (r.label === '六合' || r.label === '三合') he++;
+      else if (r.label === '六冲') chong++;
+      else if (r.label === '相刑') xing++;
+      else if (r.label === '相害') hai++;
+    }));
+    const branchScore = he * 3 - chong * 4 - xing * 3 - hai * 2;
+    const bGood = branchScore > 0 ? 1 : branchScore < 0 ? -1 : 0;
+    factors.push({
+      name: '地支刑冲',
+      detail: `合局 ${he} 处 · 六冲 ${chong} 处 · 相刑 ${xing} 处 · 相害 ${hai} 处`,
+      good: bGood, weight: 12
+    });
+    score += Math.max(-12, Math.min(12, branchScore));
+
+    score = Math.max(5, Math.min(100, Math.round(score)));
+    const verdict = score >= 80 ? '天作之合，佳偶天成' :
+                    score >= 65 ? '上等姻缘，宜结连理' :
+                    score >= 50 ? '中平相配，用心则久' :
+                    score >= 35 ? '略有波折，多些包容' : '缘分较浅，且行且惜';
+    return { score, factors, verdict };
+  }
+
+  return { buildChart, dailyFortune, zeji, analyze, hehun, WUXING_COLOR, GAN_WUXING, ZHI_WUXING };
 })();

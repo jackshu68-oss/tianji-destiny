@@ -18,6 +18,7 @@
       <div class="brand">天機<span class="brand-en">TIANJI</span></div>
       <div class="nav-links">
         <a href="#compute">排盘</a>
+        <a href="#hehun">合婚</a>
         <a href="#zeji">择吉</a>
         <a href="#about">关于</a>
       </div>
@@ -255,6 +256,54 @@
       <button class="btn-primary btn-block" id="btn-zeji">开始择吉 ✦</button>
       <p class="form-hint" id="zj-hint">若已保存命盘，将同时为你避开与自身日支相冲的日子。</p>
       <div class="zj-result" id="zj-result"></div>
+    </div>
+  </section>
+
+  <!-- 八字合婚 -->
+  <section class="hehun" id="hehun">
+    <div class="section-head">
+      <p class="eyebrow">八字合婚</p>
+      <h2>两人生辰 · 姻缘配对</h2>
+      <p class="sub">输入双方生辰，从生肖、纳音、日主五行、喜用神互补与地支刑冲五个维度，综合测算你们的缘分分数。</p>
+    </div>
+    <div class="hehun-card">
+      <div class="hehun-cols">
+        <div class="hehun-person">
+          <h4>甲方</h4>
+          <div class="form-grid">
+            <div class="field"><label>出生年份</label><input type="number" id="hh-year-a" placeholder="1990" min="1901" max="2099" /></div>
+            <div class="field"><label>月</label><input type="number" id="hh-month-a" placeholder="6" min="1" max="12" /></div>
+            <div class="field"><label>日</label><input type="number" id="hh-day-a" placeholder="15" min="1" max="31" /></div>
+            <div class="field"><label>时（24小时制）</label><select id="hh-hour-a"></select></div>
+            <div class="field"><label>分</label><input type="number" id="hh-minute-a" placeholder="0" min="0" max="59" value="0" /></div>
+            <div class="field"><label>性别</label>
+              <div class="gender-toggle">
+                <button type="button" class="hh-g-btn active" data-g="male" data-who="a">乾造 · 男</button>
+                <button type="button" class="hh-g-btn" data-g="female" data-who="a">坤造 · 女</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="hehun-person">
+          <h4>乙方</h4>
+          <div class="form-grid">
+            <div class="field"><label>出生年份</label><input type="number" id="hh-year-b" placeholder="1992" min="1901" max="2099" /></div>
+            <div class="field"><label>月</label><input type="number" id="hh-month-b" placeholder="3" min="1" max="12" /></div>
+            <div class="field"><label>日</label><input type="number" id="hh-day-b" placeholder="8" min="1" max="31" /></div>
+            <div class="field"><label>时（24小时制）</label><select id="hh-hour-b"></select></div>
+            <div class="field"><label>分</label><input type="number" id="hh-minute-b" placeholder="0" min="0" max="59" value="0" /></div>
+            <div class="field"><label>性别</label>
+              <div class="gender-toggle">
+                <button type="button" class="hh-g-btn active" data-g="male" data-who="b">乾造 · 男</button>
+                <button type="button" class="hh-g-btn" data-g="female" data-who="b">坤造 · 女</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <button class="btn-primary btn-block" id="btn-hehun">测算姻缘分数 ✦</button>
+      <p class="form-hint">仅在本地浏览器计算，不上传任何个人信息。</p>
+      <div class="hehun-result hidden" id="hh-result"></div>
     </div>
   </section>
 
