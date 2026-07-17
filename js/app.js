@@ -1,4 +1,4 @@
-/* ============================ 天機 · 前端交互 ============================ */
+/* ============================ 道法自然 · 前端交互 ============================ */
 (function () {
   const $ = (s) => document.querySelector(s);
   const $$ = (s) => Array.from(document.querySelectorAll(s));
@@ -8,6 +8,7 @@
   let viewDate = new Date();
   let gender = 'male';
   let calMode = 'solar';
+  let lastZiweiCells = null;
 
   /* ---------- 星空背景 ---------- */
   function initStars() {
@@ -272,6 +273,7 @@
     if (!ZiweiBoard.available) { note.textContent = '（紫微引擎未加载）'; return; }
     note.textContent = `${chart.gender === 'female' ? '坤造' : '乾造'} ${chart.birthStr}`;
     const cells = ZiweiBoard.getBoard(chart.y, chart.m, chart.d, chart.h, chart.mi || 0, chart.gender, chart.pillars[0].gan);
+    lastZiweiCells = cells;
     $('#zw-board').innerHTML = ZiweiBoard.renderBoard(cells);
     $('#zw-detail').innerHTML = ZiweiBoard.renderDetail(cells);
   }
@@ -392,7 +394,7 @@
   function shareWechat() {
     const url = location.href;
     if (navigator.share) {
-      navigator.share({ title: '天機 · 我的每日命理', text: '看看我的八字与紫微命盘', url }).catch(() => {});
+      navigator.share({ title: '道法自然 · 我的每日命理', text: '看看我的八字与紫微命盘', url }).catch(() => {});
     } else {
       shareImage();
       setTimeout(() => toast('图片已生成，长按保存后可发到微信'), 900);
@@ -417,7 +419,7 @@
       .then(canvas => {
         stage.classList.remove('active');
         const link = document.createElement('a');
-        link.download = `天机_${f.dateStr}.png`;
+        link.download = `道法自然_${f.dateStr}.png`;
         link.href = canvas.toDataURL('image/png');
         link.click();
       })
@@ -430,7 +432,7 @@
     const ji = (f.ji.length ? f.ji.slice(0, 6) : ['—']).join(' · ');
     return `<div class="sc-card">
       <div class="sc-head">
-        <div class="sc-brand">天機 · TIANJI</div>
+        <div class="sc-brand">道法自然 · DAOFA</div>
         <div class="sc-date">${f.dateStr} ${f.week} · 农历${f.lunarStr}</div>
       </div>
       <div class="sc-ming">${chart.dayGan}${chart.dayWx}命　生肖${chart.shengXiao}　本命${chart.yearGanZhi}</div>
@@ -449,7 +451,7 @@
       </div>
       <div class="sc-zwtitle">紫微斗数命盘</div>
       <div class="sc-zw">${zwHtml}</div>
-      <div class="sc-foot">观天之机 · 知日之宜　｜　传统文化娱乐参考</div>
+      <div class="sc-foot">观天之道 · 知日之宜　｜　传统文化娱乐参考</div>
     </div>`;
   }
 
@@ -591,9 +593,225 @@
     });
   }
 
+  /* ---------- 全站「详解」弹层 ---------- */
+  const TEN_GOD_DESC = {
+    比肩: '与日主同五行、同阴阳，主兄弟姐妹、朋友、自我意识与独立。',
+    劫财: '与日主同五行、异阴阳，主合作也主争夺、破耗。',
+    食神: '日主所生且同阴阳，主才华、口福、享受与子女缘。',
+    伤官: '日主所生且异阴阳，主才艺与表现，亦主叛逆不服管束。',
+    正财: '日主所克且异阴阳，主稳定收入、务实与妻子（女命论夫）。',
+    偏财: '日主所克且同阴阳，主横财、机遇、应酬与风流。',
+    正官: '克日主且异阴阳，主事业、名望、规则与丈夫（女命）。',
+    七杀: '克日主且同阴阳，主压力、权威、挑战与魄力。',
+    正印: '生日主且异阴阳，主长辈、学识、庇护与贵人。',
+    偏印: '生日主且同阴阳，主偏门技艺、冷门才华，亦主思虑孤僻。'
+  };
+  const WX_DESC = {
+    木: '仁 · 生发、条达，对应肝、春、东方。',
+    火: '礼 · 炎热、向上，对应心、夏、南方。',
+    土: '信 · 承载、化生，对应脾胃、长夏、中央。',
+    金: '义 · 肃杀、收敛，对应肺、秋、西方。',
+    水: '智 · 润下、流动，对应肾、冬、北方。'
+  };
+
+  function sec(title, html) { return `<div class="dm-sec"><h4>${title}</h4>${html}</div>`; }
+  function ul(items) { return `<ul class="dm-ul">${items.map(i => `<li>${i}</li>`).join('')}</ul>`; }
+  function wxColor(w) { return TianjiEngine.WUXING_COLOR[w]; }
+
+  const Detail = {
+    overview(c, a) {
+      return sec('你是这张命盘的中心', `<p>八字以「日柱天干」代表你自己，称为<b>日主 / 命主</b>。你生于 ${c.birthStr}，日主为 <b style="color:${wxColor(c.dayWx)}">${c.dayGan}</b>，五行属 <b>${c.dayWx}</b>（${c.dayGanYinYang}${c.dayWx}）。${WX_DESC[c.dayWx]}</p>`)
+        + sec('旺衰与喜忌', `<p>经综合四柱生克测算，你的日主为「<b>${a.level}</b>」：${a.levelDesc}</p>
+          <p>喜用神（对你有助的五行）：<b style="color:var(--jade)">${a.yong.join('、')}</b>；忌神（对你不利的五行）：<b style="color:var(--red)">${a.ji.join('、')}</b>。日常可多亲近喜用元素以助运。</p>`)
+        + sec('上方标签的含义', ul([
+            `生肖 <b>${c.shengXiao}</b>：年柱地支所代表的属相，主先天根基与祖上气场。`,
+            `本命 <b>${c.yearGanZhi}</b>：出生年的干支，也叫「年命」。`,
+            `日主 <b>${c.dayGan}${c.dayWx}</b>：代表「我」的核心五行。`,
+            `五行最旺 <b style="color:${wxColor(c.strongest)}">${c.strongest}</b>：八字中能量最强的五行。`,
+            c.lacking.length ? `五行缺 <b>${c.lacking.join('、')}</b>：该五行在八字中完全不现，宜后天补益。` : `五行 <b>俱全</b>：格局相对均衡。`
+          ]));
+    },
+    bazi(c, a) {
+      const roles = [
+        ['年柱', c.pillars[0], '祖上 · 根基 · 幼年'],
+        ['月柱', c.pillars[1], '父母 · 兄弟 · 事业（月令为提纲）'],
+        ['日柱', c.pillars[2], '自身 · 配偶 · 中年'],
+        ['时柱', c.pillars[3], '子女 · 晚年 · 事业结果']
+      ];
+      const cards = roles.map(([label, p, tag]) => `
+        <div class="dm-pillar">
+          <div class="dm-p-label">${label}</div>
+          <div class="dm-p-gz" style="color:${p.color}">${p.gan}${p.zhi}</div>
+          <div class="dm-p-god">${p.god}</div>
+          <div class="dm-p-sub">${tag}</div>
+          <div class="dm-p-nayin">纳音：${p.naYin}</div>
+        </div>`).join('');
+      const godList = Object.keys(TEN_GOD_DESC).map(g => `<li><b>${g}</b>：${TEN_GOD_DESC[g]}</li>`).join('');
+      return sec('四柱是什么', `<p>「四柱」即年、月、日、时四组干支，每组一「天干」一「地支」，共八个字，故称八字。天干为显、地支为藏，干支组合构成推演的基础。</p>`)
+        + sec('你的四柱', `<div class="dm-pillars">${cards}</div>`)
+        + sec('天干十神（以你日主为「我」）', `<p>十神是日主与其他天干的生克关系，揭示人事角色。${a.pillars.map(p => `<b style="color:${p.color}">${p.gan}${p.zhi}</b> 之天干为「${p.god}」`).join('；')}。</p><ul class="dm-ul">${godList}</ul>`)
+        + sec('纳音', `<p>纳音是干支的五行化气（如「海中金」「炉中火」），常用作年命配对与性情补充参考，上方每柱已标注其纳音。</p>`);
+    },
+    profound(c, a) {
+      const sha = a.shenSha.length ? a.shenSha.map(s => `<li><b style="color:var(--gold)">${s.name}</b>（${s.where}）：${s.desc}</li>`).join('') : '<li>本命未触发常见神煞。</li>';
+      return sec('日主旺衰', `<p>以日主五行对照四柱天干与地支藏干，统计「生我、同我」的助力占比为 <b>${a.ratio}%</b>，故判定日主为「<b>${a.level}</b>」。</p><p>${a.levelDesc}</p>`)
+        + sec('用神 · 喜忌', `<p>「用神」是命局中最能平衡日主、补偏救弊的五行；「喜神」辅助用神，「忌神」则加重偏颇。你的喜用为 <b style="color:var(--jade)">${a.yong.join('、')}</b>，忌神为 <b style="color:var(--red)">${a.ji.join('、')}</b>。</p>`)
+        + sec('五行能量（含地支藏干）', `<p>此处能量按「天干1、本气0.5、中气0.3、余气0.2」加权统计，比只看八个字更贴近真实强弱。${['木','火','土','金','水'].map(w => `<b style="color:${wxColor(w)}">${w} ${a.energy[w].toFixed(1)}</b>`).join('　')}</p>`)
+        + sec('胎元 · 命宫 · 身宫 · 空亡', `<p>胎元（受胎之月干支）、命宫（先天格局与性格）、身宫（后天作为与归宿）、空亡（旬空之地，力量减弱）是细盘的重要坐标：</p>
+          <ul class="dm-ul">
+            <li>胎元：<b>${a.taiYuan}</b></li>
+            <li>命宫：<b>${a.mingGong}</b></li>
+            <li>身宫：<b>${a.shenGong}</b></li>
+            <li>空亡：<b>${a.kongWang}</b></li>
+          </ul>`)
+        + sec('神煞（${a.shenSha.length}）', `<p>神煞是古人对特殊干支组合的象义归纳，可作性情与机遇的旁证：</p><ul class="dm-ul">${sha}</ul>`)
+        + sec('地支藏干与十神', `<p>每个地支内藏一至三天干（本气·中气·余气），它们与日主同样构成十神关系，是判断格局深浅的关键。本气以粗体标示于上方细盘表格。</p>`);
+    },
+    ziwei(c) {
+      const cells = lastZiweiCells;
+      if (!cells || !cells.length) return '<p class="dm-empty">紫微命盘尚未加载，请先生成命盘。</p>';
+      const order = ['命宫', '夫妻', '财帛', '官禄', '福德', '迁移'];
+      const rows = order.map(duty => {
+        const cell = cells.find(x => x.duty === duty); if (!cell) return '';
+        const mains = cell.stars.filter(s => s.cls === 'main');
+        const mainTxt = mains.length ? mains.map(s => `${s.name}${s.hua ? `（${s.hua}）` : ''}`).join('、') : '无主星（借星安宫）';
+        return `<div class="dm-zw-row"><b>${cell.duty}</b><span class="dm-zw-gz">${cell.stem}${cell.branch}</span><span class="dm-zw-main">${mainTxt}</span></div>`;
+      }).join('');
+      return sec('紫微斗数是什么', `<p>紫微斗数以出生时刻排出十二人事宫（命宫、兄弟、夫妻……父母），再将南北斗十四主星与众多辅星落入各宫，并依<b>年干</b>飞出「禄、权、科、忌」四化，借星曜庙旺与四化流转论吉凶。</p>`)
+        + sec('你的关键宫位（主星）', `<p>以下为几个核心宫位的主星（括号内为四化飞星）。命宫主星尤其影响性格与先天禀赋。</p><div class="dm-zw-list">${rows}</div>`)
+        + sec('四化飞星', `<p>四化依你年干（${c.pillars[0].gan}）而定，是能量流动的「开关」：<b>禄</b>主生发福泽，<b>权</b>主掌权变动，<b>科</b>主声名才学，<b>忌</b>主执滞纠缠。结合上方命盘中的四化标记一起参看。</p>`);
+    },
+    wuxing(c, a) {
+      return sec('五行生克', `<p>五行相生：木生火、火生土、土生金、金生水、水生木；五行相克：木克土、土克水、水克火、火克金、金克木。命理以「中和为贵」——过旺宜泄耗，不足宜生扶。</p>`)
+        + sec('你的五行格局', `<p>八字（四个天干＋四个地支本气）中，以 <b style="color:${wxColor(c.strongest)}">${c.strongest}</b> 最旺。${c.lacking.length ? `你<b>缺${c.lacking.join('、')}</b>，日常可多亲近对应元素以求平衡。` : `你的五行<b>俱全</b>，格局较为均衡。`}</p>`)
+        + sec('各元素意象', `<ul class="dm-ul">${['木','火','土','金','水'].map(w => `<li><b style="color:${wxColor(w)}">${w}</b>：${WX_DESC[w]}</li>`).join('')}</ul>`);
+    },
+    daily(c) {
+      const dSolar = window.Solar.fromYmd(viewDate.getFullYear(), viewDate.getMonth() + 1, viewDate.getDate());
+      const f = TianjiEngine.dailyFortune(c, dSolar);
+      const scoreWord = f.score >= 75 ? '上吉' : f.score >= 55 ? '中吉' : f.score >= 40 ? '平顺' : '谨慎';
+      return sec('今日分数怎么来', `<p>分数结合「你的日主五行」与「当日干支」的生克关系：遇<b>印</b>（生我）、<b>比劫</b>（同我）为吉而加分；遇<b>官杀</b>（克我）则减分。若当日地支<b>冲</b>你本命日支则再减分，<b>六合</b>则加分。基础分约 62 分上下浮动，最终落在 30–98 之间。</p>`)
+        + sec('今日概况（${f.dateStr}）', `<p>当日干支 <b>${f.dayGanZhi}</b>，十神为「<b>${f.god}</b>」：${TEN_GOD_DESC[f.god] || ''}</p>
+          <p>评分 <b style="color:${wxColor(c.dayWx)}">${f.score}</b> 分，属「${scoreWord}」。${f.advice}</p>`)
+        + sec('宜 / 忌与黄历', `<p>宜忌取自当日黄历：宜 <b style="color:var(--green)">${(f.yi.length ? f.yi.join('、') : '诸事不宜')}</b>；忌 <b style="color:var(--red)">${(f.ji.length ? f.ji.join('、') : '百无禁忌')}</b>。</p>
+          <p>值神 <b>${f.god}</b>；今日冲煞 <b>${f.chong} 煞${f.sha}</b>；吉神宜趋：${f.jiShen.slice(0,4).join('、') || '—'}；凶煞：${(f.xiongSha && f.xiongSha.length ? f.xiongSha.slice(0,4).join('、') : '—')}。</p>`)
+        + sec('幸运指引', `<p>幸运方位 <b>${f.luckyDir}</b>；喜用五行 <b>${f.luckyWx.join('、')}</b>；幸运色见上方色块。这些是「生扶你日主」的五行，用作择色、择向的参考。</p>`);
+    },
+    dayun(c) {
+      const nowY = new Date().getFullYear();
+      const cells = c.daYun.map(d => {
+        const active = nowY >= d.startYear && nowY <= d.endYear ? ' <b style="color:var(--gold)">（当前大运）</b>' : '';
+        return `<li><b style="color:${d.color}">${d.ganZhi}</b>　${d.startAge}–${d.endAge}岁（${d.startYear}–${d.endYear}）· 十神「${d.god}」${active}</li>`;
+      }).join('');
+      return sec('什么是大运', `<p>大运是十年一变的运势阶段，由出生月柱顺逆排布。你约 <b>${c.startInfo.year}岁${c.startInfo.month}个月</b> 起运，之后每十年换一柱大运。</p>`)
+        + sec('你的大运轨迹', `<ul class="dm-ul">${cells}</ul>`)
+        + sec('怎么看', `<p>大运干支与日主生克，决定这十年的整体气场；天干主前半段、地支主后半段。当「用神」大运来临时，往往顺势而为、事半功倍。</p>`);
+    },
+    liunian(c) {
+      const Solar = window.Solar; const nowY = new Date().getFullYear();
+      const items = [];
+      for (let y = nowY - 1; y <= nowY + 5; y++) {
+        const lunar = Solar.fromYmd(y, 6, 1).getLunar();
+        const gz = lunar.getYearInGanZhi();
+        const god = (function (dayGan, otherGan) {
+          const GW = TianjiEngine.GAN_WUXING;
+          const YY = { 甲:'阳',乙:'阴',丙:'阳',丁:'阴',戊:'阳',己:'阴',庚:'阳',辛:'阴',壬:'阳',癸:'阴' };
+          const SHENG = { 木:'火',火:'土',土:'金',金:'水',水:'木' };
+          const KE = { 木:'土',火:'金',土:'水',金:'木',水:'火' };
+          const me = GW[dayGan], ot = GW[otherGan], same = YY[dayGan] === YY[otherGan];
+          if (me === ot) return same ? '比肩' : '劫财';
+          if (SHENG[me] === ot) return same ? '食神' : '伤官';
+          if (KE[me] === ot) return same ? '偏财' : '正财';
+          if (KE[ot] === me) return same ? '七杀' : '正官';
+          if (SHENG[ot] === me) return same ? '偏印' : '正印';
+          return '比肩';
+        })(c.dayGan, gz[0]);
+        const cur = y === nowY ? ' <b style="color:var(--gold)">（今年）</b>' : '';
+        items.push(`<li><b>${y}</b>年（${gz} ${lunar.getYearShengXiao()}）· 流年十神「${god}」${cur}：${(TEN_GOD_DESC[god] || '').slice(0, 18)}</li>`);
+      }
+      return sec('什么是流年', `<p>流年即「当年的太岁干支」，是每一年叠加在大运之上的气场。流年十神是相对于你日主（${c.dayGan}）而论的生克关系，用来判断该年事业、财情、健康的主题。</p>`)
+        + sec('近年流年', `<ul class="dm-ul">${items.join('')}</ul>`);
+    },
+    hehunPrinciple() {
+      return sec('测算原理', `<p>八字合婚从五个维度综合评分，基础分 50 分，各维度按吉凶加减，最终落在 5–100 分：</p>
+        <ul class="dm-ul">
+          <li><b>生肖配对（±12）</b>：看双方年支的六合、三合、六冲、相害、相刑。</li>
+          <li><b>年命纳音（±10）</b>：双方年柱纳音五行的生克比和。</li>
+          <li><b>日主五行（±12）</b>：双方日主五行的相生、比和或相克。</li>
+          <li><b>用神互补（±14）</b>：对方八字五行能量，是否补足你方的喜用神。</li>
+          <li><b>地支刑冲（±12）</b>：双方八个地支两两配对，统计合局、六冲、相刑、相害。</li>
+        </ul>`)
+        + sec('分数与判语', `<p>≥80 天作之合；≥65 上等姻缘；≥50 中平相配；≥35 略有波折；<35 缘分较浅。分数仅供文化娱乐参考，婚姻幸福更在于彼此的理解与经营。</p>`);
+    }
+  };
+
+  function buildDetail(type) {
+    if (type === 'hehun') return Detail.hehunPrinciple();
+    if (!chart) return '<p class="dm-empty">请先生成命盘后再查看详解。</p>';
+    const a = TianjiEngine.analyze(chart);
+    const map = {
+      overview: () => Detail.overview(chart, a),
+      bazi: () => Detail.bazi(chart, a),
+      profound: () => Detail.profound(chart, a),
+      ziwei: () => Detail.ziwei(chart),
+      wuxing: () => Detail.wuxing(chart, a),
+      daily: () => Detail.daily(chart),
+      dayun: () => Detail.dayun(chart),
+      liunian: () => Detail.liunian(chart)
+    };
+    return (map[type] && map[type]()) || '<p class="dm-empty">暂无详解。</p>';
+  }
+
+  function openDetail(type) {
+    const titles = {
+      overview: '命主概览 · 详解', bazi: '四柱八字 · 详解', profound: '八字精批 · 详解',
+      ziwei: '紫微斗数 · 详解', wuxing: '五行分布 · 详解', daily: '每日运势 · 详解',
+      dayun: '大运流转 · 详解', liunian: '流年运程 · 详解', hehun: '八字合婚 · 测算原理'
+    };
+    const body = buildDetail(type);
+    if (body === null) return;
+    $('#detail-modal .dm-title').textContent = titles[type] || '详解';
+    $('#detail-modal .dm-body').innerHTML = body;
+    $('#detail-modal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeDetail() {
+    $('#detail-modal').classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+
+  function injectDetailButtons() {
+    $$('[data-detail]').forEach(sec => {
+      if (sec.querySelector(':scope > .dm-trigger')) return;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'dm-trigger';
+      btn.textContent = '详解 ›';
+      btn.addEventListener('click', (e) => { e.stopPropagation(); openDetail(sec.dataset.detail); });
+      sec.appendChild(btn);
+    });
+  }
+
+  function initDetailModal() {
+    $$('#detail-modal [data-close]').forEach(el => el.addEventListener('click', closeDetail));
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDetail(); });
+  }
+
+  function initQuickNav() {
+    $$('.quick-nav [data-jump]').forEach(b => b.addEventListener('click', () => {
+      const id = b.dataset.jump;
+      const target = document.getElementById(id);
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }));
+    const brand = $('.brand');
+    if (brand) brand.style.cursor = 'pointer';
+    if (brand) brand.addEventListener('click', () => scrollTo({ top: 0, behavior: 'smooth' }));
+  }
+
   /* ---------- 启动 ---------- */
   window.addEventListener('DOMContentLoaded', () => {
     initStars(); initForm(); initDateNav(); initShare(); initZeji(); initFloat(); initHehun();
+    injectDetailButtons(); initDetailModal(); initQuickNav();
     refreshSavedBar();
   });
 })();

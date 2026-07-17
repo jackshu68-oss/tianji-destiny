@@ -1,4 +1,4 @@
-/* ============================ 天機 · 设计系统 ============================ */
+/* ============================ 道法自然 · 设计系统 ============================ */
 :root {
   --bg: #0a0b0f;
   --bg-2: #0f1117;
@@ -553,3 +553,68 @@ body {
 .hh-factor .hf-detail { font-size: 14px; color: var(--ink); }
 .hh-factor.good .hf-detail { color: var(--jade); }
 .hh-factor.bad .hf-detail { color: var(--red); }
+
+/* ============================ 结果区「详解」触发按钮 ============================ */
+.res-block, .hehun, .block-head, .section-head { position: relative; }
+.dm-trigger {
+  position: absolute; top: 16px; right: 16px; z-index: 6;
+  background: rgba(255,255,255,0.06); border: 1px solid var(--panel-line);
+  color: var(--gold-soft); padding: 6px 14px; border-radius: 100px;
+  font-size: 12px; letter-spacing: 1px; cursor: pointer; font-family: var(--sans);
+  transition: all .3s;
+}
+.dm-trigger:hover { background: var(--gold); color: #1a1710; border-color: transparent; }
+/* 为有右侧内容的区块标题留出按钮空间 */
+.qiyun { margin-right: 104px; }
+.today-block .date-nav { margin-right: 104px; }
+
+/* ============================ 快捷导航（结果内跳转） ============================ */
+.quick-nav { display: inline-flex; gap: 8px; flex-wrap: wrap; }
+
+/* ============================ 详解弹层 ============================ */
+.detail-modal { position: fixed; inset: 0; z-index: 300; display: flex; align-items: center; justify-content: center; padding: 24px; }
+.detail-modal.hidden { display: none; }
+.dm-backdrop { position: absolute; inset: 0; background: rgba(5,6,9,0.72); backdrop-filter: blur(6px); }
+.dm-panel {
+  position: relative; width: 100%; max-width: 720px; max-height: 86vh; overflow-y: auto;
+  background: var(--bg-2); border: 1px solid var(--panel-line); border-radius: var(--radius);
+  padding: 32px 34px; box-shadow: 0 40px 100px rgba(0,0,0,0.6); animation: fadeUp .4s ease both;
+}
+.dm-close {
+  position: absolute; top: 14px; right: 16px; width: 34px; height: 34px; border-radius: 50%;
+  border: 1px solid var(--panel-line); background: rgba(255,255,255,0.05); color: var(--ink-soft);
+  font-size: 20px; line-height: 1; cursor: pointer; transition: all .3s;
+}
+.dm-close:hover { background: var(--gold); color: #1a1710; }
+.dm-head { border-bottom: 1px solid var(--panel-line); padding-bottom: 16px; margin-bottom: 22px; }
+.dm-kicker { font-size: 11px; letter-spacing: 4px; color: var(--gold-soft); text-transform: uppercase; }
+.dm-title { font-family: var(--serif); font-size: 24px; font-weight: 600; letter-spacing: 2px; margin-top: 8px; }
+.dm-sec { margin-bottom: 24px; }
+.dm-sec h4 { font-family: var(--serif); font-size: 17px; color: var(--gold); letter-spacing: 1px; margin-bottom: 12px; }
+.dm-sec p { color: var(--ink-soft); font-size: 14px; font-weight: 300; line-height: 1.95; }
+.dm-sec p b { color: var(--ink); font-weight: 500; }
+.dm-ul { list-style: none; display: flex; flex-direction: column; gap: 9px; margin: 4px 0; }
+.dm-ul li { font-size: 14px; color: var(--ink-soft); font-weight: 300; line-height: 1.8; padding-left: 18px; position: relative; }
+.dm-ul li::before { content: ''; position: absolute; left: 0; top: 11px; width: 6px; height: 6px; border-radius: 50%; background: var(--gold-soft); }
+.dm-ul li b { color: var(--ink); font-weight: 500; }
+.dm-pillars { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 6px 0 10px; }
+.dm-pillar { text-align: center; background: rgba(0,0,0,0.22); border: 1px solid var(--panel-line); border-radius: 12px; padding: 14px 8px; }
+.dm-p-label { font-size: 11px; color: var(--ink-mute); letter-spacing: 2px; }
+.dm-p-gz { font-family: var(--serif); font-size: 28px; font-weight: 700; margin: 6px 0 3px; }
+.dm-p-god { font-size: 12px; color: var(--gold-soft); }
+.dm-p-sub { font-size: 11px; color: var(--ink-mute); margin-top: 6px; }
+.dm-p-nayin { font-size: 11px; color: var(--ink-mute); margin-top: 4px; }
+.dm-zw-list { display: flex; flex-direction: column; gap: 8px; }
+.dm-zw-row { display: flex; align-items: baseline; gap: 12px; background: rgba(0,0,0,0.18); border: 1px solid var(--panel-line); border-radius: 10px; padding: 11px 14px; font-size: 13px; }
+.dm-zw-row > b { font-family: var(--serif); color: var(--gold); min-width: 48px; }
+.dm-zw-gz { color: var(--ink-mute); font-size: 12px; }
+.dm-zw-main { color: var(--ink); }
+.dm-empty { color: var(--ink-mute); font-size: 14px; text-align: center; padding: 30px 0; }
+
+@media (max-width: 560px) {
+  .dm-panel { padding: 26px 20px; }
+  .dm-pillars { grid-template-columns: repeat(2, 1fr); }
+  .qiyun { margin-right: 0; }
+  .today-block .date-nav { margin-right: 0; }
+  .dm-trigger { top: 12px; right: 12px; padding: 5px 11px; font-size: 11px; }
+}
