@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>天机 · 每日命理</title>
+  <meta name="description" content="输入生辰，洞见每日宜忌、流年大运、紫微命盘。融合八字四柱、紫微斗数、五行、黄历宜忌之智慧。" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;500;600;700;900&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <canvas id="stars"></canvas>
+
+  <nav class="nav">
+    <div class="nav-inner">
+      <div class="brand">天機<span class="brand-en">TIANJI</span></div>
+      <div class="nav-links">
+        <a href="#compute">排盘</a>
+        <a href="#zeji">择吉</a>
+        <a href="#about">关于</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- 返回顶部浮动按钮 -->
+  <button id="back-top" title="回到顶部">↑</button>
+
+  <!-- Hero -->
+  <header class="hero" id="top">
+    <div class="hero-glow"></div>
+    <div class="hero-content">
+      <p class="hero-eyebrow">古法今用 · 每日一测</p>
+      <h1 class="hero-title">观天之机<br /><span class="hero-title-sub">知日之宜</span></h1>
+      <p class="hero-desc">
+        融合八字四柱、紫微斗数、五行生克、流年大运与黄历宜忌，<br class="br-pc" />
+        输入你的生辰，每一天都为你而算。
+      </p>
+      <a href="#compute" class="btn-primary">开始排盘 →</a>
+      <div class="hero-scroll">向下滑动</div>
+    </div>
+  </header>
+
+  <!-- 已保存存档提示条 -->
+  <div class="saved-bar hidden" id="saved-bar">
+    <div class="saved-inner">
+      <span class="saved-dot"></span>
+      <span id="saved-text">已为你保存命盘</span>
+      <button class="saved-btn" id="saved-view">查看我的每日运势</button>
+      <button class="saved-btn ghost" id="saved-reset">重新排盘</button>
+    </div>
+  </div>
+
+  <!-- 输入区 -->
+  <section class="compute" id="compute">
+    <div class="section-head">
+      <p class="eyebrow">第一步</p>
+      <h2>输入你的生辰</h2>
+      <p class="sub">阳历（公历）出生的年、月、日、时辰。时辰越准，命盘越准。排盘后信息将保存在本机，每日自动为你呈现运势。</p>
+    </div>
+
+    <div class="form-card">
+      <div class="form-grid">
+        <div class="field">
+          <label>出生年份</label>
+          <input type="number" id="in-year" placeholder="1990" min="1901" max="2099" />
+        </div>
+        <div class="field">
+          <label>月</label>
+          <input type="number" id="in-month" placeholder="6" min="1" max="12" />
+        </div>
+        <div class="field">
+          <label>日</label>
+          <input type="number" id="in-day" placeholder="15" min="1" max="31" />
+        </div>
+        <div class="field">
+          <label>时（24小时制）</label>
+          <select id="in-hour"></select>
+        </div>
+        <div class="field">
+          <label>分</label>
+          <input type="number" id="in-minute" placeholder="0" min="0" max="59" value="0" />
+        </div>
+        <div class="field">
+          <label>性别</label>
+          <div class="gender-toggle">
+            <button type="button" class="g-btn active" data-g="male">乾造 · 男</button>
+            <button type="button" class="g-btn" data-g="female">坤造 · 女</button>
+          </div>
+        </div>
+      </div>
+      <button class="btn-primary btn-block" id="btn-compute">生成我的命盘 ✦</button>
+      <p class="form-hint">仅在本地浏览器计算并保存，不上传任何个人信息。</p>
+      <div class="cal-toggle">
+        <span class="cal-label">生日历法</span>
+        <div class="seg">
+          <button type="button" class="seg-btn active" data-cal="solar">阳历</button>
+          <button type="button" class="seg-btn" data-cal="lunar">农历</button>
+        </div>
+        <label class="leap-chk hidden" id="leap-wrap"><input type="checkbox" id="in-leap" /> 闰月</label>
+      </div>
+    </div>
+  </section>
+
+  <!-- 结果区 -->
+  <main class="result hidden" id="result">
+
+    <!-- 操作栏 -->
+    <div class="res-toolbar">
+      <div class="save-status" id="save-status">✓ 已保存到本机</div>
+      <div class="toolbar-actions">
+        <div class="share-wrap">
+          <button class="tool-btn" id="btn-share">📤 分享</button>
+          <div class="share-pop hidden" id="share-pop">
+            <button data-act="img">🖼 生成分享图</button>
+            <button data-act="link">🔗 复制链接</button>
+            <button data-act="wechat">💬 分享到微信</button>
+          </div>
+        </div>
+        <button class="tool-btn" id="btn-clear">清除存档</button>
+      </div>
+    </div>
+
+    <!-- 命主概览 -->
+    <section class="res-block hero-result">
+      <p class="eyebrow" id="res-birth"></p>
+      <h2 class="daymaster-title"><span id="res-daymaster"></span></h2>
+      <p class="daymaster-desc" id="res-daymaster-desc"></p>
+      <div class="quick-tags" id="res-quicktags"></div>
+    </section>
+
+    <!-- 四柱八字 -->
+    <section class="res-block">
+      <div class="block-head"><span class="dot"></span><h3>四柱八字</h3></div>
+      <div class="pillars" id="res-pillars"></div>
+    </section>
+
+    <!-- 八字精批 · 专业细盘 -->
+    <section class="res-block">
+      <div class="block-head"><span class="dot"></span><h3>八字精批 · 专业细盘</h3></div>
+      <div class="pf-strength" id="pf-strength"></div>
+      <div class="pf-yong" id="pf-yong"></div>
+      <div class="pf-energy" id="pf-energy"></div>
+      <div class="pf-grid" id="pf-grid"></div>
+      <div class="pf-pillars" id="pf-pillars"></div>
+    </section>
+
+    <!-- 紫微斗数命盘 -->
+    <section class="res-block">
+      <div class="block-head"><span class="dot"></span><h3>紫微斗数命盘</h3><span class="qiyun" id="zw-note"></span></div>
+      <div class="zw-legend">
+        <span><i class="lg main"></i>主星</span>
+        <span><i class="lg aus"></i>吉星</span>
+        <span><i class="lg ina"></i>煞星</span>
+        <span><i class="lg neu"></i>杂曜</span>
+        <span class="lg-hua"><i class="hua hua-禄">禄</i><i class="hua hua-权">权</i><i class="hua hua-科">科</i><i class="hua hua-忌">忌</i>四化飞星</span>
+      </div>
+      <div class="zw-board" id="zw-board"></div>
+      <div class="zw-detail" id="zw-detail"></div>
+    </section>
+
+    <!-- 五行分布 -->
+    <section class="res-block">
+      <div class="block-head"><span class="dot"></span><h3>五行分布</h3></div>
+      <div class="wuxing-wrap">
+        <div class="wuxing-bars" id="res-wuxing"></div>
+        <div class="wuxing-note" id="res-wuxing-note"></div>
+      </div>
+    </section>
+
+    <!-- 今日运势 -->
+    <section class="res-block today-block">
+      <div class="block-head">
+        <span class="dot"></span><h3>每日运势</h3>
+        <div class="date-nav">
+          <button id="day-prev" aria-label="前一天">‹</button>
+          <span id="day-label"></span>
+          <button id="day-next" aria-label="后一天">›</button>
+          <button id="day-today" class="btn-mini">今天</button>
+        </div>
+      </div>
+      <div class="today-hero">
+        <div class="score-ring">
+          <svg viewBox="0 0 120 120">
+            <circle cx="60" cy="60" r="52" class="ring-bg" />
+            <circle cx="60" cy="60" r="52" class="ring-fg" id="score-ring-fg" />
+          </svg>
+          <div class="score-num"><span id="score-value">0</span><em>分</em></div>
+        </div>
+        <div class="today-summary">
+          <div class="today-gz" id="today-gz"></div>
+          <p class="today-advice" id="today-advice"></p>
+          <div class="lucky-row" id="lucky-row"></div>
+        </div>
+      </div>
+      <div class="dims" id="res-dims"></div>
+      <div class="yiji">
+        <div class="yiji-col yi"><div class="yiji-title"><span>宜</span></div><div class="yiji-tags" id="yi-tags"></div></div>
+        <div class="yiji-col ji"><div class="yiji-title"><span>忌</span></div><div class="yiji-tags" id="ji-tags"></div></div>
+      </div>
+      <div class="huangli-grid" id="huangli-grid"></div>
+    </section>
+
+    <!-- 大运 -->
+    <section class="res-block">
+      <div class="block-head"><span class="dot"></span><h3>大运流转</h3><span class="qiyun" id="res-qiyun"></span></div>
+      <div class="dayun-track" id="res-dayun"></div>
+    </section>
+
+    <!-- 流年 -->
+    <section class="res-block">
+      <div class="block-head"><span class="dot"></span><h3>流年运程</h3></div>
+      <div class="liunian" id="res-liunian"></div>
+    </section>
+
+    <div class="disclaimer">
+      本应用所有内容基于中国传统命理与黄历算法生成，仅供文化研究与娱乐参考，请理性看待，切勿迷信。
+    </div>
+  </main>
+
+  <!-- 择吉 -->
+  <section class="zeji" id="zeji">
+    <div class="section-head">
+      <p class="eyebrow">择吉</p>
+      <h2>选个好日子</h2>
+      <p class="sub">选择要做的事与日期范围，系统扫描每日黄历宜忌、值神与冲煞，为你挑选最适宜的吉日。</p>
+    </div>
+    <div class="zeji-card">
+      <div class="form-grid zeji-grid">
+        <div class="field">
+          <label>择吉事项</label>
+          <select id="zj-event">
+            <option value="嫁娶">嫁娶 · 结婚</option>
+            <option value="开市">开市 · 开业</option>
+            <option value="动土">动土 · 装修</option>
+            <option value="出行">出行 · 旅游</option>
+            <option value="搬家">移徙 · 搬家</option>
+            <option value="入宅">入宅 · 迁居</option>
+            <option value="安葬">安葬</option>
+            <option value="祈福">祈福 · 祭祀</option>
+            <option value="订盟">订婚 · 纳采</option>
+            <option value="求嗣">求子 · 求嗣</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>起始日期</label>
+          <input type="date" id="zj-start" />
+        </div>
+        <div class="field">
+          <label>结束日期（最多90天）</label>
+          <input type="date" id="zj-end" />
+        </div>
+      </div>
+      <button class="btn-primary btn-block" id="btn-zeji">开始择吉 ✦</button>
+      <p class="form-hint" id="zj-hint">若已保存命盘，将同时为你避开与自身日支相冲的日子。</p>
+      <div class="zj-result" id="zj-result"></div>
+    </div>
+  </section>
+
+  <!-- 关于 -->
+  <footer class="about" id="about">
+    <div class="about-inner">
+      <h4>关于 · 天機</h4>
+      <p>
+        天機 汇集中华传统命理智慧——四柱八字、紫微斗数、五行生克、十神、大运流年，
+        以及沿用千年的黄历宜忌体系。我们用现代的方式，让古老的智慧每天陪伴你，
+        帮你在合适的时机，做合适的事。
+      </p>
+      <p class="copyright">© 天機 TIANJI · 传统文化 · 娱乐参考</p>
+    </div>
+  </footer>
+
+  <!-- 分享卡片（截图用，默认隐藏） -->
+  <div id="share-stage" class="share-stage"></div>
+
+  <script src="js/lunar.js"></script>
+  <script src="js/ziwei-gt.global.js"></script>
+  <script src="js/engine.js"></script>
+  <script src="js/ziwei.js"></script>
+  <script src="js/html2canvas.min.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
