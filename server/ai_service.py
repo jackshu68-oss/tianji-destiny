@@ -137,14 +137,28 @@ def call_deepseek(title, context, module):
         },
         method="POST",
     )
-    try:
-        with urllib.request.urlopen(request, timeout=50) as response:
-            raw = json.loads(response.read().decode("utf-8"))
-    except urllib.error.HTTPError as error:
-        detail = error.read().decode("utf-8", errors="replace")[:500]
-        raise RuntimeError(f"UPSTREAM_HTTP_{error.code}:{detail}") from error
-    except (urllib.error.URLError, TimeoutError) as error:
-        raise RuntimeError("UPSTREAM_UNAVAILABLE") from error
+    raw = None
+    last_error = None
+    for attempt in range(2):
+        try:
+            with urllib.request.urlopen(request, timeout=30) as response:
+                raw = json.loads(response.read().decode("utf-8"))
+            break
+        except urllib.error.HTTPError as error:
+            last_error = RuntimeError("UPSTREAM_HTTP_{}".format(error.code))
+            if attempt == 0 and error.code in (408, 429, 500, 502, 503, 504):
+                time.sleep(1.2)
+                continue
+            raise last_error from error
+        except (urllib.error.URLError, TimeoutError, ValueError) as error:
+            last_error = RuntimeError("UPSTREAM_UNAVAILABLE")
+            if attempt == 0:
+                time.sleep(1.2)
+                continue
+            raise last_error from error
+
+    if raw is None:
+        raise last_error or RuntimeError("UPSTREAM_UNAVAILABLE")
 
     choices = raw.get("choices") or []
     if not choices:
@@ -240,13 +254,18 @@ class Handler(BaseHTTPRequestHandler):
         try:
             analysis, model, usage = call_deepseek(title, context, module)
         except RuntimeError as error:
-            code = str(error)
+            code = str(error).split(":", 1)[0]
+            print("AI request failed: {}".format(code), flush=True)
             if code == "AI_SERVICE_NOT_CONFIGURED":
-                self.send_json(503, {"ok": False, "message": "AI 服务尚未完成配置。"})
-            elif "UPSTREAM_HTTP_429" in code:
-                self.send_json(503, {"ok": False, "message": "AI 服务当前繁忙，请稍后再试。"})
+                self.send_json(503, {"ok": False, "code": code, "message": "AI 服务尚未完成配置。"})
+            elif code in ("UPSTREAM_HTTP_401", "UPSTREAM_HTTP_402", "UPSTREAM_HTTP_403"):
+                self.send_json(503, {"ok": False, "code": code, "message": "AI 账户或余额暂时不可用，管理员正在检查。"})
+            elif code == "UPSTREAM_HTTP_429":
+                self.send_json(503, {"ok": False, "code": code, "message": "DeepSeek 当前繁忙，系统自动重试后仍未响应，请稍后再按一次。"})
+            elif code == "UPSTREAM_HTTP_400":
+                self.send_json(502, {"ok": False, "code": code, "message": "当前排盘内容未能完成 AI 解读，请换一个问题后重试。"})
             else:
-                self.send_json(502, {"ok": False, "message": "AI 暂时没有返回结果，请稍后重试。"})
+                self.send_json(502, {"ok": False, "code": code, "message": "网络出现短暂波动，系统自动重试后仍未返回，请稍后再按一次。"})
             return
 
         result = {"ok": True, "analysis": analysis, "model": model, "usage": usage, "cached": False}

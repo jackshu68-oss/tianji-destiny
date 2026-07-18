@@ -82,7 +82,7 @@
       output.className = 'ai-output loading';
       output.textContent = '正在核对排盘依据并组织详解，通常需要数秒。';
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 55000);
+      const timer = setTimeout(() => controller.abort(), 70000);
       try {
         const response = await fetch('/api/ai/interpret', {
           method: 'POST',
@@ -98,7 +98,7 @@
         button.textContent = payload.cached ? '已生成 · 使用缓存' : '重新生成';
       } catch (error) {
         output.className = 'ai-output error';
-        output.textContent = error.name === 'AbortError' ? 'AI 响应超时，请稍后再试。' : (error.message || 'AI 服务暂时不可用。');
+        output.textContent = error.name === 'AbortError' ? 'AI 响应时间较长，本次已停止等待，请稍后再试。' : (error.message || 'AI 服务暂时不可用。');
         button.textContent = '重新尝试';
       } finally {
         clearTimeout(timer);
