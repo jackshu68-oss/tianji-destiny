@@ -449,14 +449,15 @@ class Handler(BaseHTTPRequestHandler):
             connection = storage_connection()
             try:
                 cursor = connection.execute("DELETE FROM shares WHERE code = ? AND revoke_hash = ?", (code, token_hash(token)))
+                still_exists = connection.execute("SELECT 1 FROM shares WHERE code = ?", (code,)).fetchone()
                 connection.commit()
                 changed = cursor.rowcount
             finally:
                 connection.close()
-            if not changed:
+            if not changed and still_exists:
                 self.send_json(403, {"ok": False, "message": "撤销凭证无效或分享已不存在。"})
             else:
-                self.send_json(200, {"ok": True})
+                self.send_json(200, {"ok": True, "already_gone": not bool(changed)})
             return
 
         if path == "/api/sync/create":
@@ -515,14 +516,15 @@ class Handler(BaseHTTPRequestHandler):
             connection = storage_connection()
             try:
                 cursor = connection.execute("DELETE FROM syncs WHERE code = ? AND revoke_hash = ?", (code, token_hash(token)))
+                still_exists = connection.execute("SELECT 1 FROM syncs WHERE code = ?", (code,)).fetchone()
                 connection.commit()
                 changed = cursor.rowcount
             finally:
                 connection.close()
-            if not changed:
+            if not changed and still_exists:
                 self.send_json(403, {"ok": False, "message": "撤销凭证无效或同步资料已不存在。"})
             else:
-                self.send_json(200, {"ok": True})
+                self.send_json(200, {"ok": True, "already_gone": not bool(changed)})
             return
 
         self.send_json(404, {"ok": False, "error": "NOT_FOUND"})
