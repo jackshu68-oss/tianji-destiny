@@ -1,7 +1,5 @@
 """Subscription billing and entitlement support for the Tianji web app."""
 
-from __future__ import annotations
-
 import hashlib
 import hmac
 import json
