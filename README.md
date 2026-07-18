@@ -16,6 +16,7 @@
 - DeepSeek 智能详解：服务端密钥、限流、缓存与模块化本地知识增强
 - 匿名限时分享：隐藏姓名、出生日期、城市与完整命盘，支持撤销
 - 双模式存储：默认本机保存；可选 PBKDF2 + AES-GCM 端到端加密同步
+- Stripe 托管订阅：月付/年付 Checkout、Webhook 验签、会员凭证、邮箱恢复与 Customer Portal
 
 ## 本地运行
 
@@ -29,7 +30,7 @@ python3 -m http.server 8765 --bind 127.0.0.1
 
 ```bash
 node --test tests/core.test.mjs
-python3 -m unittest tests.test_ai_service
+python3 -m unittest tests.test_ai_service tests.test_billing
 ```
 
 测试包含梅花经典基准、报数边界、奇门基准盘、出生资料边界、工作台规划层、关系图谱、决策工具、SEO 路由，以及匿名分享和加密同步服务端边界。
@@ -40,7 +41,7 @@ python3 -m unittest tests.test_ai_service
 DEEPSEEK_API_KEY=... python3 server/ai_service.py
 ```
 
-服务默认只监听 `127.0.0.1:8788`，由同域反向代理转发 `/api/ai/*`、`/api/share/*` 与 `/api/sync/*`。密钥必须放在服务器环境变量或权限为 `600` 的环境文件里，不能写进网页。匿名分享及同步密文使用 SQLite 保存；生产环境由 systemd 的 `StateDirectory=tianji-ai` 提供持久目录。
+服务默认只监听 `127.0.0.1:8788`，由同域反向代理转发 `/api/ai/*`、`/api/share/*`、`/api/sync/*` 与 `/api/billing/*`。密钥必须放在服务器环境变量或权限为 `600` 的环境文件里，不能写进网页。匿名分享、同步密文及会员状态使用 SQLite 保存；生产环境由 systemd 的 `StateDirectory=tianji-ai` 提供持久目录。商业配置模板见 [deploy/tianji-ai.env.example](deploy/tianji-ai.env.example)，上线步骤见 [docs/commercial-launch.md](docs/commercial-launch.md)。
 
 ## 私隐边界
 

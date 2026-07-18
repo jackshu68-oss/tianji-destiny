@@ -63,6 +63,10 @@
     return error;
   }
 
+  function billingHeaders() {
+    return window.TianjiBilling ? window.TianjiBilling.authHeaders() : {};
+  }
+
   async function readApiResponse(response) {
     const text = await response.text();
     let payload;
@@ -86,6 +90,7 @@
       await wait(delay);
       try {
         const response = await fetch(`/api/ai/result/${encodeURIComponent(jobId)}`, {
+          headers: billingHeaders(),
           credentials: 'same-origin',
           cache: 'no-store',
           signal
@@ -118,7 +123,7 @@
       try {
         const response = await fetch('/api/ai/interpret', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: Object.assign({ 'Content-Type': 'application/json' }, billingHeaders()),
           credentials: 'same-origin',
           cache: 'no-store',
           signal,

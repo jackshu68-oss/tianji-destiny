@@ -16,6 +16,11 @@ from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from socketserver import ThreadingMixIn
 
+try:
+    from billing import BillingError, BillingService
+except ModuleNotFoundError:
+    from server.billing import BillingError, BillingService
+
 
 ROOT = pathlib.Path(__file__).resolve().parent
 KNOWLEDGE = json.loads((ROOT / "knowledge.json").read_text(encoding="utf-8"))
@@ -27,7 +32,7 @@ ALLOWED_HOSTS = {
     item.strip().lower()
     for item in os.environ.get(
         "TIANJI_ALLOWED_HOSTS",
-        "tianji.47-86-31-98.sslip.io,127.0.0.1,localhost",
+        "tianji.47-86-31-98.sslip.io,daofainsight.com,www.daofainsight.com,127.0.0.1,localhost",
     ).split(",")
     if item.strip()
 }
@@ -48,6 +53,7 @@ GLOBAL_REQUESTS = defaultdict(int)
 STORAGE_REQUESTS = defaultdict(list)
 DATA_DIR = pathlib.Path(os.environ.get("TIANJI_DATA_DIR", "/tmp/tianji-ai-data"))
 DATABASE_PATH = DATA_DIR / "private_store.sqlite3"
+BILLING = BillingService(DATABASE_PATH)
 CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 
 
@@ -371,7 +377,12 @@ class Handler(BaseHTTPRequestHandler):
         forwarded = self.headers.get("X-Forwarded-For", "")
         return (forwarded.split(",", 1)[0].strip() or self.client_address[0])[:80]
 
-    def read_json_body(self, maximum=MAX_BODY_BYTES):
+    def bearer_token(self):
+        authorization = self.headers.get("Authorization", "")
+        scheme, separator, token = authorization.partition(" ")
+        return token.strip() if separator and scheme.lower() == "bearer" else ""
+
+    def read_raw_body(self, maximum=MAX_BODY_BYTES):
         try:
             length = int(self.headers.get("Content-Length", "0"))
         except ValueError:
@@ -379,11 +390,64 @@ class Handler(BaseHTTPRequestHandler):
         if length <= 0 or length > maximum:
             self.send_json(413, {"ok": False, "message": "提交内容过长。"})
             return None
+        return self.rfile.read(length)
+
+    def read_json_body(self, maximum=MAX_BODY_BYTES):
+        raw = self.read_raw_body(maximum)
+        if raw is None:
+            return None
         try:
-            return json.loads(self.rfile.read(length).decode("utf-8"))
+            return json.loads(raw.decode("utf-8"))
         except (UnicodeDecodeError, json.JSONDecodeError):
             self.send_json(400, {"ok": False, "message": "提交格式无效。"})
             return None
+
+    def send_billing_error(self, error):
+        self.send_json(error.status, {"ok": False, "code": error.code, "message": error.message})
+
+    def handle_billing_get(self, path):
+        if path == "/api/billing/config":
+            self.send_json(200, BILLING.public_config())
+            return
+        if path == "/api/billing/status":
+            self.send_json(200, BILLING.status(self.bearer_token()))
+            return
+        self.send_json(404, {"ok": False, "error": "NOT_FOUND"})
+
+    def handle_billing_post(self, path):
+        try:
+            if path == "/api/billing/webhook":
+                raw = self.read_raw_body(MAX_STORAGE_BODY)
+                if raw is not None:
+                    self.send_json(200, BILLING.handle_webhook(raw, self.headers.get("Stripe-Signature", "")))
+                return
+            if not allow_storage_request(self.client_id()):
+                self.send_json(429, {"ok": False, "message": "本小时账户操作过多，请稍后再试。"})
+                return
+            body = self.read_json_body(16 * 1024)
+            if body is None:
+                return
+            if not isinstance(body, dict):
+                raise BillingError(400, "INVALID_BODY", "提交格式无效。")
+            if path == "/api/billing/checkout":
+                result = BILLING.create_checkout(body.get("plan"), body.get("email"))
+            elif path == "/api/billing/claim":
+                result = BILLING.claim_checkout(body.get("session_id"), body.get("claim"))
+            elif path == "/api/billing/portal":
+                result = BILLING.create_portal(self.bearer_token())
+            elif path == "/api/billing/recovery/start":
+                result = BILLING.start_recovery(body.get("email"))
+            elif path == "/api/billing/recovery/verify":
+                result = BILLING.verify_recovery(body.get("email"), body.get("code"))
+            else:
+                self.send_json(404, {"ok": False, "error": "NOT_FOUND"})
+                return
+            self.send_json(200, result)
+        except BillingError as error:
+            self.send_billing_error(error)
+        except Exception as error:
+            print("Billing request failed: {} {}".format(path, type(error).__name__), flush=True)
+            self.send_json(500, {"ok": False, "code": "BILLING_INTERNAL_ERROR", "message": "账户服务暂时不可用，请稍后再试。"})
 
     def handle_storage_get(self):
         now = int(time.time())
@@ -536,6 +600,10 @@ class Handler(BaseHTTPRequestHandler):
         if not self.valid_host():
             self.send_json(404, {"ok": False, "error": "NOT_FOUND"})
             return
+        path = self.path.split("?", 1)[0]
+        if path.startswith("/api/billing/"):
+            self.handle_billing_get(path)
+            return
         if self.path.startswith("/api/share/") or self.path.startswith("/api/sync/"):
             self.handle_storage_get()
             return
@@ -557,6 +625,13 @@ class Handler(BaseHTTPRequestHandler):
         self.send_json(snapshot.get("status_code", 500), snapshot.get("payload") or {"ok": False, "message": "AI 任务没有返回结果。"})
 
     def do_POST(self):
+        path = self.path.split("?", 1)[0]
+        if path.startswith("/api/billing/"):
+            if not self.valid_host():
+                self.send_json(403, {"ok": False, "message": "请求来源无效。"})
+                return
+            self.handle_billing_post(path)
+            return
         if self.path.startswith("/api/share/") or self.path.startswith("/api/sync/"):
             if not self.valid_host():
                 self.send_json(403, {"ok": False, "message": "请求来源无效。"})
@@ -609,10 +684,15 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json(202, {"ok": True, "pending": True, "job_id": pending_job_id, "poll_after_ms": 1600, "deduplicated": True})
             return
 
-        allowed, message = allow_request(self.client_id())
-        if not allowed:
-            self.send_json(429, {"ok": False, "message": message})
+        pro_allowed, pro_account_id = BILLING.consume_pro_usage(self.bearer_token())
+        if pro_account_id and not pro_allowed:
+            self.send_json(429, {"ok": False, "message": "今日 Pro AI 详解额度已用完，请明天再试。"})
             return
+        if not pro_allowed:
+            allowed, message = allow_request(self.client_id())
+            if not allowed:
+                self.send_json(429, {"ok": False, "message": message})
+                return
         job_id = secrets.token_urlsafe(18)
         with LOCK:
             candidate = PENDING_BY_DIGEST.get(digest)

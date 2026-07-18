@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title data-zh="会员与订阅｜道法自然" data-en="Membership & Billing | DAOFA">会员与订阅｜道法自然</title>
+  <meta name="description" data-content-zh="查看道法自然免费版与 Pro 会员方案，安全订阅、恢复会员及管理续订。" data-content-en="Compare DAOFA Free and Pro, subscribe securely, restore membership and manage renewal." content="查看道法自然免费版与 Pro 会员方案，安全订阅、恢复会员及管理续订。" />
+  <meta name="theme-color" content="#f4f0e7" />
+  <link rel="canonical" href="https://tianji.47-86-31-98.sslip.io/pricing/" />
+  <script>
+    try {
+      document.documentElement.dataset.theme = localStorage.getItem('tianji_theme_v1') === 'classic' ? 'classic' : 'modern';
+      document.documentElement.lang = localStorage.getItem('tianji_language_v1') === 'en' ? 'en-CA' : 'zh-CN';
+    } catch (_error) { document.documentElement.dataset.theme = 'modern'; }
+  </script>
+  <link rel="icon" href="../assets/daofa-mark.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="../css/style.css?v=20260718-18" />
+</head>
+<body class="commercial-page" data-billing-root>
+  <canvas id="stars"></canvas>
+  <nav class="nav">
+    <div class="nav-inner">
+      <a class="brand brand-link" href="../">道法自然<span class="brand-en">DAOFA</span></a>
+      <div class="nav-actions">
+        <a class="commercial-home-link" href="../" data-zh="返回主页" data-en="Home">返回主页</a>
+        <div class="preference-controls" aria-label="界面偏好">
+          <button id="language-toggle" class="preference-toggle language-toggle" type="button" aria-label="Switch to English" title="Switch to English">EN</button>
+          <button id="theme-toggle" class="preference-toggle theme-toggle" type="button" aria-label="切换到经典黑金风格" title="切换到经典黑金风格">◐</button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="commercial-main">
+    <header class="commercial-header">
+      <p class="eyebrow" data-zh="会员中心" data-en="MEMBERSHIP">会员中心</p>
+      <h1 data-zh="选择适合你的使用方式" data-en="Choose how you use DAOFA">选择适合你的使用方式</h1>
+      <p data-zh="基础排盘永久免费；Pro 提供更高的 AI 详解额度和可恢复的会员权限。" data-en="Core charting stays free. Pro adds a higher AI interpretation allowance and recoverable membership access.">基础排盘永久免费；Pro 提供更高的 AI 详解额度和可恢复的会员权限。</p>
+    </header>
+
+    <section class="billing-status-band" id="billing-status-band" aria-live="polite">
+      <div>
+        <span data-zh="当前账户" data-en="CURRENT ACCESS">当前账户</span>
+        <h2 id="billing-status-title">正在检查会员状态…</h2>
+        <p id="billing-status-detail"></p>
+      </div>
+      <button type="button" id="billing-manage" hidden data-zh="管理订阅" data-en="Manage subscription">管理订阅</button>
+    </section>
+
+    <div id="billing-notice" class="billing-notice" aria-live="polite"></div>
+    <p id="billing-merchant-state" class="billing-merchant-state"></p>
+
+    <section class="pricing-purchase" aria-labelledby="pricing-title">
+      <div class="pricing-purchase-head">
+        <div>
+          <p class="eyebrow" data-zh="方案" data-en="PLANS">方案</p>
+          <h2 id="pricing-title" data-zh="先免费使用，需要更多 AI 时再升级" data-en="Start free and upgrade when you need more AI">先免费使用，需要更多 AI 时再升级</h2>
+        </div>
+        <label class="billing-email-field" for="billing-email">
+          <span data-zh="收据与会员恢复邮箱" data-en="Receipt and recovery email">收据与会员恢复邮箱</span>
+          <input id="billing-email" type="email" autocomplete="email" inputmode="email" maxlength="254" data-placeholder-zh="name@example.com" data-placeholder-en="name@example.com" placeholder="name@example.com" />
+        </label>
+      </div>
+
+      <div class="pricing-grid">
+        <article class="pricing-plan">
+          <div class="pricing-plan-head">
+            <span data-zh="免费版" data-en="FREE">免费版</span>
+            <strong>CA$0</strong>
+            <small data-zh="长期免费" data-en="Always free">长期免费</small>
+          </div>
+          <ul>
+            <li data-zh="八字、紫微、每日万年历与传统工具" data-en="BaZi, Zi Wei, daily almanac and traditional tools">八字、紫微、每日万年历与传统工具</li>
+            <li data-zh="命盘与日历默认保存在当前装置" data-en="Charts and calendar stored on this device by default">命盘与日历默认保存在当前装置</li>
+            <li data-zh="共享 AI 详解额度" data-en="Shared AI interpretation allowance">共享 AI 详解额度</li>
+          </ul>
+          <span class="pricing-current" data-zh="无需付款" data-en="No payment required">无需付款</span>
+        </article>
+
+        <article class="pricing-plan is-pro">
+          <div class="pricing-plan-head">
+            <span data-zh="Pro 月付" data-en="PRO MONTHLY">Pro 月付</span>
+            <strong data-price="monthly">CA$9.99</strong>
+            <small data-zh="每月自动续订" data-en="per month, recurring">每月自动续订</small>
+          </div>
+          <ul>
+            <li data-zh="每日最多 100 次 AI 智能详解" data-en="Up to 100 AI interpretations per day">每日最多 100 次 AI 智能详解</li>
+            <li data-zh="邮箱恢复会员权限" data-en="Restore membership by email">邮箱恢复会员权限</li>
+            <li data-zh="Stripe 会员中心管理或取消续订" data-en="Manage or cancel renewal in the Stripe portal">Stripe 会员中心管理或取消续订</li>
+          </ul>
+          <button type="button" data-plan-checkout="monthly">商户开通中</button>
+        </article>
+
+        <article class="pricing-plan is-pro featured">
+          <div class="pricing-plan-head">
+            <span data-zh="Pro 年付" data-en="PRO ANNUAL">Pro 年付</span>
+            <strong data-price="yearly">CA$79</strong>
+            <small data-zh="每年自动续订" data-en="per year, recurring">每年自动续订</small>
+          </div>
+          <ul>
+            <li data-zh="与月付相同的 Pro 功能" data-en="All monthly Pro features">与月付相同的 Pro 功能</li>
+            <li data-zh="按当前价格比月付节省约 34%" data-en="About 34% less than monthly at current prices">按当前价格比月付节省约 34%</li>
+            <li data-zh="到期前可随时关闭下一期续订" data-en="Turn off the next renewal before the period ends">到期前可随时关闭下一期续订</li>
+          </ul>
+          <button type="button" data-plan-checkout="yearly">商户开通中</button>
+        </article>
+      </div>
+
+      <label class="billing-consent" for="billing-consent">
+        <input id="billing-consent" type="checkbox" />
+        <span data-zh="我已阅读并同意服务条款、订阅与取消规则及隐私政策；我明白这是自动续订的数字服务。" data-en="I have read and agree to the Terms, subscription and cancellation rules, and Privacy Policy, and understand this is a recurring digital service.">我已阅读并同意服务条款、订阅与取消规则及隐私政策；我明白这是自动续订的数字服务。</span>
+      </label>
+      <p class="billing-legal-links"><a href="../terms/" data-zh="服务条款" data-en="Terms">服务条款</a><a href="../privacy.html" data-zh="隐私政策" data-en="Privacy">隐私政策</a></p>
+    </section>
+
+    <section class="billing-recovery" id="billing-recovery" hidden>
+      <div>
+        <p class="eyebrow" data-zh="更换装置" data-en="NEW DEVICE">更换装置</p>
+        <h2 data-zh="恢复已有会员" data-en="Restore an existing membership">恢复已有会员</h2>
+        <p data-zh="输入付款邮箱，我们会发送六位验证码。验证码不会显示账户是否存在。" data-en="Enter the billing email and we will send a six-digit code. The response does not reveal whether an account exists.">输入付款邮箱，我们会发送六位验证码。验证码不会显示账户是否存在。</p>
+      </div>
+      <div class="billing-recovery-form">
+        <label><span data-zh="付款邮箱" data-en="Billing email">付款邮箱</span><input id="billing-recovery-email" type="email" autocomplete="email" maxlength="254" /></label>
+        <button type="button" id="billing-recovery-send" data-zh="发送验证码" data-en="Send code">发送验证码</button>
+        <label><span data-zh="六位验证码" data-en="Six-digit code">六位验证码</span><input id="billing-recovery-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" disabled /></label>
+        <button type="button" id="billing-recovery-verify" disabled data-zh="恢复会员" data-en="Restore membership">恢复会员</button>
+      </div>
+    </section>
+
+    <section class="commercial-boundary">
+      <h2 data-zh="会员不会改变解读边界" data-en="Membership does not change the interpretation boundary">会员不会改变解读边界</h2>
+      <p data-zh="Pro 购买的是更高的服务用量与账户功能，不代表结果更准确，也不提供确定性预测。所有内容仍只用于传统文化研究、自我观察与娱乐参考。" data-en="Pro purchases higher service usage and account features. It does not make results more accurate or provide certain predictions. All content remains for traditional-culture study, self-reflection and entertainment.">Pro 购买的是更高的服务用量与账户功能，不代表结果更准确，也不提供确定性预测。所有内容仍只用于传统文化研究、自我观察与娱乐参考。</p>
+    </section>
+  </main>
+
+  <footer class="commercial-footer">
+    <span>© 道法自然 DAOFA</span>
+    <a href="mailto:jackshu68@gmail.com">jackshu68@gmail.com</a>
+  </footer>
+
+  <script src="../js/ui.js?v=20260718-17"></script>
+  <script src="../js/billing.js?v=20260718-19"></script>
+  <script src="../js/ambient.js?v=20260718-14"></script>
+</body>
+</html>

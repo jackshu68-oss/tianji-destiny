@@ -226,6 +226,7 @@ test('页面包含新增排盘、现代摘要、隐私入口和本地脚本', ()
   assert.match(html, /js\/ambient\.js/);
   assert.match(html, /js\/profile\.js/);
   assert.match(html, /js\/ui\.js/);
+  assert.match(html, /js\/billing\.js/);
   assert.match(html, /js\/ai\.js/);
   assert.match(html, /js\/planner\.js/);
   assert.match(html, /js\/workspace\.js/);
@@ -271,4 +272,29 @@ test('SEO、匿名分享与私隐文件齐备', () => {
   const privacy = fs.readFileSync(new URL('../privacy.html', import.meta.url), 'utf8');
   assert.match(privacy, /AES-GCM/);
   assert.match(privacy, /180 天/);
+});
+
+test('正式会员页只通过同源接口结账并完整披露自动续订', () => {
+  const pricing = fs.readFileSync(new URL('../pricing/index.html', import.meta.url), 'utf8');
+  const terms = fs.readFileSync(new URL('../terms/index.html', import.meta.url), 'utf8');
+  const privacy = fs.readFileSync(new URL('../privacy.html', import.meta.url), 'utf8');
+  const billing = fs.readFileSync(new URL('../js/billing.js', import.meta.url), 'utf8');
+  const caddy = fs.readFileSync(new URL('../deploy/Caddyfile.snippet', import.meta.url), 'utf8');
+
+  assert.match(pricing, /id="billing-email"/);
+  assert.match(pricing, /id="billing-consent"/);
+  assert.match(pricing, /data-plan-checkout="monthly"/);
+  assert.match(pricing, /data-plan-checkout="yearly"/);
+  assert.match(pricing, /每月自动续订/);
+  assert.match(pricing, /每年自动续订/);
+  assert.match(pricing, /data-en=/);
+  assert.match(terms, /Stripe/);
+  assert.match(terms, /取消与退款/);
+  assert.match(privacy, /不会取得或保存完整卡号和安全码/);
+  assert.match(billing, /\/api\/billing\/checkout/);
+  assert.match(billing, /\/api\/billing\/claim/);
+  assert.match(billing, /\/api\/billing\/portal/);
+  assert.match(billing, /\/api\/billing\/recovery\/verify/);
+  assert.doesNotMatch(billing, /STRIPE_SECRET_KEY|sk_live_|whsec_/);
+  assert.match(caddy, /handle \/api\/billing\/\*/);
 });

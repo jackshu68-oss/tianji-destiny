@@ -124,7 +124,7 @@
   };
 
   const ENGLISH_PHRASES = {
-    '排盘': 'Chart', '合婚': 'Compatibility', '梅花': 'Meihua', '奇门': 'Qimen', '塔罗': 'Tarot', '雷诺曼': 'Lenormand', '择吉': 'Date Finder', '界面偏好': 'Interface preferences', '播放舒缓音乐': 'Play ambient music', '回到顶部': 'Back to top',
+    '排盘': 'Chart', '合婚': 'Compatibility', '梅花': 'Meihua', '奇门': 'Qimen', '塔罗': 'Tarot', '雷诺曼': 'Lenormand', '择吉': 'Date Finder', '会员': 'Membership', '会员中心': 'Membership', '服务与订阅条款': 'Service & Subscription Terms', '界面偏好': 'Interface preferences', '播放舒缓音乐': 'Play ambient music', '回到顶部': 'Back to top',
     '道法自然 · 个人洞察工具': 'DAOFA · PERSONAL INSIGHT', '看懂自己': 'Understand Yourself', '把握时机': 'Move With the Moment',
     '输入出生资料，快速了解你的性格底层、事业财运、关系模式，': 'Enter birth details to explore your underlying traits, career and wealth patterns, relationships,',
     '以及目前所处的人生阶段。': 'and the life stage you are moving through now.', '免费生成我的人生图谱': 'Create My Life Map',
@@ -252,6 +252,22 @@
     });
   }
 
+  function translateBilingual(element) {
+    if (!element || !element.dataset) return;
+    const text = language === 'en' ? element.dataset.en : element.dataset.zh;
+    if (text != null && element.textContent !== text) element.textContent = text;
+    const attributes = [
+      ['placeholder', 'PlaceholderZh', 'PlaceholderEn'],
+      ['title', 'TitleZh', 'TitleEn'],
+      ['aria-label', 'AriaZh', 'AriaEn'],
+      ['content', 'ContentZh', 'ContentEn']
+    ];
+    attributes.forEach(([attribute, zhKey, enKey]) => {
+      const value = language === 'en' ? element.dataset[enKey] : element.dataset[zhKey];
+      if (value != null && element.getAttribute(attribute) !== value) element.setAttribute(attribute, value);
+    });
+  }
+
   function translateTree(target) {
     if (!target || typeof document === 'undefined') return;
     const rootElement = target.nodeType === 9 ? target.documentElement : (target.nodeType === 1 ? target : target.parentElement);
@@ -263,6 +279,8 @@
     if (rootElement) {
       translateAttributes(rootElement);
       rootElement.querySelectorAll('[placeholder],[title],[aria-label]').forEach(translateAttributes);
+      if (rootElement.matches && rootElement.matches('[data-zh],[data-content-zh]')) translateBilingual(rootElement);
+      rootElement.querySelectorAll('[data-zh],[data-content-zh]').forEach(translateBilingual);
     }
   }
 
@@ -285,11 +303,18 @@
   function applyLanguage() {
     if (typeof document === 'undefined') return;
     document.documentElement.lang = language === 'en' ? 'en-CA' : 'zh-CN';
-    document.title = language === 'en' ? 'DAOFA | Daily Chinese Almanac & Personal Insight' : '道法自然｜看懂自己，把握时机';
+    const pageTitle = document.querySelector('title[data-zh][data-en]');
+    document.title = pageTitle
+      ? (language === 'en' ? pageTitle.dataset.en : pageTitle.dataset.zh)
+      : (language === 'en' ? 'DAOFA | Daily Chinese Almanac & Personal Insight' : '道法自然｜看懂自己，把握时机');
     const description = document.querySelector('meta[name="description"]');
-    if (description) description.content = language === 'en'
-      ? 'A private, bilingual daily Chinese almanac and personal insight tool combining BaZi, Zi Wei and timing cycles.'
-      : '输入出生资料，快速了解性格底层、事业财运、关系模式与目前人生阶段。结合八字、紫微与流年，以现代方式解读传统智慧。';
+    if (description) {
+      description.content = description.dataset.contentZh && description.dataset.contentEn
+        ? (language === 'en' ? description.dataset.contentEn : description.dataset.contentZh)
+        : (language === 'en'
+          ? 'A private, bilingual daily Chinese almanac and personal insight tool combining BaZi, Zi Wei and timing cycles.'
+          : '输入出生资料，快速了解性格底层、事业财运、关系模式与目前人生阶段。结合八字、紫微与流年，以现代方式解读传统智慧。');
+    }
     translateTree(document);
     updateControls();
   }
