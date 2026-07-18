@@ -3,7 +3,9 @@ const TianjiKnowledge = (function () {
   const SOURCES = {
     bazi: { label: '四柱规则', detail: 'lunar-javascript 历法数据 + 本站五行、十神与刑冲合害规则' },
     meihua: { label: '梅花规则', detail: 'taibu-core（MIT）经典时间起卦结构与体用、互变、月令规则' },
-    qimen: { label: '奇门规则', detail: 'qfdk/qimen（MIT）时家转盘、九宫、九星、八门、八神与格局规则' }
+    qimen: { label: '奇门规则', detail: 'qfdk/qimen（MIT）时家转盘、九宫、九星、八门、八神与格局规则' },
+    tarot: { label: '塔罗规则', detail: 'Rider–Waite–Smith 78 张标准结构、正逆位与牌阵位置关系' },
+    lenormand: { label: '雷诺曼规则', detail: 'Petit Lenormand 36 张标准序列、相邻连线与中心牌结构' }
   };
   const TEN_GOD = {
     比肩:{core:'同气、自主与同辈关系',career:'适合独立推进、同业协作；也要避免重复投入与立场僵持。',wealth:'财务宜重视边界，合伙账目要清楚。',relation:'更强调平等与自我空间。'},

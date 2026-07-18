@@ -4,9 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>道法自然 · 传统术数排盘</title>
-  <meta name="description" content="四柱八字、紫微斗数、梅花易数、奇门遁甲、流年大运、合婚与黄历择吉，本地排盘并提供逐项详解。" />
+  <meta name="description" content="四柱八字、紫微斗数、梅花易数、奇门遁甲、塔罗牌、雷诺曼卡牌、流年大运、合婚与黄历择吉，本地排盘并提供逐项详解。" />
   <!-- 字体使用系统字体栈（见 css/style.css），不依赖外部网络，大陆/离线均可秒开 -->
-  <link rel="stylesheet" href="css/style.css?v=20260718-7" />
+  <link rel="stylesheet" href="css/style.css?v=20260718-8" />
 </head>
 <body>
   <canvas id="stars"></canvas>
@@ -14,12 +14,19 @@
   <nav class="nav">
     <div class="nav-inner">
       <div class="brand">道法自然<span class="brand-en">DAOFA</span></div>
-      <div class="nav-links">
-        <a href="#compute">排盘</a>
-        <a href="#hehun">合婚</a>
-        <a href="#meihua">梅花</a>
-        <a href="#qimen">奇门</a>
-        <a href="#zeji">择吉</a>
+      <div class="nav-actions">
+        <div class="nav-links">
+          <a href="#compute">排盘</a>
+          <a href="#hehun">合婚</a>
+          <a href="#meihua">梅花</a>
+          <a href="#qimen">奇门</a>
+          <a href="#tarot">塔罗</a>
+          <a href="#lenormand">雷诺曼</a>
+          <a href="#zeji">择吉</a>
+        </div>
+        <button id="music-toggle" class="music-toggle" type="button" aria-label="播放舒缓音乐" aria-pressed="false" title="播放舒缓音乐">
+          <span aria-hidden="true">♫</span>
+        </button>
       </div>
     </div>
   </nav>
@@ -34,7 +41,7 @@
       <p class="hero-eyebrow">古法今用 · 每日一测</p>
       <h1 class="hero-title">观天之道<br /><span class="hero-title-sub">知日之宜</span></h1>
       <p class="hero-desc">
-        融合八字四柱、紫微斗数、五行生克、流年大运与黄历宜忌，<br class="br-pc" />
+        融合八字四柱、紫微斗数、流年大运、塔罗与雷诺曼卡牌，<br class="br-pc" />
         输入你的生辰，每一天都为你而算。
       </p>
       <a href="#compute" class="btn-primary">开始排盘 →</a>
@@ -378,13 +385,67 @@
     </div>
   </section>
 
+  <section class="divination-section oracle-section tarot-section" id="tarot">
+    <div class="section-head">
+      <p class="eyebrow">塔罗牌</p>
+      <h2>静心抽牌 · 看见当下线索</h2>
+      <p class="sub">使用完整 78 张塔罗牌，以单牌、时间之流或行动指引牌阵，整理问题中的关系与选择。</p>
+    </div>
+    <div class="divination-card oracle-workspace">
+      <div class="divination-form-grid oracle-form-grid">
+        <div class="field field-wide">
+          <label for="tarot-question">所问之事</label>
+          <textarea id="tarot-question" rows="3" maxlength="160" placeholder="一事一问，例如：我现在最需要看清的工作选择是什么？"></textarea>
+        </div>
+        <div class="field">
+          <label for="tarot-spread">选择牌阵</label>
+          <select id="tarot-spread">
+            <option value="single">一张牌 · 当下讯息</option>
+            <option value="timeline" selected>三张牌 · 时间之流</option>
+            <option value="action">三张牌 · 行动指引</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn-primary btn-block" id="btn-tarot">洗牌并抽取 ✦</button>
+      <p class="form-hint">抽牌在当前浏览器完成；牌意用于自我观察与娱乐参考。</p>
+      <div class="divination-result oracle-result hidden" id="tarot-result" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <section class="divination-section oracle-section lenormand-section" id="lenormand">
+    <div class="section-head">
+      <p class="eyebrow">吉卜赛雷诺曼</p>
+      <h2>三十六象 · 连线读牌</h2>
+      <p class="sub">以标准 36 张 Petit Lenormand 图像牌，观察事件、人物、阻力与后续走向之间的连接。</p>
+    </div>
+    <div class="divination-card oracle-workspace">
+      <div class="divination-form-grid oracle-form-grid">
+        <div class="field field-wide">
+          <label for="lenormand-question">所问之事</label>
+          <textarea id="lenormand-question" rows="3" maxlength="160" placeholder="一事一问，例如：这次合作接下来会经过哪些阶段？"></textarea>
+        </div>
+        <div class="field">
+          <label for="lenormand-spread">选择牌阵</label>
+          <select id="lenormand-spread">
+            <option value="single">一张牌 · 今日提示</option>
+            <option value="line3" selected>三张牌 · 事件线</option>
+            <option value="line5">五张牌 · 完整路径</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn-primary btn-block" id="btn-lenormand">洗牌并展开 ✦</button>
+      <p class="form-hint">雷诺曼以相邻卡牌连线解读，不使用逆位；结果仅供文化研究与娱乐参考。</p>
+      <div class="divination-result oracle-result hidden" id="lenormand-result" aria-live="polite"></div>
+    </div>
+  </section>
+
   <!-- 关于 -->
   <footer class="about" id="about">
     <div class="about-inner">
       <h4>关于 · 道法自然</h4>
       <p>
-        道法自然 汇集中华传统术数——四柱八字、紫微斗数、梅花易数、奇门遁甲、五行十神与大运流年，
-        以及黄历宜忌体系。我们用现代的方式，让古老的文化每天陪伴你，
+        道法自然 汇集四柱八字、紫微斗数、梅花易数、奇门遁甲、塔罗、雷诺曼卡牌、五行十神与大运流年，
+        以及黄历宜忌体系。我们用现代的方式，让不同传统中的象征语言每天陪伴你，
         帮你在合适的时机，做合适的事。
       </p>
       <p class="copyright">© 道法自然 DAOFA · 传统文化 · 娱乐参考</p>
@@ -407,16 +468,18 @@
     </div>
   </div>
 
-  <script src="js/lunar.js?v=20260718-7"></script>
-  <script src="js/vendor/qimen-core.min.js?v=20260718-7"></script>
-  <script src="js/meihua.js?v=20260718-7"></script>
-  <script src="js/knowledge.js?v=20260718-7"></script>
-  <script src="js/ziwei-gt.global.js?v=20260718-7"></script>
-  <script src="js/engine.js?v=20260718-7"></script>
-  <script src="js/ziwei.js?v=20260718-7"></script>
-  <script src="js/html2canvas.min.js?v=20260718-7"></script>
-  <script src="js/app.js?v=20260718-7"></script>
-  <script src="js/divination.js?v=20260718-7"></script>
-  <script src="js/ai.js?v=20260718-7"></script>
+  <script src="js/lunar.js?v=20260718-8"></script>
+  <script src="js/vendor/qimen-core.min.js?v=20260718-8"></script>
+  <script src="js/meihua.js?v=20260718-8"></script>
+  <script src="js/knowledge.js?v=20260718-8"></script>
+  <script src="js/ziwei-gt.global.js?v=20260718-8"></script>
+  <script src="js/engine.js?v=20260718-8"></script>
+  <script src="js/ziwei.js?v=20260718-8"></script>
+  <script src="js/html2canvas.min.js?v=20260718-8"></script>
+  <script src="js/app.js?v=20260718-8"></script>
+  <script src="js/divination.js?v=20260718-8"></script>
+  <script src="js/oracle.js?v=20260718-8"></script>
+  <script src="js/ai.js?v=20260718-8"></script>
+  <script src="js/ambient.js?v=20260718-8"></script>
 </body>
 </html>

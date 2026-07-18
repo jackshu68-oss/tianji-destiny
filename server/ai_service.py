@@ -60,6 +60,10 @@ def module_for(title):
         return "meihua"
     if "奇门" in title:
         return "qimen"
+    if "塔罗" in title:
+        return "tarot"
+    if "雷诺曼" in title or "吉卜赛" in title:
+        return "lenormand"
     return "bazi"
 
 

@@ -75,13 +75,32 @@ test('奇门浏览器包通过五个节气基准盘', () => {
   }
 });
 
+test('塔罗与雷诺曼使用完整标准牌组并可无重复抽牌', () => {
+  const context = browserContext();
+  vm.runInContext(fs.readFileSync(new URL('../js/oracle.js', import.meta.url), 'utf8'), context);
+  const oracle = context.window.TianjiOracle;
+  assert.equal(oracle.TAROT_DECK.length, 78);
+  assert.equal(new Set(oracle.TAROT_DECK.map(card => card.id)).size, 78);
+  assert.equal(oracle.LENORMAND_DECK.length, 36);
+  assert.equal(new Set(oracle.LENORMAND_DECK.map(card => card.id)).size, 36);
+  const draw = oracle.drawCards(oracle.LENORMAND_DECK, 5, false);
+  assert.equal(draw.length, 5);
+  assert.equal(new Set(draw.map(item => item.card.id)).size, 5);
+  assert.ok(draw.every(item => item.reversed === false));
+});
+
 test('页面包含两种新增排盘和本地脚本', () => {
   const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
   assert.match(html, /id="meihua"/);
   assert.match(html, /id="qimen"/);
+  assert.match(html, /id="tarot"/);
+  assert.match(html, /id="lenormand"/);
+  assert.match(html, /id="music-toggle"/);
   assert.match(html, /js\/meihua\.js/);
   assert.match(html, /js\/vendor\/qimen-core\.min\.js/);
   assert.match(html, /js\/divination\.js/);
+  assert.match(html, /js\/oracle\.js/);
+  assert.match(html, /js\/ambient\.js/);
   assert.match(html, /js\/ai\.js/);
   const aiSource = fs.readFileSync(new URL('../js/ai.js', import.meta.url), 'utf8');
   assert.match(aiSource, /\/api\/ai\/interpret/);

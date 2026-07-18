@@ -24,6 +24,8 @@ class AiServiceTests(unittest.TestCase):
         self.assertEqual(SERVICE.module_for("奇门遁甲 · 全局详解"), "qimen")
         self.assertEqual(SERVICE.module_for("八字合婚 · 详解"), "hehun")
         self.assertEqual(SERVICE.module_for("流年运程 · 详解"), "dayun")
+        self.assertEqual(SERVICE.module_for("塔罗牌 · 完整牌阵详解"), "tarot")
+        self.assertEqual(SERVICE.module_for("雷诺曼 · 完整连线详解"), "lenormand")
 
     def test_fenced_json_response_is_normalized(self):
         result = SERVICE.parse_model_json(
