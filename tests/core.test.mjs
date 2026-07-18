@@ -89,18 +89,55 @@ test('塔罗与雷诺曼使用完整标准牌组并可无重复抽牌', () => {
   assert.ok(draw.every(item => item.reversed === false));
 });
 
-test('页面包含两种新增排盘和本地脚本', () => {
+test('出生资料模块校验日期、城市与夏令时间边界', () => {
+  const context = browserContext();
+  vm.runInContext(fs.readFileSync(new URL('../js/profile.js', import.meta.url), 'utf8'), context);
+  const profile = context.window.TianjiProfile;
+  assert.equal(profile.resolveCity('佛山，中国').timeZone, 'Asia/Shanghai');
+  assert.equal(profile.resolveCity('Toronto').name, '多伦多');
+  assert.equal(profile.validateSolarDate(2024, 2, 29, new Date('2026-01-01')).ok, true);
+  assert.equal(profile.validateSolarDate(2025, 2, 29, new Date('2026-01-01')).ok, false);
+  const toronto = profile.resolveCity('多伦多，加拿大');
+  assert.equal(profile.inspectLocalTime({ y: 2026, m: 3, d: 8, h: 2, mi: 30 }, toronto).valid, false);
+  assert.equal(profile.inspectLocalTime({ y: 2026, m: 11, d: 1, h: 1, mi: 30 }, toronto).ambiguous, true);
+  const corrected = profile.applyTimeCorrection({ y: 2026, m: 7, d: 18, h: 12, mi: 0 }, profile.resolveCity('佛山，中国'), 'solar');
+  assert.ok(corrected.correctionMinutes < 0);
+  assert.match(corrected.note, /真太阳时校正/);
+});
+
+test('未知出生时辰只使用三柱并提供五维每日决策数据', () => {
+  const context = browserContext();
+  context.window.Solar = lunar.Solar;
+  vm.runInContext(fs.readFileSync(new URL('../js/engine.js', import.meta.url), 'utf8'), context);
+  const engine = vm.runInContext('TianjiEngine', context);
+  const chart = engine.buildChart(1990, 1, 1, 12, 0, 'male', { timeUnknown: true });
+  const analysis = engine.analyze(chart);
+  const daily = engine.dailyFortune(chart, lunar.Solar.fromYmd(2026, 7, 18));
+  assert.equal(chart.timeUnknown, true);
+  assert.match(chart.birthStr, /时辰未知/);
+  assert.equal(analysis.pillars.length, 3);
+  assert.equal(analysis.mingGong, '时辰未知');
+  assert.deepEqual(Object.keys(daily.dims).slice(0, 5), ['action', 'communication', 'finance', 'relation', 'state']);
+});
+
+test('页面包含新增排盘、现代摘要、隐私入口和本地脚本', () => {
   const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
   assert.match(html, /id="meihua"/);
   assert.match(html, /id="qimen"/);
   assert.match(html, /id="tarot"/);
   assert.match(html, /id="lenormand"/);
   assert.match(html, /id="music-toggle"/);
+  assert.match(html, /id="core-grid"/);
+  assert.match(html, /data-accuracy="unknown"/);
+  assert.match(html, /id="in-city"/);
+  assert.match(html, /class="professional-details"/);
+  assert.match(html, /privacy\.html/);
   assert.match(html, /js\/meihua\.js/);
   assert.match(html, /js\/vendor\/qimen-core\.min\.js/);
   assert.match(html, /js\/divination\.js/);
   assert.match(html, /js\/oracle\.js/);
   assert.match(html, /js\/ambient\.js/);
+  assert.match(html, /js\/profile\.js/);
   assert.match(html, /js\/ai\.js/);
   const aiSource = fs.readFileSync(new URL('../js/ai.js', import.meta.url), 'utf8');
   assert.match(aiSource, /\/api\/ai\/interpret/);

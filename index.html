@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>道法自然 · 传统术数排盘</title>
-  <meta name="description" content="四柱八字、紫微斗数、梅花易数、奇门遁甲、塔罗牌、雷诺曼卡牌、流年大运、合婚与黄历择吉，本地排盘并提供逐项详解。" />
+  <title>道法自然｜看懂自己，把握时机</title>
+  <meta name="description" content="输入出生资料，快速了解性格底层、事业财运、关系模式与目前人生阶段。结合八字、紫微与流年，以现代方式解读传统智慧。" />
   <!-- 字体使用系统字体栈（见 css/style.css），不依赖外部网络，大陆/离线均可秒开 -->
-  <link rel="stylesheet" href="css/style.css?v=20260718-8" />
+  <link rel="stylesheet" href="css/style.css?v=20260718-9" />
 </head>
 <body>
   <canvas id="stars"></canvas>
@@ -38,16 +38,33 @@
   <header class="hero" id="top">
     <div class="hero-glow"></div>
     <div class="hero-content">
-      <p class="hero-eyebrow">古法今用 · 每日一测</p>
-      <h1 class="hero-title">观天之道<br /><span class="hero-title-sub">知日之宜</span></h1>
+      <p class="hero-eyebrow">道法自然 · 个人洞察工具</p>
+      <h1 class="hero-title">看懂自己<br /><span class="hero-title-sub">把握时机</span></h1>
       <p class="hero-desc">
-        融合八字四柱、紫微斗数、流年大运、塔罗与雷诺曼卡牌，<br class="br-pc" />
-        输入你的生辰，每一天都为你而算。
+        输入出生资料，快速了解你的性格底层、事业财运、关系模式，<br class="br-pc" />
+        以及目前所处的人生阶段。
       </p>
-      <a href="#compute" class="btn-primary">开始排盘 →</a>
-      <div class="hero-scroll">向下滑动</div>
+      <a href="#compute" class="btn-primary">免费生成我的人生图谱</a>
+      <p class="hero-trust">出生资料只保存在你的装置中，不会自动上传</p>
+      <div class="hero-method">结合八字、紫微与流年，以现代方式解读传统智慧</div>
     </div>
   </header>
+
+  <section class="outcome-preview" id="preview">
+    <div class="section-head compact-head">
+      <p class="eyebrow">你将看到</p>
+      <h2>先给答案，再看依据</h2>
+      <p class="sub">30 秒读懂重点，需要时再展开专业命盘。</p>
+    </div>
+    <div class="outcome-grid">
+      <article><span>01</span><h3>核心性格与天赋</h3><p>理解你的底层驱动力、优势与惯常反应。</p></article>
+      <article><span>02</span><h3>事业与财富模式</h3><p>看见适合你的工作节奏、资源使用与风险点。</p></article>
+      <article><span>03</span><h3>感情与人际倾向</h3><p>整理关系需求、沟通方式与容易摩擦的位置。</p></article>
+      <article><span>04</span><h3>当前大运阶段</h3><p>把十年背景转化成当下值得关注的人生主题。</p></article>
+      <article><span>05</span><h3>本年与本月重点</h3><p>以趋势语言提示机会窗口与需要控制的风险。</p></article>
+      <article><span>06</span><h3>今日行动建议</h3><p>只突出最适合、要避免与一项现实提醒。</p></article>
+    </div>
+  </section>
 
   <!-- 已保存存档提示条 -->
   <div class="saved-bar hidden" id="saved-bar">
@@ -64,30 +81,73 @@
     <div class="section-head">
       <p class="eyebrow">第一步</p>
       <h2>输入你的生辰</h2>
-      <p class="sub">阳历（公历）出生的年、月、日、时辰。时辰越准，命盘越准。排盘后信息将保存在本机，每日自动为你呈现运势。</p>
+      <p class="sub">按你知道的程度填写。即使不知道出生时辰，也可以先生成清楚标注范围的简化分析。</p>
     </div>
 
     <div class="form-card">
+      <div class="form-step">
+        <span>1</span>
+        <div><b>选择生日历法</b><small>阳历或农历</small></div>
+      </div>
+      <div class="cal-toggle form-control-row">
+        <span class="cal-label">生日历法</span>
+        <div class="seg">
+          <button type="button" class="seg-btn active" data-cal="solar">阳历</button>
+          <button type="button" class="seg-btn" data-cal="lunar">农历</button>
+        </div>
+        <label class="leap-chk hidden" id="leap-wrap"><input type="checkbox" id="in-leap" /> 闰月</label>
+      </div>
+
+      <div class="form-step">
+        <span>2</span>
+        <div><b>填写出生日期与时间</b><small>系统会即时检查日期及当地夏令时间</small></div>
+      </div>
       <div class="form-grid">
         <div class="field">
-          <label>出生年份</label>
+          <label for="in-year">出生年份</label>
           <input type="number" id="in-year" placeholder="1990" min="1901" max="2099" />
         </div>
         <div class="field">
-          <label>月</label>
+          <label for="in-month">月</label>
           <input type="number" id="in-month" placeholder="6" min="1" max="12" />
         </div>
         <div class="field">
-          <label>日</label>
+          <label for="in-day">日</label>
           <input type="number" id="in-day" placeholder="15" min="1" max="31" />
         </div>
+      </div>
+
+      <div class="field field-wide time-accuracy-field">
+        <label>出生时间准确度</label>
+        <div class="choice-grid" id="time-accuracy" role="group" aria-label="出生时间准确度">
+          <button type="button" class="choice-btn active" data-accuracy="exact"><b>准确</b><span>知道具体时间</span></button>
+          <button type="button" class="choice-btn" data-accuracy="approx"><b>大约</b><span>时间可能有偏差</span></button>
+          <button type="button" class="choice-btn" data-accuracy="unknown"><b>不知道</b><span>生成简化分析</span></button>
+        </div>
+      </div>
+      <div class="form-grid time-grid" id="time-fields">
         <div class="field">
-          <label>时（24小时制）</label>
+          <label for="in-hour">时（24小时制）</label>
           <select id="in-hour"></select>
         </div>
         <div class="field">
-          <label>分</label>
+          <label for="in-minute">分</label>
           <input type="number" id="in-minute" placeholder="0" min="0" max="59" value="0" />
+        </div>
+        <div class="time-status" id="time-status" aria-live="polite">准确时辰可启用紫微斗数与时柱分析。</div>
+      </div>
+      <div class="unknown-time-note hidden" id="unknown-time-form-note">不知道时辰时，只分析年月日、生肖、基础五行与趋势；紫微斗数、时柱及依赖时辰的结论不会启用。</div>
+
+      <div class="form-step">
+        <span>3</span>
+        <div><b>选择出生地与性别</b><small>出生地用于时区、夏令时及可选真太阳时校正</small></div>
+      </div>
+      <div class="form-grid identity-grid">
+        <div class="field field-city">
+          <label for="in-city">出生城市</label>
+          <input type="text" id="in-city" list="city-options" autocomplete="off" placeholder="输入城市，例如：佛山 / Toronto" />
+          <datalist id="city-options"></datalist>
+          <small class="field-meta" id="city-meta">请选择搜索结果中的城市。</small>
         </div>
         <div class="field">
           <label>性别</label>
@@ -97,16 +157,24 @@
           </div>
         </div>
       </div>
-      <button class="btn-primary btn-block" id="btn-compute">生成我的命盘 ✦</button>
-      <p class="form-hint">仅在本地浏览器计算并保存，不上传任何个人信息。</p>
-      <div class="cal-toggle">
-        <span class="cal-label">生日历法</span>
-        <div class="seg">
-          <button type="button" class="seg-btn active" data-cal="solar">阳历</button>
-          <button type="button" class="seg-btn" data-cal="lunar">农历</button>
+
+      <details class="advanced-settings" id="advanced-settings">
+        <summary>高级设置</summary>
+        <div class="advanced-body">
+          <div class="field">
+            <label>出生时间校正</label>
+            <div class="seg correction-seg" role="group" aria-label="出生时间校正">
+              <button type="button" class="time-mode-btn active" data-time-mode="standard">标准时间</button>
+              <button type="button" class="time-mode-btn" data-time-mode="solar">真太阳时</button>
+            </div>
+            <small class="field-meta" id="correction-meta">默认采用出生地当时的民用时间。</small>
+          </div>
         </div>
-        <label class="leap-chk hidden" id="leap-wrap"><input type="checkbox" id="in-leap" /> 闰月</label>
-      </div>
+      </details>
+
+      <div class="form-error hidden" id="form-error" role="alert"></div>
+      <button class="btn-primary btn-block" id="btn-compute">生成我的命盘 ✦</button>
+      <p class="form-hint">资料只在当前浏览器计算并保存在本机。AI 功能只会在你主动点击时发送当前详解文本。</p>
     </div>
   </section>
 
@@ -134,6 +202,17 @@
       </div>
     </div>
 
+    <section class="res-block core-summary" id="res-core">
+      <div class="core-intro">
+        <p class="eyebrow">30 秒看懂</p>
+        <h2>你是谁，你在哪，下一步看什么</h2>
+        <p id="core-scope">先看结论，再按需要展开依据。</p>
+      </div>
+      <div class="core-grid" id="core-grid"></div>
+    </section>
+
+    <div class="unknown-result-note hidden" id="unknown-result-note">本次为未知时辰简化分析：时柱与紫微斗数未参与，依赖具体时辰的结论不会显示。</div>
+
     <!-- 命主概览 -->
     <section class="res-block hero-result" id="res-overview" data-detail="overview">
       <p class="eyebrow" id="res-birth"></p>
@@ -141,6 +220,10 @@
       <p class="daymaster-desc" id="res-daymaster-desc"></p>
       <div class="quick-tags" id="res-quicktags"></div>
     </section>
+
+    <details class="professional-details">
+      <summary><span>展开专业细盘</span><small>四柱、十神、藏干、紫微十二宫与五行依据</small></summary>
+      <div class="professional-body">
 
     <!-- 四柱八字 -->
     <section class="res-block" data-detail="bazi">
@@ -181,6 +264,9 @@
       </div>
     </section>
 
+      </div>
+    </details>
+
     <!-- 今日运势 -->
     <section class="res-block today-block" data-detail="daily">
       <div class="block-head">
@@ -192,26 +278,31 @@
           <button id="day-today" class="btn-mini">今天</button>
         </div>
       </div>
-      <div class="today-hero">
-        <div class="score-ring">
-          <svg viewBox="0 0 120 120">
-            <circle cx="60" cy="60" r="52" class="ring-bg" />
-            <circle cx="60" cy="60" r="52" class="ring-fg" id="score-ring-fg" />
-          </svg>
-          <div class="score-num"><span id="score-value">0</span><em>分</em></div>
+      <div class="today-hero decision-hero">
+        <div class="daily-level">
+          <span>今日节奏</span>
+          <strong id="daily-level">生成命盘后查看</strong>
+          <small id="daily-score-note"></small>
         </div>
         <div class="today-summary">
           <div class="today-gz" id="today-gz"></div>
-          <p class="today-advice" id="today-advice"></p>
+          <div class="daily-focus-grid">
+            <div><span>最适合</span><b id="daily-best"></b></div>
+            <div><span>要避免</span><b id="daily-avoid"></b></div>
+            <div><span>今日提醒</span><b id="daily-reminder"></b></div>
+          </div>
           <div class="lucky-row" id="lucky-row"></div>
         </div>
       </div>
       <div class="dims" id="res-dims"></div>
-      <div class="yiji">
-        <div class="yiji-col yi"><div class="yiji-title"><span>宜</span></div><div class="yiji-tags" id="yi-tags"></div></div>
-        <div class="yiji-col ji"><div class="yiji-title"><span>忌</span></div><div class="yiji-tags" id="ji-tags"></div></div>
-      </div>
-      <div class="huangli-grid" id="huangli-grid"></div>
+      <details class="cultural-details">
+        <summary>查看传统黄历宜忌</summary>
+        <div class="yiji">
+          <div class="yiji-col yi"><div class="yiji-title"><span>宜</span></div><div class="yiji-tags" id="yi-tags"></div></div>
+          <div class="yiji-col ji"><div class="yiji-title"><span>忌</span></div><div class="yiji-tags" id="ji-tags"></div></div>
+        </div>
+        <div class="huangli-grid" id="huangli-grid"></div>
+      </details>
     </section>
 
     <!-- 大运 -->
@@ -449,6 +540,7 @@
         帮你在合适的时机，做合适的事。
       </p>
       <p class="copyright">© 道法自然 DAOFA · 传统文化 · 娱乐参考</p>
+      <div class="footer-links"><a href="privacy.html">隐私政策</a><a href="privacy.html#terms">使用条款</a><a href="privacy.html#updates">更新记录</a></div>
     </div>
   </footer>
 
@@ -468,18 +560,19 @@
     </div>
   </div>
 
-  <script src="js/lunar.js?v=20260718-8"></script>
-  <script src="js/vendor/qimen-core.min.js?v=20260718-8"></script>
-  <script src="js/meihua.js?v=20260718-8"></script>
-  <script src="js/knowledge.js?v=20260718-8"></script>
-  <script src="js/ziwei-gt.global.js?v=20260718-8"></script>
-  <script src="js/engine.js?v=20260718-8"></script>
-  <script src="js/ziwei.js?v=20260718-8"></script>
-  <script src="js/html2canvas.min.js?v=20260718-8"></script>
-  <script src="js/app.js?v=20260718-8"></script>
-  <script src="js/divination.js?v=20260718-8"></script>
-  <script src="js/oracle.js?v=20260718-8"></script>
-  <script src="js/ai.js?v=20260718-8"></script>
-  <script src="js/ambient.js?v=20260718-8"></script>
+  <script src="js/lunar.js?v=20260718-9"></script>
+  <script src="js/vendor/qimen-core.min.js?v=20260718-9"></script>
+  <script src="js/meihua.js?v=20260718-9"></script>
+  <script src="js/knowledge.js?v=20260718-9"></script>
+  <script src="js/profile.js?v=20260718-9"></script>
+  <script src="js/ziwei-gt.global.js?v=20260718-9"></script>
+  <script src="js/engine.js?v=20260718-9"></script>
+  <script src="js/ziwei.js?v=20260718-9"></script>
+  <script src="js/html2canvas.min.js?v=20260718-9"></script>
+  <script src="js/app.js?v=20260718-9"></script>
+  <script src="js/divination.js?v=20260718-9"></script>
+  <script src="js/oracle.js?v=20260718-9"></script>
+  <script src="js/ai.js?v=20260718-9"></script>
+  <script src="js/ambient.js?v=20260718-9"></script>
 </body>
 </html>

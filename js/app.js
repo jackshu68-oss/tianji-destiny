@@ -8,6 +8,8 @@
   let viewDate = new Date();
   let gender = 'male';
   let calMode = 'solar';
+  let timeAccuracy = 'exact';
+  let timeMode = 'standard';
   let lastZiweiCells = null;
 
   /* ---------- 星空背景 ---------- */
@@ -43,10 +45,34 @@
       sel.appendChild(o);
     }
     sel.value = 12;
+    const cityOptions = $('#city-options');
+    if (window.TianjiProfile && cityOptions) {
+      cityOptions.innerHTML = TianjiProfile.CITIES.map(city => `<option value="${city.label}">${(city.aliases || []).join(' / ')}</option>`).join('');
+    }
     $$('.g-btn').forEach(b => b.addEventListener('click', () => {
       $$('.g-btn').forEach(x => x.classList.remove('active')); b.classList.add('active'); gender = b.dataset.g;
     }));
     $('#btn-compute').addEventListener('click', onCompute);
+
+    $$('.choice-btn').forEach(b => b.addEventListener('click', () => {
+      $$('.choice-btn').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      timeAccuracy = b.dataset.accuracy;
+      updateTimeAccuracy();
+      validateFormPreview();
+    }));
+    $$('.time-mode-btn').forEach(b => b.addEventListener('click', () => {
+      $$('.time-mode-btn').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      timeMode = b.dataset.timeMode;
+      updateCityMeta();
+    }));
+    $('#in-city').addEventListener('input', updateCityMeta);
+    $('#in-city').addEventListener('change', updateCityMeta);
+    ['#in-year', '#in-month', '#in-day', '#in-hour', '#in-minute'].forEach(id => {
+      $(id).addEventListener('change', validateFormPreview);
+      $(id).addEventListener('blur', validateFormPreview);
+    });
 
     // 历法切换（阳历 / 农历）
     $$('.seg-btn').forEach(b => b.addEventListener('click', () => {
@@ -55,20 +81,71 @@
       calMode = b.dataset.cal;
       $('#leap-wrap').classList.toggle('hidden', calMode !== 'lunar');
       $('#in-year').placeholder = calMode === 'lunar' ? '农历年(如1990)' : '1990';
+      validateFormPreview();
     }));
+    updateTimeAccuracy();
+    updateCityMeta();
+  }
+
+  function updateTimeAccuracy() {
+    const unknown = timeAccuracy === 'unknown';
+    $('#time-fields').classList.toggle('is-disabled', unknown);
+    $('#unknown-time-form-note').classList.toggle('hidden', !unknown);
+    $('#in-hour').disabled = unknown;
+    $('#in-minute').disabled = unknown;
+    $('#advanced-settings').classList.toggle('is-disabled', unknown);
+    $('#time-status').textContent = unknown ? '时柱与紫微斗数将停用。' : (timeAccuracy === 'approx' ? '结果会标注出生时间为大约值。' : '准确时辰可启用紫微斗数与时柱分析。');
+  }
+
+  function selectedCity() {
+    return window.TianjiProfile ? TianjiProfile.resolveCity($('#in-city').value) : null;
+  }
+
+  function updateCityMeta() {
+    const city = selectedCity();
+    const meta = $('#city-meta');
+    if (!$('#in-city').value.trim()) {
+      meta.textContent = '请选择搜索结果中的城市。';
+      meta.className = 'field-meta';
+      return;
+    }
+    if (!city) {
+      meta.textContent = '暂未识别这个城市，请从建议列表中选择。';
+      meta.className = 'field-meta error';
+      return;
+    }
+    meta.textContent = `${city.timeZone} · 经度 ${Math.abs(city.longitude).toFixed(2)}°${city.longitude >= 0 ? 'E' : 'W'}`;
+    meta.className = 'field-meta valid';
+    $('#correction-meta').textContent = timeMode === 'solar' ? '将按出生日期、当地夏令时、经度与均时差校正。' : '采用出生地当时的民用标准时间。';
+  }
+
+  function showFormError(message) {
+    const box = $('#form-error');
+    if (!message) { box.textContent = ''; box.classList.add('hidden'); return; }
+    box.textContent = message;
+    box.classList.remove('hidden');
+  }
+
+  function validateFormPreview() {
+    const y = parseInt($('#in-year').value, 10), m = parseInt($('#in-month').value, 10), d = parseInt($('#in-day').value, 10);
+    if (!y && !m && !d) { showFormError(''); return; }
+    if (!y || !m || !d) { showFormError('请完整填写出生年月日。'); return; }
+    if (calMode === 'solar' && window.TianjiProfile) {
+      const checked = TianjiProfile.validateSolarDate(y, m, d);
+      showFormError(checked.ok ? '' : checked.message);
+      return;
+    }
+    if (m < 1 || m > 12 || d < 1 || d > 30) showFormError('请检查农历月份与日期。');
+    else showFormError('');
   }
 
   // 农历 → 阳历（含闰月）
   function lunarToSolar(ly, lm, ld, isLeap) {
     const Lunar = window.Lunar;
     if (!isLeap) return Lunar.fromYmd(ly, lm, ld).getSolar();
-    // 闰月在 lunar.js 中以负数月份表示（如闰五月 = -5）
-    try {
-      return Lunar.fromYmd(ly, -lm, ld).getSolar();
-    } catch (e) {
-      // 该年无闰月时回退普通月
-      return Lunar.fromYmd(ly, lm, ld).getSolar();
-    }
+    const leapMonth = window.LunarYear.fromYear(ly).getLeapMonth();
+    if (leapMonth !== lm) throw new Error(`农历 ${ly} 年的闰月不是 ${lm} 月`);
+    return Lunar.fromYmd(ly, -lm, ld).getSolar();
   }
 
   /* ---------- 排盘 ---------- */
@@ -76,9 +153,14 @@
     let y = parseInt($('#in-year').value, 10), m = parseInt($('#in-month').value, 10),
         d = parseInt($('#in-day').value, 10), h = parseInt($('#in-hour').value, 10),
         mi = parseInt($('#in-minute').value, 10) || 0;
-    if (!y || !m || !d || y < 1901 || y > 2099 || m < 1 || m > 12 || d < 1 || d > 31) {
-      alert('请填写正确的出生年月日。'); return;
+    showFormError('');
+    if (!y || !m || !d) { showFormError('请完整填写出生年月日。'); return; }
+    if (timeAccuracy !== 'unknown' && (!Number.isInteger(h) || h < 0 || h > 23 || mi < 0 || mi > 59)) {
+      showFormError('请填写正确的出生时间。'); return;
     }
+    const city = selectedCity();
+    if (!city) { showFormError('请选择搜索结果中的出生城市。'); $('#in-city').focus(); return; }
+    const original = { y, m, d, h: timeAccuracy === 'unknown' ? 12 : h, mi: timeAccuracy === 'unknown' ? 0 : mi };
     let calNote = '';
     if (calMode === 'lunar') {
       try {
@@ -86,12 +168,28 @@
         const solar = lunarToSolar(y, m, d, isLeap);
         calNote = `农历 ${y}年${m}月${d}日${isLeap ? '（闰月）' : ''}（即阳历 ${solar.getYear()}年${solar.getMonth()}月${solar.getDay()}日）`;
         y = solar.getYear(); m = solar.getMonth(); d = solar.getDay();
-      } catch (e) { alert('农历日期转换出错，请检查。'); return; }
+      } catch (e) { showFormError(`农历日期无效：${e.message || '请检查日期与闰月。'}`); return; }
     }
-    try { chart = TianjiEngine.buildChart(y, m, d, h, mi, gender); }
-    catch (e) { alert('计算出错，请检查日期是否有效。'); console.error(e); return; }
+    const checked = TianjiProfile.validateSolarDate(y, m, d);
+    if (!checked.ok) { showFormError(checked.message); return; }
+    const localInput = { y, m, d, h: original.h, mi: original.mi, unknown: timeAccuracy === 'unknown' };
+    const localTime = TianjiProfile.inspectLocalTime(localInput, city);
+    if (!localTime.valid) { showFormError('这个当地时间处于夏令时跳过时段，请调整出生时间或选择“大约”。'); return; }
+    if (localTime.ambiguous && timeAccuracy === 'exact') { showFormError('这个当地时间在夏令时结束时重复出现，请选择“大约”并在结果中保留此限制。'); return; }
+    const corrected = TianjiProfile.applyTimeCorrection(localInput, city, timeAccuracy === 'unknown' ? 'standard' : timeMode);
+    try { chart = TianjiEngine.buildChart(corrected.y, corrected.m, corrected.d, corrected.h, corrected.mi, gender, { timeUnknown: timeAccuracy === 'unknown' }); }
+    catch (e) { showFormError('计算出错，请检查日期是否有效。'); console.error(e); return; }
     chart.calendarNote = calNote;
-    saveProfile({ y, m, d, h, mi, gender, calMode, isLeap: $('#in-leap').checked });
+    chart.city = city;
+    chart.timeAccuracy = timeAccuracy;
+    chart.timeMode = timeMode;
+    chart.timeCorrectionNote = corrected.note;
+    saveProfile({
+      y: corrected.y, m: corrected.m, d: corrected.d, h: corrected.h, mi: corrected.mi,
+      inputY: original.y, inputM: original.m, inputD: original.d, inputH: original.h, inputMi: original.mi,
+      gender, calMode, isLeap: $('#in-leap').checked, city: city.name, cityLabel: city.label,
+      timeZone: city.timeZone, timeAccuracy, timeMode, timeUnknown: timeAccuracy === 'unknown', correctionNote: corrected.note
+    });
     viewDate = new Date();
     renderAll();
     $('#result').classList.remove('hidden');
@@ -118,7 +216,9 @@
     const bar = $('#saved-bar');
     if (!p) { bar.classList.add('hidden'); return; }
     bar.classList.remove('hidden');
-    $('#saved-text').textContent = `已保存命盘：生于 ${p.y}年${p.m}月${p.d}日 ${String(p.h).padStart(2,'0')}:${String(p.mi||0).padStart(2,'0')}（${p.gender === 'female' ? '坤造·女' : '乾造·男'}）`;
+    const displayY = p.inputY || p.y, displayM = p.inputM || p.m, displayD = p.inputD || p.d;
+    const timeText = p.timeUnknown ? '时辰未知' : `${String(p.inputH != null ? p.inputH : p.h).padStart(2,'0')}:${String(p.inputMi != null ? p.inputMi : (p.mi || 0)).padStart(2,'0')}`;
+    $('#saved-text').textContent = `已保存：${displayY}年${displayM}月${displayD}日 ${timeText}${p.cityLabel ? ` · ${p.cityLabel}` : ''}（${p.gender === 'female' ? '坤造·女' : '乾造·男'}）`;
   }
 
   /* ---------- 自动加载（每日打开） ---------- */
@@ -126,8 +226,12 @@
     const p = loadProfile();
     if (!p) return false;
     try {
-      chart = TianjiEngine.buildChart(p.y, p.m, p.d, p.h, p.mi, p.gender);
+      chart = TianjiEngine.buildChart(p.y, p.m, p.d, p.h == null ? 12 : p.h, p.mi || 0, p.gender, { timeUnknown: Boolean(p.timeUnknown) });
       chart.calendarNote = p.calMode === 'lunar' ? '（农历输入）' : '';
+      chart.city = p.city ? TianjiProfile.resolveCity(p.city) : null;
+      chart.timeAccuracy = p.timeAccuracy || 'exact';
+      chart.timeMode = p.timeMode || 'standard';
+      chart.timeCorrectionNote = p.correctionNote || '采用出生地民用标准时间。';
       viewDate = new Date();
       renderAll();
       $('#result').classList.remove('hidden');
@@ -139,9 +243,26 @@
   /* ---------- 渲染全部 ---------- */
   function renderAll() {
     renderChart();
+    renderCore();
     renderProfound();
     renderZiwei();
     renderDaily();
+  }
+
+  function renderCore() {
+    const analysis = TianjiEngine.analyze(chart);
+    const cards = TianjiProfile.buildCoreSummary(chart, analysis, new Date().getFullYear());
+    $('#core-grid').innerHTML = cards.map(card => `
+      <article class="core-card core-${card.key}">
+        <span>${card.label}</span>
+        <h3>${card.title}</h3>
+        <p>${card.detail}</p>
+      </article>`).join('');
+    const scope = chart.timeUnknown
+      ? '本次使用年月日生成基础图谱；时柱、紫微与依赖具体时辰的判断未参与。'
+      : `本次已采用${chart.city ? chart.city.label : '出生地'}的${chart.timeMode === 'solar' ? '真太阳时校正' : '民用标准时间'}。`;
+    $('#core-scope').textContent = scope;
+    $('#unknown-result-note').classList.toggle('hidden', !chart.timeUnknown);
   }
 
   /* ---------- 命盘 ---------- */
@@ -152,6 +273,12 @@
       el.style.cssText = 'font-size:13px;color:var(--ink-mute);margin-top:8px;letter-spacing:.5px;';
       el.textContent = chart.calendarNote;
       $('#res-birth').appendChild(el);
+    }
+    if (chart.city || chart.timeCorrectionNote) {
+      const meta = document.createElement('div');
+      meta.className = 'birth-meta';
+      meta.textContent = `${chart.city ? chart.city.label : '未设置出生城市'} · ${chart.timeCorrectionNote || '采用民用标准时间'}`;
+      $('#res-birth').appendChild(meta);
     }
     $('#res-daymaster').textContent = `${chart.dayGan}${chart.dayWx}命`;
     const wxDesc = {
@@ -168,14 +295,15 @@
       chart.lacking.length ? `五行缺 <b>${chart.lacking.join('、')}</b>` : `五行 <b>俱全</b>`
     ].map(t => `<span>${t}</span>`).join('');
 
-    $('#res-pillars').innerHTML = chart.pillars.map(p => `
+    const visiblePillars = chart.timeUnknown ? chart.pillars.slice(0, 3) : chart.pillars;
+    $('#res-pillars').innerHTML = visiblePillars.map(p => `
       <div class="pillar">
         <div class="p-label">${p.label}</div>
         <div class="p-gz" style="color:${p.color}">${p.gan}${p.zhi}</div>
         <div class="p-god">${p.god}</div>
         <div class="p-nayin">${p.naYin}</div>
         <div class="p-tag">${p.tag}</div>
-      </div>`).join('');
+      </div>`).join('') + (chart.timeUnknown ? '<div class="pillar pillar-unavailable"><div class="p-label">时柱</div><div class="p-gz">未启用</div><div class="p-tag">需要准确出生时辰</div></div>' : '');
 
     const maxWx = Math.max(...Object.values(chart.wx), 1);
     $('#res-wuxing').innerHTML = ['木','火','土','金','水'].map(w => `
@@ -189,7 +317,7 @@
     const lackTxt = chart.lacking.length ? `你的八字中<b>缺${chart.lacking.join('、')}</b>，日常可多亲近对应元素以求平衡。` : `你的八字五行<b>俱全</b>，格局较为均衡。`;
     $('#res-wuxing-note').innerHTML = `八字五行以<b>${chart.strongest}</b>最旺。${lackTxt}五行讲究中和为贵，过旺宜泄、不足宜补，日常起居、色彩、方位皆可作调和。`;
 
-    $('#res-qiyun').textContent = `${chart.startInfo.year}岁${chart.startInfo.month}个月起运`;
+    $('#res-qiyun').textContent = `${chart.timeUnknown ? '约 ' : ''}${chart.startInfo.year}岁${chart.startInfo.month}个月起运`;
     const nowY = new Date().getFullYear();
     $('#res-dayun').innerHTML = chart.daYun.map(d => {
       const active = nowY >= d.startYear && nowY <= d.endYear ? 'active' : '';
@@ -234,7 +362,7 @@
 
     $('#pf-grid').innerHTML = `
       <div class="pf-card">
-        <div class="pf-card-h">胎元 · 命宫 · 身宫 · 空亡</div>
+        <div class="pf-card-h">胎元 · 命宫 · 身宫 · 空亡${chart.timeUnknown ? '（简化）' : ''}</div>
         <div class="pf-mini"><span>胎元</span><b>${d.taiYuan}</b></div>
         <div class="pf-mini"><span>命宫</span><b>${d.mingGong}</b></div>
         <div class="pf-mini"><span>身宫</span><b>${d.shenGong}</b></div>
@@ -270,6 +398,13 @@
   /* ---------- 紫微斗数 ---------- */
   function renderZiwei() {
     const note = $('#zw-note');
+    if (chart.timeUnknown) {
+      lastZiweiCells = null;
+      note.textContent = '时辰未知，未启用';
+      $('#zw-board').innerHTML = '<div class="module-unavailable"><b>紫微斗数需要出生时辰</b><p>本次不会使用中午或其他默认时间代替，以免产生看似精确但不可验证的结果。</p></div>';
+      $('#zw-detail').innerHTML = '';
+      return;
+    }
     if (!ZiweiBoard.available) { note.textContent = '（紫微引擎未加载）'; return; }
     note.textContent = `${chart.gender === 'female' ? '坤造' : '乾造'} ${chart.birthStr}`;
     const cells = ZiweiBoard.getBoard(chart.y, chart.m, chart.d, chart.h, chart.mi || 0, chart.gender, chart.pillars[0].gan);
@@ -327,14 +462,12 @@
 
     $('#day-label').textContent = `${f.dateStr.slice(5)} ${f.week}`;
     $('#today-gz').innerHTML = `<b>${f.dayGanZhi}</b>日　农历${f.lunarStr}　纳音「${f.naYin}」　值神${f.god}`;
-    $('#today-advice').textContent = f.advice;
-
-    $('#score-value').textContent = f.score;
-    const circ = 2 * Math.PI * 52;
-    const ring = $('#score-ring-fg');
-    ring.style.strokeDashoffset = circ * (1 - f.score / 100);
-    const ringColor = f.score >= 75 ? '#6bc0a0' : f.score >= 55 ? '#d9b978' : '#e0655c';
-    ring.style.stroke = ringColor; $('.score-num span').style.color = ringColor;
+    const decision = TianjiProfile.dailyDecision(f);
+    $('#daily-level').textContent = decision.level;
+    $('#daily-score-note').textContent = '由五个生活维度综合，不代表确定吉凶';
+    $('#daily-best').textContent = decision.best;
+    $('#daily-avoid').textContent = decision.avoid;
+    $('#daily-reminder').textContent = decision.reminder;
 
     const colorDots = f.luckyColor.map(c => `<span class="lucky-dot" style="background:${c}"></span>`).join('');
     $('#lucky-row').innerHTML = `
@@ -343,7 +476,7 @@
       <div class="lucky-item">幸运色<span class="lucky-dots">${colorDots}</span></div>
       <div class="lucky-item">今日冲煞<b>${f.chong} 煞${f.sha}</b></div>`;
 
-    const dimNames = { career: '事业', wealth: '财运', love: '感情', health: '健康' };
+    const dimNames = { action: '行动', communication: '沟通', finance: '财务', relation: '关系', state: '状态' };
     $('#res-dims').innerHTML = Object.keys(dimNames).map(k => `
       <div class="dim"><div class="d-name">${dimNames[k]}</div>
         <div class="d-bar"><div class="d-fill" data-v="${f.dims[k]}"></div></div>
@@ -388,7 +521,7 @@
   function copyLink() {
     const url = location.href;
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(url).then(() => toast('链接已复制，可粘贴到微信')).catch(() => toast('复制失败，请手动复制网址'));
+      navigator.clipboard.writeText(url).then(() => toast('链接已复制，不含出生资料')).catch(() => toast('复制失败，请手动复制网址'));
     } else { toast('当前环境不支持自动复制，请手动复制网址'); }
   }
   function shareWechat() {
@@ -426,32 +559,26 @@
       .catch(e => { console.error(e); stage.classList.remove('active'); alert('生成图片失败，请重试。'); });
   }
   function buildShareCard(chart, f, p) {
-    const zwCells = ZiweiBoard.available ? ZiweiBoard.getBoard(p.y, p.m, p.d, p.h, p.mi, chart.gender, chart.pillars[0].gan) : null;
-    const zwHtml = zwCells ? ZiweiBoard.renderBoard(zwCells) : '';
-    const yi = (f.yi.length ? f.yi.slice(0, 6) : ['—']).join(' · ');
-    const ji = (f.ji.length ? f.ji.slice(0, 6) : ['—']).join(' · ');
+    const analysis = TianjiEngine.analyze(chart);
+    const core = TianjiProfile.buildCoreSummary(chart, analysis, new Date().getFullYear());
+    const decision = TianjiProfile.dailyDecision(f);
+    const shareCode = (window.crypto && crypto.getRandomValues) ? Array.from(crypto.getRandomValues(new Uint8Array(4))).map(n => n.toString(16).padStart(2, '0')).join('').toUpperCase() : Date.now().toString(36).slice(-8).toUpperCase();
     return `<div class="sc-card">
       <div class="sc-head">
         <div class="sc-brand">道法自然 · DAOFA</div>
         <div class="sc-date">${f.dateStr} ${f.week} · 农历${f.lunarStr}</div>
       </div>
-      <div class="sc-ming">${chart.dayGan}${chart.dayWx}命　生肖${chart.shengXiao}　本命${chart.yearGanZhi}</div>
-      <div class="sc-sizhu">
-        ${chart.pillars.map(pl => `<div class="sc-pz"><span>${pl.label}</span><b style="color:${pl.color}">${pl.gan}${pl.zhi}</b><i>${pl.god}</i></div>`).join('')}
+      <div class="sc-ming">我的人生图谱 · ${chart.dayGan}${chart.dayWx}日主</div>
+      <div class="sc-core">
+        ${core.slice(0, 3).map(item => `<div><span>${item.label}</span><b>${item.title}</b><p>${item.detail}</p></div>`).join('')}
       </div>
-      <div class="sc-score">
-        <div class="sc-ring" style="--c:${f.score>=75?'#6bc0a0':f.score>=55?'#d9b978':'#e0655c'}">
-          <span>${f.score}</span><em>今日运势</em>
-        </div>
-        <div class="sc-yiji">
-          <div class="sc-yi"><b>宜</b>${yi}</div>
-          <div class="sc-ji"><b>忌</b>${ji}</div>
-          <div class="sc-lucky">幸运方位 ${f.luckyDir}　喜用 ${f.luckyWx.join('、')}　冲煞 ${f.chong}煞${f.sha}</div>
-        </div>
+      <div class="sc-decision">
+        <span>今日节奏 · ${decision.level}</span>
+        <p><b>最适合</b>${decision.best}</p>
+        <p><b>要避免</b>${decision.avoid}</p>
+        <p><b>提醒</b>${decision.reminder}</p>
       </div>
-      <div class="sc-zwtitle">紫微斗数命盘</div>
-      <div class="sc-zw">${zwHtml}</div>
-      <div class="sc-foot">观天之道 · 知日之宜　｜　传统文化娱乐参考</div>
+      <div class="sc-foot">分享码 ${shareCode} · 已隐藏出生日期与完整命盘 · 传统文化娱乐参考</div>
     </div>`;
   }
 
@@ -473,8 +600,7 @@
     // 限制 90 天
     const days = Math.round((new Date(e) - new Date(s)) / 86400000) + 1;
     if (days > 90) { alert('为保证体验，择吉范围请控制在 90 天内。'); return; }
-    const p = loadProfile();
-    const avoidBranch = p ? chart.pillars[2].zhi : null; // 个人日支
+    const avoidBranch = chart ? chart.pillars[2].zhi : null; // 个人日支
     const results = TianjiEngine.zeji(event, start, end, avoidBranch);
     const best = results.filter(r => r.suitable);
     let html = `<div class="zj-summary">在 ${days} 天中，共找到 <b>${best.length}</b> 个「宜${event}」的吉日${avoidBranch ? '（已为你避开冲本命日支）' : ''}：</div>`;
@@ -639,7 +765,7 @@
         ['月柱', c.pillars[1], '父母 · 兄弟 · 事业（月令为提纲）'],
         ['日柱', c.pillars[2], '自身 · 配偶 · 中年'],
         ['时柱', c.pillars[3], '子女 · 晚年 · 事业结果']
-      ];
+      ].slice(0, c.timeUnknown ? 3 : 4);
       const cards = roles.map(([label, p, tag]) => `
         <div class="dm-pillar">
           <div class="dm-p-label">${label}</div>
@@ -649,7 +775,7 @@
           <div class="dm-p-nayin">纳音：${p.naYin}</div>
         </div>`).join('');
       const godList = Object.keys(TEN_GOD_DESC).map(g => `<li><b>${g}</b>：${TEN_GOD_DESC[g]}</li>`).join('');
-      return sec('四柱是什么', `<p>「四柱」即年、月、日、时四组干支，每组一「天干」一「地支」，共八个字，故称八字。天干为显、地支为藏，干支组合构成推演的基础。</p>`)
+      return sec('四柱是什么', `<p>「四柱」即年、月、日、时四组干支，每组一「天干」一「地支」，共八个字，故称八字。天干为显、地支为藏，干支组合构成推演的基础。${c.timeUnknown ? '本次没有准确出生时辰，因此只展示年月日三柱，不以默认时辰补齐。' : ''}</p>`)
         + sec('你的四柱', `<div class="dm-pillars">${cards}</div>`)
         + sec('天干十神（以你日主为「我」）', `<p>十神是日主与其他天干的生克关系，揭示人事角色。${a.pillars.map(p => `<b style="color:${p.color}">${p.gan}${p.zhi}</b> 之天干为「${p.god}」`).join('；')}。</p><ul class="dm-ul">${godList}</ul>`)
         + sec('纳音', `<p>纳音是干支的五行化气（如「海中金」「炉中火」），常用作年命配对与性情补充参考，上方每柱已标注其纳音。</p>`);
@@ -670,6 +796,7 @@
         + sec('地支藏干与十神', `<p>每个地支内藏一至三天干（本气·中气·余气），它们与日主同样构成十神关系，是判断格局深浅的关键。本气以粗体标示于上方细盘表格。</p>`);
     },
     ziwei(c) {
+      if (c.timeUnknown) return sec('本次未启用紫微斗数', '<p>紫微十二宫依赖出生时辰。本次时辰未知，为避免制造虚假精确度，系统不会用中午或随机时辰代排。</p>');
       const cells = lastZiweiCells;
       if (!cells || !cells.length) return '<p class="dm-empty">紫微命盘尚未加载，请先生成命盘。</p>';
       const order = ['命宫', '夫妻', '财帛', '官禄', '福德', '迁移'];
@@ -709,7 +836,7 @@
         const support = (analysis.yong || []).includes(d.wx) ? '此运天干五行属于喜用，整体更易借力。' : (analysis.ji || []).includes(d.wx) ? '此运天干五行属于忌神，宜控制风险和节奏。' : '此运需结合地支与流年共同判断。';
         return `<li><b style="color:${d.color}">${d.ganZhi}</b>　${d.startAge}–${d.endAge}岁（${d.startYear}–${d.endYear}）· 十神「${d.god}」${active}<br><span>${detail} ${support}</span></li>`;
       }).join('');
-      return sec('什么是大运', `<p>大运是十年一变的运势阶段，由出生月柱顺逆排布。你约 <b>${c.startInfo.year}岁${c.startInfo.month}个月</b> 起运，之后每十年换一柱大运。</p>`)
+      return sec('什么是大运', `<p>大运是十年一变的运势阶段，由出生月柱顺逆排布。你${c.timeUnknown ? '在时辰未知的简化条件下，约' : '约'} <b>${c.startInfo.year}岁${c.startInfo.month}个月</b> 起运，之后每十年换一柱大运。${c.timeUnknown ? '起运月份可能因真实时辰而调整。' : ''}</p>`)
         + sec('你的大运轨迹', `<ul class="dm-ul">${cells}</ul>`)
         + sec('怎么看', `<p>大运干支与日主生克，决定这十年的整体气场；天干常作为显性主题，地支还要结合藏干、刑冲合害和每年流年。上面的解释是阶段提示，不代表十年内每件事都会相同。</p>`);
     },

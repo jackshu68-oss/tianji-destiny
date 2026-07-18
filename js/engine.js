@@ -62,8 +62,12 @@ const TianjiEngine = (function () {
   }
 
   /* ---------- 主计算：根据出生信息生成命盘 ---------- */
-  function buildChart(year, month, day, hour, minute, gender) {
-    const solar = Solar.fromYmdHms(year, month, day, hour, minute || 0, 0);
+  function buildChart(year, month, day, hour, minute, gender, options) {
+    const opts = options || {};
+    const timeUnknown = Boolean(opts.timeUnknown);
+    const effectiveHour = timeUnknown ? 12 : hour;
+    const effectiveMinute = timeUnknown ? 0 : (minute || 0);
+    const solar = Solar.fromYmdHms(year, month, day, effectiveHour, effectiveMinute, 0);
     const lunar = solar.getLunar();
     const ec = lunar.getEightChar();
 
@@ -81,7 +85,7 @@ const TianjiEngine = (function () {
     // 各柱天干十神
     pillars.forEach(p => { p.god = (p.gan === dayGan) ? '日主' : tenGod(dayGan, p.gan); p.color = WUXING_COLOR[GAN_WUXING[p.gan]]; });
 
-    const wx = countWuXing(gans, zhis);
+    const wx = countWuXing(timeUnknown ? gans.slice(0, 3) : gans, timeUnknown ? zhis.slice(0, 3) : zhis);
     // 缺失/最弱五行
     const wxEntries = Object.entries(wx).sort((a, b) => a[1] - b[1]);
     const lacking = wxEntries.filter(e => e[1] === 0).map(e => e[0]);
@@ -111,10 +115,10 @@ const TianjiEngine = (function () {
 
     return {
       solar, lunar, ec,
-      y: year, m: month, d: day, h: hour, mi: minute,
-      birthStr: `${year}年${month}月${day}日 ${String(hour).padStart(2, '0')}:${String(minute || 0).padStart(2, '0')}`,
+      y: year, m: month, d: day, h: timeUnknown ? null : hour, mi: timeUnknown ? null : minute,
+      birthStr: timeUnknown ? `${year}年${month}月${day}日（时辰未知）` : `${year}年${month}月${day}日 ${String(hour).padStart(2, '0')}:${String(minute || 0).padStart(2, '0')}`,
       lunarStr: lunar.getYearInChinese() + '年' + lunar.getMonthInChinese() + '月' + lunar.getDayInChinese(),
-      gender,
+      gender, timeUnknown,
       dayGan, dayWx,
       dayGanYinYang: GAN_YINYANG[dayGan],
       shengXiao: lunar.getYearShengXiao(),
@@ -152,14 +156,19 @@ const TianjiEngine = (function () {
     if (LIUHE[dayZhi] === dZhi) { score += 8; heSelf = true; }
     score = Math.max(30, Math.min(98, Math.round(score)));
 
-    // 分维度（事业/财运/感情/健康）—— 基于十神略作偏移
+    // 五维每日决策卡：行动、沟通、财务、关系、状态
     const base = score;
     const dims = {
-      career: clamp(base + offsetFor(god, 'career')),
-      wealth: clamp(base + offsetFor(god, 'wealth')),
-      love: clamp(base + offsetFor(god, 'love')),
-      health: clamp(base + offsetFor(god, 'health'))
+      action: clamp(base + offsetFor(god, 'career')),
+      communication: clamp(base + offsetFor(god, 'communication')),
+      finance: clamp(base + offsetFor(god, 'wealth')),
+      relation: clamp(base + offsetFor(god, 'love')),
+      state: clamp(base + offsetFor(god, 'health'))
     };
+    dims.career = dims.action;
+    dims.wealth = dims.finance;
+    dims.love = dims.relation;
+    dims.health = dims.state;
 
     // 幸运五行/方位/颜色：取能生扶日主者（印+比劫）
     const luckyWx = [chart.dayWx, invSheng(chart.dayWx)]; // 同类 + 生我
@@ -202,6 +211,7 @@ const TianjiEngine = (function () {
   function offsetFor(god, dim) {
     const t = {
       career: { 正官: 10, 七杀: 8, 正印: 6, 偏印: 4, 比肩: 3, 劫财: -2, 伤官: -4, 食神: 2, 正财: 4, 偏财: 5 },
+      communication: { 正官: 2, 七杀: -3, 正印: 4, 偏印: 1, 比肩: 3, 劫财: -4, 伤官: 10, 食神: 9, 正财: 2, 偏财: 5 },
       wealth: { 正财: 12, 偏财: 14, 食神: 6, 伤官: 5, 比肩: -3, 劫财: -6, 正官: 3, 七杀: 1, 正印: 2, 偏印: 0 },
       love: { 正财: 8, 正官: 6, 偏财: 4, 食神: 5, 伤官: -3, 七杀: -2, 比肩: 0, 劫财: -4, 正印: 3, 偏印: -1 },
       health: { 正印: 10, 偏印: 6, 比肩: 5, 食神: 4, 劫财: -2, 七杀: -8, 正官: -3, 伤官: -4, 正财: 1, 偏财: 0 }
@@ -334,10 +344,11 @@ const TianjiEngine = (function () {
 
   function analyze(chart) {
     const dayGan = chart.dayGan, dayWx = chart.dayWx, lunar = chart.lunar;
-    const chen = hourToChen(chart.h);
+    const sourcePillars = chart.timeUnknown ? chart.pillars.slice(0, 3) : chart.pillars;
+    const chen = chart.timeUnknown ? null : hourToChen(chart.h);
 
     // 四柱藏干 + 十神 + 十二长生(星运) + 自坐 + 空亡
-    const pillars = chart.pillars.map(p => {
+    const pillars = sourcePillars.map(p => {
       const zhi = p.zhi;
       const cang = (CANG[zhi] || []).map(([stem, role]) => ({
         stem, role, tenGod: tenGod(dayGan, stem), wx: GAN_WUXING[stem]
@@ -352,7 +363,7 @@ const TianjiEngine = (function () {
 
     // 五行能量（加权：天干1，本气0.5，中气0.3，余气0.2）
     const energy = { 木: 0, 火: 0, 土: 0, 金: 0, 水: 0 };
-    chart.pillars.forEach(p => {
+    sourcePillars.forEach(p => {
       energy[GAN_WUXING[p.gan]] += 1;
       (CANG[p.zhi] || []).forEach(([stem, role]) => {
         energy[GAN_WUXING[stem]] += role === 1 ? 0.5 : role === 2 ? 0.3 : 0.2;
@@ -361,7 +372,7 @@ const TianjiEngine = (function () {
 
     // 日主旺衰
     let sup = 0, tot = 0;
-    chart.pillars.forEach(p => {
+    sourcePillars.forEach(p => {
       tot += 1; if (isSupport(dayWx, GAN_WUXING[p.gan])) sup += 1;
       (CANG[p.zhi] || []).forEach(([stem, role]) => {
         const w = role === 1 ? 0.5 : role === 2 ? 0.3 : 0.2;
@@ -386,10 +397,10 @@ const TianjiEngine = (function () {
     // 胎元 / 命宫 / 身宫
     const monthGan = chart.pillars[1].gan, monthZhi = chart.pillars[1].zhi, yearGan = chart.pillars[0].gan;
     const taiYuan = GAN_ARR[(GAN_ARR.indexOf(monthGan) + 1) % 10] + ZHI_ARR[(ZHI_ARR.indexOf(monthZhi) + 3) % 12];
-    const mgZhi = mingGongZhi(chart.m, chen);
-    const mingGong = zhiGan(yearGan, mgZhi) + mgZhi;
-    const sgZhi = ZHI_ARR[(zIdx(mgZhi) + (SHEN_OFFSET[chen] || 0)) % 12];
-    const shenGong = zhiGan(yearGan, sgZhi) + sgZhi;
+    const mgZhi = chart.timeUnknown ? null : mingGongZhi(chart.m, chen);
+    const mingGong = chart.timeUnknown ? '时辰未知' : zhiGan(yearGan, mgZhi) + mgZhi;
+    const sgZhi = chart.timeUnknown ? null : ZHI_ARR[(zIdx(mgZhi) + (SHEN_OFFSET[chen] || 0)) % 12];
+    const shenGong = chart.timeUnknown ? '时辰未知' : zhiGan(yearGan, sgZhi) + sgZhi;
 
     return {
       pillars, energy,
