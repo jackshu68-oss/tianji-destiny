@@ -116,6 +116,24 @@ test('出生资料模块校验日期、城市与夏令时间边界', () => {
   assert.match(corrected.note, /真太阳时校正/);
 });
 
+test('中英文偏好会重绘每日建议并保留传统术语原文', () => {
+  const context = browserContext();
+  context.window.Solar = lunar.Solar;
+  for (const file of ['ui.js', 'profile.js', 'engine.js']) {
+    vm.runInContext(fs.readFileSync(new URL(`../js/${file}`, import.meta.url), 'utf8'), context);
+  }
+  context.window.TianjiUI.setLanguage('en', false);
+  const chart = context.window.TianjiEngine.buildChart(1990, 6, 15, 10, 30, 'male');
+  const fortune = context.window.TianjiEngine.dailyFortune(chart, lunar.Solar.fromYmd(2026, 7, 18));
+  const decision = context.window.TianjiProfile.dailyDecision(fortune);
+  assert.equal(context.window.TianjiUI.getLanguage(), 'en');
+  assert.equal(context.window.TianjiUI.translateTerm('木'), 'Wood');
+  assert.equal(context.window.TianjiUI.translateTerm('开市'), 'Open business');
+  assert.match(decision.best, /Organise|Handle|Learn|Focus|Move|Expand|Create|Propose|Advance|Reconfirm|Complete/);
+  assert.match(context.window.TianjiUI.t('daily.title', { name: 'Alex' }), /Alex/);
+  assert.match(context.window.TianjiProfile.buildCoreSummary(chart, context.window.TianjiEngine.analyze(chart), 2026)[0].label, /Underlying traits/);
+});
+
 test('未知出生时辰只使用三柱并提供五维每日决策数据', () => {
   const context = browserContext();
   context.window.Solar = lunar.Solar;
@@ -189,6 +207,10 @@ test('页面包含新增排盘、现代摘要、隐私入口和本地脚本', ()
   assert.match(html, /data-accuracy="unknown"/);
   assert.match(html, /id="in-city"/);
   assert.match(html, /id="insight-workspace"/);
+  assert.match(html, /id="daily-home"/);
+  assert.match(html, /id="daily-home-yi"/);
+  assert.match(html, /id="language-toggle"/);
+  assert.match(html, /id="theme-toggle"/);
   assert.match(html, /id="life-timeline-list"/);
   assert.match(html, /id="rhythm-calendar-grid"/);
   assert.match(html, /id="ai-question-panel"/);
@@ -203,6 +225,7 @@ test('页面包含新增排盘、现代摘要、隐私入口和本地脚本', ()
   assert.match(html, /js\/oracle\.js/);
   assert.match(html, /js\/ambient\.js/);
   assert.match(html, /js\/profile\.js/);
+  assert.match(html, /js\/ui\.js/);
   assert.match(html, /js\/ai\.js/);
   assert.match(html, /js\/planner\.js/);
   assert.match(html, /js\/workspace\.js/);
@@ -213,6 +236,12 @@ test('页面包含新增排盘、现代摘要、隐私入口和本地脚本', ()
   assert.match(aiSource, /\/api\/ai\/result\//);
   assert.match(aiSource, /payload\.pending/);
   assert.doesNotMatch(aiSource, /Bearer\s|DEEPSEEK_API_KEY|api\.deepseek\.com/);
+  const workspaceSource = fs.readFileSync(new URL('../js/workspace.js', import.meta.url), 'utf8');
+  assert.match(workspaceSource, /has-active-profile/);
+  assert.match(workspaceSource, /setActiveProfileId/);
+  const css = fs.readFileSync(new URL('../css/style.css', import.meta.url), 'utf8');
+  assert.match(css, /html\[data-theme="classic"\]/);
+  assert.match(css, /\.daily-home-overview/);
 });
 
 test('紫微十二宫支持键盘与点击打开宫位详情', () => {

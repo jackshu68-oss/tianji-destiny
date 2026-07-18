@@ -161,14 +161,43 @@
     正官: ['结构进阶', '规则、责任与职业位置成为阶段重点。'], 七杀: ['压力转化', '挑战感上升，清晰优先级比盲目加速更重要。'],
     正印: ['学习沉淀', '适合补足知识、建立方法及接受可靠支持。'], 偏印: ['专精探索', '适合深入冷门或专业问题，也要避免封闭思考。']
   };
+  const TRAITS_EN = {
+    木: ['Growth and connection', 'You tend to value growth, relationships and long-term development, looking first for paths that can remain sustainable.'],
+    火: ['Expression and momentum', 'You often move ideas forward through visible action and enthusiasm, and benefit from turning inspiration into concrete outcomes.'],
+    土: ['Stability and support', 'You are inclined to create order, carry responsibility and turn scattered resources into a dependable foundation.'],
+    金: ['Judgement and execution', 'You value standards, efficiency and clear boundaries, and tend to define the rules before acting on a complex problem.'],
+    水: ['Observation and adaptation', 'You readily gather information, notice change and adjust your method to different situations.']
+  };
+  const STAGE_WORDS_EN = {
+    比肩: ['Build independently', 'Build your own rhythm while keeping collaboration boundaries clear.'], 劫财: ['Reorganise resources', 'Cooperation and competition may both increase, so clarify roles and costs first.'],
+    食神: ['Create steadily', 'Consistent output, communication and quality of life are worth sustained attention.'], 伤官: ['Improve and express', 'The drive to change methods is stronger; leave room in important conversations.'],
+    正财: ['Accumulate practically', 'Steady action and measurable outcomes are more useful than quick wins.'], 偏财: ['Connect with opportunity', 'External opportunities can increase, but conditions and downside still need verification.'],
+    正官: ['Advance through structure', 'Rules, responsibility and professional positioning become central themes.'], 七杀: ['Convert pressure', 'When challenge rises, clear priorities matter more than constant acceleration.'],
+    正印: ['Learn and consolidate', 'Strengthen knowledge, build a method and accept reliable support.'], 偏印: ['Explore deeply', 'Specialist or unconventional questions reward depth, provided your thinking stays open.']
+  };
 
   function buildCoreSummary(chart, analysis, currentYear) {
-    const trait = TRAITS[chart.dayWx] || TRAITS.土;
+    const english = root.TianjiUI && root.TianjiUI.getLanguage() === 'en';
+    const traitTable = english ? TRAITS_EN : TRAITS;
+    const stageTable = english ? STAGE_WORDS_EN : STAGE_WORDS;
+    const trait = traitTable[chart.dayWx] || traitTable.土;
     const active = (chart.daYun || []).find(item => currentYear >= item.startYear && currentYear <= item.endYear) || (chart.daYun || [])[0];
-    const stage = active && STAGE_WORDS[active.god] ? STAGE_WORDS[active.god] : ['稳步整理', '先确认现实条件，再逐步推进重要事项。'];
-    const yong = analysis && analysis.yong ? analysis.yong.join('、') : chart.dayWx;
-    const caution = analysis && analysis.ji ? analysis.ji.join('、') : chart.strongest;
+    const stage = active && stageTable[active.god] ? stageTable[active.god] : (english ? ['Organise steadily', 'Confirm practical conditions before moving important matters forward step by step.'] : ['稳步整理', '先确认现实条件，再逐步推进重要事项。']);
+    const translate = value => english && root.TianjiUI ? root.TianjiUI.translateTerm(value) : value;
+    const yong = analysis && analysis.yong ? analysis.yong.map(translate).join(english ? ', ' : '、') : translate(chart.dayWx);
+    const caution = analysis && analysis.ji ? analysis.ji.map(translate).join(english ? ', ' : '、') : translate(chart.strongest);
     const level = analysis && analysis.level ? analysis.level : '基础结构';
+    const activeGod = active ? translate(active.god) : '';
+    if (english) {
+      const keywords = active ? `${stage[0]} · ${activeGod} · ${yong}` : `${trait[0]} · Stability · Observation`;
+      return [
+        { key: 'trait', label: 'Underlying traits', title: trait[0], detail: trait[1] },
+        { key: 'strength', label: 'Core strengths', title: 'Supportive structure', detail: `Learning, resources or actions associated with ${yong} may currently offer more support.` },
+        { key: 'caution', label: 'Watch points', title: 'Avoid relying on one approach', detail: `${caution} themes may become excessive or unbalanced; add factual checks to important decisions.` },
+        { key: 'stage', label: 'Current life phase', title: active ? `${active.ganZhi} · ${stage[0]}` : stage[0], detail: stage[1] },
+        { key: 'next', label: 'Next 90 days', title: keywords, detail: 'These keywords mark directions worth observing, not certain events. Recheck them against real progress each month.' }
+      ];
+    }
     const keywords = active ? `${stage[0]} · ${active.god} · ${yong}元素` : `${trait[0]} · 稳定 · 观察`;
     return [
       { key: 'trait', label: '底层特质', title: trait[0], detail: trait[1] },
@@ -180,6 +209,7 @@
   }
 
   function dailyDecision(fortune) {
+    const english = root.TianjiUI && root.TianjiUI.getLanguage() === 'en';
     const bestByGod = {
       正官: '整理流程、确认责任与完成正式事项', 七杀: '处理最重要的难题，并为行动设置边界',
       正印: '学习、复盘与向可靠的人请教', 偏印: '集中研究一个需要深度思考的问题',
@@ -187,6 +217,22 @@
       食神: '创作、表达与完成可持续的小成果', 伤官: '提出改进方案，并留意表达方式',
       比肩: '独立推进重点任务，同时同步关键伙伴', 劫财: '重新确认分工、成本与共同目标'
     };
+    const bestByGodEn = {
+      正官: 'Organise the process, confirm responsibilities and finish formal tasks', 七杀: 'Handle the most important challenge and set clear boundaries around action',
+      正印: 'Learn, review and ask a reliable person for perspective', 偏印: 'Focus deeply on one question that rewards careful thought',
+      正财: 'Move measurable work and prudent financial arrangements forward', 偏财: 'Expand useful connections, but verify the conditions first',
+      食神: 'Create, communicate and complete one sustainable small outcome', 伤官: 'Propose an improvement while paying attention to delivery',
+      比肩: 'Advance the key task independently while keeping essential partners informed', 劫财: 'Reconfirm roles, costs and the shared objective'
+    };
+    if (english) {
+      const level = fortune.score >= 75 ? 'Move forward' : fortune.score >= 55 ? 'Steady progress' : fortune.score >= 40 ? 'Stabilise first' : 'Reduce the load';
+      return {
+        level,
+        best: bestByGodEn[fortune.god] || 'Complete one important, verifiable task',
+        avoid: fortune.chongSelf ? 'Avoid major decisions or direct conflict at an emotional peak' : 'Avoid opening too many tasks and scattering your attention',
+        reminder: fortune.heSelf ? 'A useful day to repair a relationship or confirm shared expectations.' : `Keep a sustainable pace and base important decisions on evidence; the ${root.TianjiUI.translateTerm(fortune.luckyDir)} direction can be used as a light planning cue.`
+      };
+    }
     const level = fortune.score >= 75 ? '顺势推进' : fortune.score >= 55 ? '稳中有进' : fortune.score >= 40 ? '先稳后动' : '降低负荷';
     return {
       level,

@@ -1508,3 +1508,221 @@ body {
   .hh-overview-modern, .shared-core { grid-template-columns: 1fr; }
   .guide-links { grid-template-columns: 1fr; }
 }
+
+/* ============================ 每日首页与界面偏好 ============================ */
+.preference-controls { display: flex; align-items: center; gap: 7px; }
+.preference-toggle {
+  width: 40px; height: 40px; display: grid; place-items: center; color: var(--ink-soft);
+  background: transparent; border: 1px solid var(--panel-line); border-radius: 50%; cursor: pointer;
+  font: 700 12px var(--sans); transition: color .2s, border-color .2s, background .2s;
+}
+.preference-toggle:hover { color: var(--gold); border-color: var(--gold); background: rgba(166,70,59,.05); }
+.theme-toggle { font-size: 18px; font-weight: 400; }
+.profile-library-card { position: relative; }
+.profile-active-label { position: absolute; top: 16px; right: 16px; color: var(--jade); font-size: 9px; font-style: normal; letter-spacing: 1px; }
+.profile-library-card button:disabled { opacity: .58; cursor: default; }
+
+body.has-active-profile .hero,
+body.has-active-profile .outcome-preview,
+body.has-active-profile .saved-bar { display: none; }
+
+.daily-home {
+  position: relative; z-index: 2; min-height: calc(100vh - 72px); padding: 116px 24px 58px;
+  background: var(--bg-2); border-bottom: 1px solid var(--panel-line);
+}
+.daily-home-inner { width: min(1180px,100%); margin: 0 auto; }
+.daily-home-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 28px; padding-bottom: 28px; border-bottom: 1px solid var(--panel-line); }
+.daily-home-head .eyebrow { margin-bottom: 8px; }
+.daily-home-head h1 { font: 700 clamp(32px,5vw,54px) var(--serif); letter-spacing: 0; line-height: 1.2; }
+.daily-home-head > div:first-child > p:last-child { margin-top: 8px; color: var(--ink-mute); font-size: 13px; }
+.daily-home-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.daily-home-actions button {
+  min-height: 42px; padding: 0 15px; color: var(--ink); background: transparent;
+  border: 1px solid var(--panel-line); border-radius: 6px; cursor: pointer; font: 600 12px var(--sans);
+}
+.daily-home-actions button:hover, .daily-home-actions button:first-child { color: #fff; background: var(--ink); border-color: var(--ink); }
+
+.daily-home-datebar { display: grid; grid-template-columns: 44px minmax(0,1fr) 44px auto; align-items: center; gap: 10px; padding: 20px 0; }
+.daily-home-datebar > button { width: 44px; height: 44px; color: var(--ink); background: rgba(255,255,255,.55); border: 1px solid var(--panel-line); border-radius: 6px; cursor: pointer; font-size: 20px; }
+.daily-home-datebar > button:hover { color: #fff; background: var(--gold); border-color: var(--gold); }
+.daily-home-datebar > div { min-width: 0; text-align: center; }
+.daily-home-datebar b, .daily-home-datebar span { display: block; }
+.daily-home-datebar b { font: 600 19px var(--serif); }
+.daily-home-datebar span { margin-top: 2px; color: var(--ink-mute); font-size: 12px; }
+.daily-home-datebar .daily-home-today { width: auto; padding: 0 15px; font-size: 12px; }
+
+.daily-home-overview { display: grid; grid-template-columns: minmax(0,.9fr) minmax(0,1.1fr); border-top: 1px solid var(--panel-line); border-bottom: 1px solid var(--panel-line); }
+.daily-almanac, .daily-reading { min-width: 0; padding: 28px; }
+.daily-almanac { border-right: 1px solid var(--panel-line); }
+.daily-almanac-title { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; }
+.daily-almanac-title span { color: var(--gold-soft); font-size: 11px; letter-spacing: 3px; }
+.daily-almanac-title strong { color: var(--gold); font: 700 31px var(--serif); }
+.daily-pillar-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 1px; margin-top: 26px; background: var(--panel-line); border: 1px solid var(--panel-line); }
+.daily-pillar-grid > div { min-height: 88px; padding: 14px 10px; text-align: center; background: rgba(255,255,255,.56); }
+.daily-pillar-grid span, .daily-pillar-grid b { display: block; }
+.daily-pillar-grid span { color: var(--ink-mute); font-size: 10px; }
+.daily-pillar-grid b { margin-top: 9px; font: 700 20px var(--serif); }
+.daily-reading { display: grid; grid-template-columns: 126px minmax(0,1fr); align-items: center; gap: 26px; }
+.daily-score { width: 126px; height: 126px; display: grid; place-content: center; text-align: center; border: 8px solid rgba(47,116,99,.14); outline: 1px solid var(--jade); border-radius: 50%; }
+.daily-score span { color: var(--jade); font: 700 45px var(--serif); line-height: 1; }
+.daily-score small { margin-top: 5px; color: var(--ink-mute); font-size: 10px; }
+.daily-reading-label { color: var(--gold-soft); font-size: 11px; letter-spacing: 2px; }
+.daily-reading h2 { margin-top: 7px; font: 700 29px var(--serif); }
+.daily-reading p { margin-top: 10px; color: var(--ink-soft); font-size: 13px; line-height: 1.8; }
+
+.daily-home-focus { display: grid; grid-template-columns: minmax(0,.8fr) minmax(0,.8fr) minmax(0,1.4fr); gap: 10px; padding: 22px 0; }
+.daily-home-focus > article { min-height: 142px; padding: 20px; background: rgba(255,255,255,.55); border: 1px solid var(--panel-line); border-radius: 8px; }
+.daily-home-focus > article > span { color: var(--gold-soft); font-size: 11px; }
+.daily-home-focus > article > b { display: block; margin-top: 16px; font: 600 16px var(--serif); line-height: 1.75; }
+.daily-home-dimensions { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 8px; }
+.daily-home-dimensions > div { min-width: 0; display: grid; align-content: center; text-align: center; }
+.daily-home-dimensions span { color: var(--ink-mute); font-size: 10px; overflow-wrap: anywhere; }
+.daily-home-dimensions b { margin-top: 7px; color: var(--gold); font: 700 19px var(--serif); }
+.daily-home-dimensions i { height: 3px; margin-top: 8px; background: rgba(32,38,33,.09); overflow: hidden; }
+.daily-home-dimensions em { display: block; height: 100%; background: var(--jade); }
+
+.daily-home-almanac-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.daily-yiji { min-height: 118px; display: grid; grid-template-columns: 72px minmax(0,1fr); gap: 18px; align-items: center; padding: 18px 22px; border: 1px solid var(--panel-line); border-radius: 8px; }
+.daily-yiji > div:first-child { text-align: center; }
+.daily-yiji > div:first-child span { width: 44px; height: 44px; display: grid; place-items: center; margin: 0 auto; border-radius: 50%; font: 700 22px var(--serif); }
+.daily-yiji > div:first-child b { display: block; margin-top: 6px; color: var(--ink-mute); font-size: 10px; }
+.daily-yi > div:first-child span { color: var(--green); border: 1px solid var(--green); }
+.daily-ji > div:first-child span { color: var(--red); border: 1px solid var(--red); }
+.daily-yiji > div:last-child { display: flex; flex-wrap: wrap; gap: 6px; }
+.daily-yiji em { padding: 5px 9px; color: var(--ink-soft); background: rgba(255,255,255,.55); border: 1px solid var(--panel-line); border-radius: 4px; font-size: 11px; font-style: normal; }
+
+/* 經典黑金主題，保留初始版本的氣質與對比度。 */
+html[data-theme="classic"] {
+  color-scheme: dark;
+  --bg: #0a0b0f;
+  --bg-2: #0f1117;
+  --panel: rgba(255,255,255,.04);
+  --panel-line: rgba(255,255,255,.1);
+  --ink: #f4f1ea;
+  --ink-soft: #b9b6ae;
+  --ink-mute: #807d75;
+  --gold: #d9b978;
+  --gold-soft: #c9a15a;
+  --jade: #6bc0a0;
+  --red: #e0655c;
+  --green: #5aa87f;
+}
+html[data-theme="classic"] body { background: var(--bg); }
+html[data-theme="classic"] #stars { opacity: 1; }
+html[data-theme="classic"] .nav { background: rgba(10,11,15,.82); border-bottom-color: rgba(255,255,255,.07); }
+html[data-theme="classic"] .preference-toggle { background: rgba(217,185,120,.05); }
+html[data-theme="classic"] .hero { min-height: 100vh; padding-top: 84px; }
+html[data-theme="classic"] .hero-glow { display: block; position: absolute; top: 42%; left: 50%; width: 780px; height: 780px; transform: translate(-50%,-50%); background: radial-gradient(circle,rgba(217,185,120,.13),rgba(217,185,120,.04) 40%,transparent 70%); filter: blur(20px); z-index: -1; }
+html[data-theme="classic"] .hero-title { color: var(--gold); background: linear-gradient(180deg,#fbf6ea,#d9b978); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+html[data-theme="classic"] .btn-primary { color: #1a1710; background: linear-gradient(135deg,#e8ce97,#cba35c); box-shadow: 0 8px 30px rgba(217,185,120,.24); }
+html[data-theme="classic"] .btn-primary:hover { box-shadow: 0 14px 44px rgba(217,185,120,.38); }
+html[data-theme="classic"] .form-card,
+html[data-theme="classic"] .hehun-card,
+html[data-theme="classic"] .zeji-card,
+html[data-theme="classic"] .divination-card { background: var(--panel); box-shadow: 0 30px 80px rgba(0,0,0,.4); }
+html[data-theme="classic"] .field input,
+html[data-theme="classic"] .field select,
+html[data-theme="classic"] .field textarea,
+html[data-theme="classic"] .g-btn,
+html[data-theme="classic"] .hh-g-btn,
+html[data-theme="classic"] .choice-btn { color: var(--ink); background: rgba(0,0,0,.28); }
+html[data-theme="classic"] .field select option { color: var(--ink); background: #14161d; }
+html[data-theme="classic"] .g-btn.active,
+html[data-theme="classic"] .hh-g-btn.active,
+html[data-theme="classic"] .method-btn.active,
+html[data-theme="classic"] .seg-btn.active,
+html[data-theme="classic"] .time-mode-btn.active { color: #1a1710; background: linear-gradient(135deg,#e8ce97,#cba35c); border-color: transparent; }
+html[data-theme="classic"] .outcome-grid article,
+html[data-theme="classic"] .professional-details > summary,
+html[data-theme="classic"] .dashboard-card,
+html[data-theme="classic"] .cross-sources > div,
+html[data-theme="classic"] .life-topic-card,
+html[data-theme="classic"] .year-card,
+html[data-theme="classic"] .month-window,
+html[data-theme="classic"] .calendar-toolbar button,
+html[data-theme="classic"] .calendar-day,
+html[data-theme="classic"] .calendar-event,
+html[data-theme="classic"] .profile-library-card,
+html[data-theme="classic"] .rectify-result article,
+html[data-theme="classic"] .backtest-result article,
+html[data-theme="classic"] .option-input,
+html[data-theme="classic"] .daily-home-focus > article,
+html[data-theme="classic"] .daily-pillar-grid > div,
+html[data-theme="classic"] .daily-yiji,
+html[data-theme="classic"] .daily-yiji em { background: rgba(255,255,255,.04); }
+html[data-theme="classic"] .core-card,
+html[data-theme="classic"] .form-control-row,
+html[data-theme="classic"] .time-status,
+html[data-theme="classic"] .daily-focus-grid > div,
+html[data-theme="classic"] .dim,
+html[data-theme="classic"] .yiji-col,
+html[data-theme="classic"] .hl-item,
+html[data-theme="classic"] .dayun-cell,
+html[data-theme="classic"] .ln-cell,
+html[data-theme="classic"] .pf-card,
+html[data-theme="classic"] .zw-cell,
+html[data-theme="classic"] .zw-row,
+html[data-theme="classic"] .zj-item,
+html[data-theme="classic"] .hehun-person,
+html[data-theme="classic"] .hh-score-wrap,
+html[data-theme="classic"] .hh-factor,
+html[data-theme="classic"] .reading-summary,
+html[data-theme="classic"] .gua-card,
+html[data-theme="classic"] .body-use-item,
+html[data-theme="classic"] .phase-item,
+html[data-theme="classic"] .qimen-keyfacts > div,
+html[data-theme="classic"] .oracle-summary,
+html[data-theme="classic"] .oracle-thread,
+html[data-theme="classic"] .rule-reading,
+html[data-theme="classic"] .dm-pillar,
+html[data-theme="classic"] .dm-zw-row { background: rgba(0,0,0,.22); }
+html[data-theme="classic"] .qimen-palace { background: #12141a; }
+html[data-theme="classic"] .palace-main strong { background: rgba(255,255,255,.04); }
+html[data-theme="classic"] .share-pop { background: #14161d; box-shadow: 0 20px 50px rgba(0,0,0,.5); }
+html[data-theme="classic"] .toast { color: var(--ink); background: rgba(20,22,29,.96); }
+html[data-theme="classic"] .dm-panel { box-shadow: 0 40px 100px rgba(0,0,0,.6); }
+html[data-theme="classic"] .daily-home { background: #0d0f14; }
+html[data-theme="classic"] .daily-home-datebar > button { background: rgba(255,255,255,.04); }
+html[data-theme="classic"] .daily-home-actions button:first-child { color: #1a1710; background: var(--gold); border-color: var(--gold); }
+html[data-theme="classic"] .daily-home-dimensions i { background: rgba(255,255,255,.09); }
+html[data-theme="classic"] .mobile-workspace-nav { background: rgba(10,11,15,.96); }
+
+@media (max-width: 900px) {
+  .nav-links { gap: 16px; }
+  .daily-home-overview { grid-template-columns: 1fr; }
+  .daily-almanac { border-right: 0; border-bottom: 1px solid var(--panel-line); }
+  .daily-home-focus { grid-template-columns: 1fr 1fr; }
+  .daily-home-dimensions { grid-column: 1 / -1; }
+}
+
+@media (max-width: 700px) {
+  .nav-inner { padding: 12px 14px; }
+  .nav-actions { gap: 7px; }
+  .preference-controls { gap: 5px; }
+  .preference-toggle, .music-toggle { width: 36px; height: 36px; flex-basis: 36px; }
+  .daily-home { min-height: 0; padding: 94px 16px 38px; }
+  .daily-home-head { align-items: flex-start; flex-direction: column; gap: 18px; }
+  .daily-home-actions { width: 100%; display: grid; grid-template-columns: repeat(3,1fr); }
+  .daily-home-actions button { min-width: 0; padding: 0 7px; }
+  .daily-home-datebar { grid-template-columns: 40px minmax(0,1fr) 40px; }
+  .daily-home-datebar > button { width: 40px; height: 40px; }
+  .daily-home-datebar .daily-home-today { grid-column: 1 / -1; width: 100%; }
+  .daily-almanac, .daily-reading { padding: 22px 16px; }
+  .daily-pillar-grid { grid-template-columns: repeat(2,1fr); }
+  .daily-reading { grid-template-columns: 94px minmax(0,1fr); gap: 18px; }
+  .daily-score { width: 94px; height: 94px; border-width: 6px; }
+  .daily-score span { font-size: 34px; }
+  .daily-reading h2 { font-size: 24px; }
+  .daily-home-focus { grid-template-columns: 1fr; }
+  .daily-home-dimensions { grid-column: 1; grid-template-columns: repeat(5,1fr); }
+  .daily-home-almanac-row { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 430px) {
+  .brand { font-size: 18px; letter-spacing: 2px; }
+  .brand-en { display: none; }
+  .daily-home-actions { grid-template-columns: 1fr; }
+  .daily-home-focus > article { min-height: 0; }
+  .daily-home-dimensions { grid-template-columns: repeat(3,1fr); }
+  .daily-yiji { grid-template-columns: 58px minmax(0,1fr); padding: 16px 12px; }
+}

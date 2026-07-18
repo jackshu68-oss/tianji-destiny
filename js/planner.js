@@ -14,6 +14,16 @@
     金: { drive: '判断与取舍', strength: '厘清标准、建立边界并完成复杂决策', watch: '标准过紧时容易压缩沟通空间' },
     水: { drive: '观察与适应', strength: '理解变化、整合信息并寻找弹性路径', watch: '信息过多时容易反复推演' }
   };
+  const WX_NATURE_EN = {
+    木: { drive: 'Growth and connection', strength: 'building long-term relationships, learning continuously and developing new work', watch: 'too many goals can scatter resources' },
+    火: { drive: 'Expression and momentum', strength: 'turning ideas into action and energising a group', watch: 'moving too quickly can reduce verification' },
+    土: { drive: 'Stability and support', strength: 'building order, managing detail and operating for the long term', watch: 'overvaluing stability can delay a necessary change' },
+    金: { drive: 'Judgement and choice', strength: 'clarifying standards, setting boundaries and making complex decisions', watch: 'overly tight standards can reduce room for communication' },
+    水: { drive: 'Observation and adaptation', strength: 'understanding change, integrating information and finding flexible routes', watch: 'too much information can lead to repeated analysis' }
+  };
+
+  function isEnglish() { return root.TianjiUI && root.TianjiUI.getLanguage() === 'en'; }
+  function term(value) { return isEnglish() && root.TianjiUI ? root.TianjiUI.translateTerm(value) : value; }
 
   function clamp(value, min, max) {
     return Math.max(min == null ? 0 : min, Math.min(max == null ? 100 : max, Math.round(value)));
@@ -51,9 +61,48 @@
     const analysis = root.TianjiEngine.analyze(chart);
     const active = currentDaYun(chart);
     const activeKnowledge = knowledgeFor(active ? active.god : '比肩');
-    const nature = WX_NATURE[chart.dayWx];
-    const support = (analysis.yong || []).join('、') || '平衡';
-    const restraint = (analysis.ji || []).join('、') || '过度用力';
+    const english = isEnglish();
+    const nature = (english ? WX_NATURE_EN : WX_NATURE)[chart.dayWx];
+    const support = (analysis.yong || []).map(term).join(english ? ', ' : '、') || (english ? 'balance' : '平衡');
+    const restraint = (analysis.ji || []).map(term).join(english ? ', ' : '、') || (english ? 'overextension' : '过度用力');
+    if (english) return [
+      {
+        key: 'talent', label: 'Traits and talents', conclusion: nature.drive,
+        evidence: `The day master is ${chart.dayGan} ${term(chart.dayWx)}; the chart is ${term(analysis.level)}, with support weighted toward ${support}.`,
+        reality: `Strength is more likely to develop through ${nature.strength}.`,
+        action: `Turn that strength into one repeatable working method, while watching that ${nature.watch}.`
+      },
+      {
+        key: 'career', label: 'Career and work', conclusion: activeKnowledge.core,
+        evidence: active ? `The current ${active.ganZhi} ten-year phase runs from ${active.startYear} to ${active.endYear}; its Ten God theme is ${term(active.god)}.` : 'Ten-year phase data is unavailable.',
+        reality: activeKnowledge.career,
+        action: 'Translate the phase theme into quarterly goals, then verify progress through responsibilities, time and deliverables.'
+      },
+      {
+        key: 'wealth', label: 'Wealth and resources', conclusion: 'Read the resource structure before short-term opportunity',
+        evidence: `Supportive elements are ${support}; the current phase theme is ${active ? term(active.god) : 'to be confirmed'}.`,
+        reality: activeKnowledge.wealth,
+        action: 'Separate stable cash flow, growth investment and higher-risk experiments, and give each its own limit.'
+      },
+      {
+        key: 'relation', label: 'Love and relationships', conclusion: 'Relationship quality depends on keeping expression and boundaries aligned',
+        evidence: `The day branch is ${chart.pillars[2].zhi}, the day master belongs to ${term(chart.dayWx)}; the phase relationship theme references ${active ? term(active.god) : 'the natal structure'}.`,
+        reality: activeKnowledge.relation,
+        action: 'When discussing a difference, separate facts, feelings and requests, then agree on time, money and responsibilities.'
+      },
+      {
+        key: 'family', label: 'Family and social network', conclusion: 'Stable support grows from clear roles and consistent response',
+        evidence: `The year pillar ${chart.pillars[0].ganZhi} and month pillar ${chart.pillars[1].ganZhi} are used as references for roots, family and the working environment.`,
+        reality: `External responsibilities and internal needs may move at different speeds; ${nature.watch}.`,
+        action: 'Turn assumed expectations into discussable roles, with dates and review points for important commitments.'
+      },
+      {
+        key: 'timing', label: 'Current timing', conclusion: active ? `${active.ganZhi} phase · ${activeKnowledge.core}` : 'Phase data needs more detail',
+        evidence: active ? `The phase runs from ${active.startYear} to ${active.endYear}; its stem element is ${term(active.wx)}.` : 'No ten-year phase is available.',
+        reality: active && (analysis.yong || []).includes(active.wx) ? 'The phase element may offer support, provided practical resources can carry it.' : active && (analysis.ji || []).includes(active.wx) ? 'The phase can amplify pressure or imbalance, making pace and risk limits especially important.' : 'The phase is relatively neutral and should be checked against annual and monthly windows.',
+        action: `Use the next three months to validate one key goal, and avoid expanding several ${restraint}-related commitments at once.`
+      }
+    ];
     return [
       {
         key: 'talent', label: '性格与天赋', conclusion: nature.drive,
@@ -97,6 +146,7 @@
   function lifeTimeline(chart, year) {
     const nowYear = year || new Date().getFullYear();
     const analysis = root.TianjiEngine.analyze(chart);
+    const english = isEnglish();
     return (chart.daYun || []).map(item => {
       const knowledge = knowledgeFor(item.god);
       const supportive = (analysis.yong || []).includes(item.wx);
@@ -109,8 +159,12 @@
         career: knowledge.career,
         wealth: knowledge.wealth,
         relation: knowledge.relation,
-        risk: supportive ? '机会增加时仍要确认资源是否跟得上。' : demanding ? '压力与偏科较容易放大，避免过度承诺或高杠杆。' : '整体需结合流年，不宜只凭十年主题下结论。',
-        action: supportive ? '适合分阶段扩大已经验证有效的方法。' : demanding ? '先守住现金流、健康节奏与关键关系，再选择性推进。' : '保留弹性，用年度复盘决定加速或调整。'
+        risk: english
+          ? (supportive ? 'More opportunity still requires enough time, cash and people to support it.' : demanding ? 'Pressure and imbalance can become louder; avoid overcommitment and leverage.' : 'Annual conditions still matter, so the ten-year theme should not stand alone.')
+          : (supportive ? '机会增加时仍要确认资源是否跟得上。' : demanding ? '压力与偏科较容易放大，避免过度承诺或高杠杆。' : '整体需结合流年，不宜只凭十年主题下结论。'),
+        action: english
+          ? (supportive ? 'Expand a method in stages after it has shown real evidence of working.' : demanding ? 'Protect cash flow, wellbeing and key relationships before advancing selectively.' : 'Keep flexibility and use an annual review to decide whether to accelerate or adjust.')
+          : (supportive ? '适合分阶段扩大已经验证有效的方法。' : demanding ? '先守住现金流、健康节奏与关键关系，再选择性推进。' : '保留弹性，用年度复盘决定加速或调整。')
       };
     });
   }
@@ -127,16 +181,16 @@
       const ganZhi = lunar.getYearInGanZhi();
       const god = tenGod(chart.dayGan, ganZhi[0]);
       const knowledge = knowledgeFor(god);
-      let relation = '与本命日支无直接六冲六合，仍需结合现实进度。';
-      if (CHONG[dayBranch] === ganZhi[1]) relation = '流年支冲本命日支，关系、居所或生活节奏较容易出现调整。';
-      else if (LIUHE[dayBranch] === ganZhi[1]) relation = '流年支与本命日支六合，协作与关系议题较容易成为重点。';
+      let relation = isEnglish() ? 'No direct clash or combination with the natal day branch; keep checking real progress.' : '与本命日支无直接六冲六合，仍需结合现实进度。';
+      if (CHONG[dayBranch] === ganZhi[1]) relation = isEnglish() ? 'The annual branch clashes with the natal day branch, so relationships, home or daily rhythm may need adjustment.' : '流年支冲本命日支，关系、居所或生活节奏较容易出现调整。';
+      else if (LIUHE[dayBranch] === ganZhi[1]) relation = isEnglish() ? 'The annual branch combines with the natal day branch, bringing collaboration and relationships into focus.' : '流年支与本命日支六合，协作与关系议题较容易成为重点。';
       cards.push({
         year, ganZhi, animal: lunar.getYearShengXiao(), god,
         theme: knowledge.core,
         career: knowledge.career,
         wealth: knowledge.wealth,
         relation,
-        background: active ? `${active.ganZhi}大运提供十年背景` : '需结合大运背景',
+        background: isEnglish() ? (active ? `${active.ganZhi} provides the ten-year backdrop` : 'Read with the ten-year backdrop') : (active ? `${active.ganZhi}大运提供十年背景` : '需结合大运背景'),
         current: year === new Date().getFullYear()
       });
     }
@@ -160,12 +214,13 @@
         return average([fortune.dims.action, fortune.dims.communication, fortune.dims.finance, fortune.dims.relation, fortune.dims.state]);
       });
       const score = clamp(average(samples));
+      const english = isEnglish();
       windows.push({
         year, month, ganZhi, god, score,
-        level: score >= 72 ? '推进窗口' : score >= 58 ? '稳步安排' : '校验与收束',
+        level: english ? (score >= 72 ? 'Momentum window' : score >= 58 ? 'Steady scheduling' : 'Review and consolidate') : (score >= 72 ? '推进窗口' : score >= 58 ? '稳步安排' : '校验与收束'),
         theme: knowledge.core,
-        best: score >= 72 ? '集中处理一项高价值目标' : score >= 58 ? '按既定节奏推进并留复盘点' : '整理资源、修正假设与控制风险',
-        watch: score < 58 ? '避免在信息不足时同时开启多个承诺' : '机会增加不等于结果确定，仍要验证现实条件'
+        best: english ? (score >= 72 ? 'Concentrate on one high-value objective' : score >= 58 ? 'Follow the planned pace and leave a review point' : 'Organise resources, correct assumptions and control risk') : (score >= 72 ? '集中处理一项高价值目标' : score >= 58 ? '按既定节奏推进并留复盘点' : '整理资源、修正假设与控制风险'),
+        watch: english ? (score < 58 ? 'Avoid opening several commitments while information is incomplete' : 'More opportunity does not guarantee an outcome; verify practical conditions') : (score < 58 ? '避免在信息不足时同时开启多个承诺' : '机会增加不等于结果确定，仍要验证现实条件')
       });
     }
     return windows;
@@ -196,6 +251,7 @@
   }
 
   function relationshipGraph(chartA, chartB, result) {
+    const english = isEnglish();
     const factors = result && Array.isArray(result.factors) ? result.factors : [];
     const factor = name => factors.find(item => item.name === name) || { good: 0, detail: '资料中性' };
     const zodiac = factor('生肖配对').good;
@@ -203,22 +259,22 @@
     const complement = factor('用神互补').good;
     const branches = factor('地支刑冲').good;
     const dimensions = [
-      { key: 'emotion', label: '情绪理解', score: clamp(58 + elements * 14 + complement * 10), basis: factor('日主五行').detail },
-      { key: 'communication', label: '沟通模式', score: clamp(56 + branches * 16 + elements * 7), basis: factor('地支刑冲').detail },
-      { key: 'pace', label: '生活节奏', score: clamp(58 + zodiac * 15 + branches * 7), basis: factor('生肖配对').detail },
-      { key: 'resources', label: '资源观念', score: clamp(55 + complement * 18 + factor('年命纳音').good * 7), basis: factor('用神互补').detail },
-      { key: 'longterm', label: '长期磨合', score: 0, basis: '综合前四项与地支合冲观察' }
+      { key: 'emotion', label: english ? 'Emotional understanding' : '情绪理解', score: clamp(58 + elements * 14 + complement * 10), basis: factor('日主五行').detail },
+      { key: 'communication', label: english ? 'Communication pattern' : '沟通模式', score: clamp(56 + branches * 16 + elements * 7), basis: factor('地支刑冲').detail },
+      { key: 'pace', label: english ? 'Lifestyle rhythm' : '生活节奏', score: clamp(58 + zodiac * 15 + branches * 7), basis: factor('生肖配对').detail },
+      { key: 'resources', label: english ? 'Approach to resources' : '资源观念', score: clamp(55 + complement * 18 + factor('年命纳音').good * 7), basis: factor('用神互补').detail },
+      { key: 'longterm', label: english ? 'Long-term adjustment' : '长期磨合', score: 0, basis: english ? 'A combined view of the first four areas and branch interactions' : '综合前四项与地支合冲观察' }
     ];
     dimensions[4].score = clamp(average(dimensions.slice(0, 4).map(item => item.score)) + branches * 5);
     dimensions.forEach(item => {
-      item.level = item.score >= 72 ? '优势' : item.score >= 56 ? '可协作' : '重点磨合';
-      item.action = item.score >= 72 ? '保留现有有效做法，并把默契转成清楚约定。' : item.score >= 56 ? '遇到分歧时先统一事实、目标与回应时间。' : '提前约定暂停机制，避免在情绪高点处理金钱与长期承诺。';
+      item.level = english ? (item.score >= 72 ? 'Strength' : item.score >= 56 ? 'Workable' : 'Needs attention') : (item.score >= 72 ? '优势' : item.score >= 56 ? '可协作' : '重点磨合');
+      item.action = english ? (item.score >= 72 ? 'Keep what already works and turn implicit understanding into a clear agreement.' : item.score >= 56 ? 'When differences appear, align on facts, goals and response time first.' : 'Agree on a pause mechanism before discussing money or long-term commitments at an emotional peak.') : (item.score >= 72 ? '保留现有有效做法，并把默契转成清楚约定。' : item.score >= 56 ? '遇到分歧时先统一事实、目标与回应时间。' : '提前约定暂停机制，避免在情绪高点处理金钱与长期承诺。');
     });
     return {
       dimensions,
       strongest: [...dimensions].sort((a, b) => b.score - a.score)[0],
       friction: [...dimensions].sort((a, b) => a.score - b.score)[0],
-      context: `${chartA.dayGan}${chartA.dayWx}与${chartB.dayGan}${chartB.dayWx}的结构比较只提供关系观察，不替代真实相处经验。`
+      context: english ? `The structural comparison between ${chartA.dayGan} ${term(chartA.dayWx)} and ${chartB.dayGan} ${term(chartB.dayWx)} is a reflection tool, not a substitute for lived relationship experience.` : `${chartA.dayGan}${chartA.dayWx}与${chartB.dayGan}${chartB.dayWx}的结构比较只提供关系观察，不替代真实相处经验。`
     };
   }
 
@@ -233,17 +289,21 @@
       return `${name}${stars.length ? `：${stars.join('、')}` : '：借对宫观察'}`;
     }).filter(Boolean) : [];
     const dailyAverage = clamp(average(Object.values(fortune.dims).slice(0, 5)));
+    const english = isEnglish();
     const sources = [
-      { label: '本命结构', value: `${chart.dayGan}${chart.dayWx} · ${analysis.level} · 喜用${analysis.yong.join('、')}` },
-      { label: '十年阶段', value: active ? `${active.ganZhi} · ${active.god} · ${knowledgeFor(active.god).core}` : '暂无大运资料' },
-      { label: '紫微关键宫', value: chart.timeUnknown ? '时辰未知，本层停用' : (keyPalaces.join('；') || '紫微盘待载入') },
-      { label: '今日节奏', value: `${dailyAverage} · ${root.TianjiProfile.dailyDecision(fortune).level}` }
+      { label: english ? 'Natal structure' : '本命结构', value: `${chart.dayGan}${term(chart.dayWx)} · ${english ? term(analysis.level) : analysis.level} · ${english ? 'support ' + analysis.yong.map(term).join(', ') : '喜用' + analysis.yong.join('、')}` },
+      { label: english ? 'Ten-year phase' : '十年阶段', value: active ? `${active.ganZhi} · ${term(active.god)} · ${knowledgeFor(active.god).core}` : (english ? 'No ten-year phase data' : '暂无大运资料') },
+      { label: english ? 'Key Zi Wei palaces' : '紫微关键宫', value: chart.timeUnknown ? (english ? 'Birth time unknown; this layer is unavailable' : '时辰未知，本层停用') : (keyPalaces.join(english ? '; ' : '；') || (english ? 'Zi Wei chart is loading' : '紫微盘待载入')) },
+      { label: english ? "Today's rhythm" : '今日节奏', value: `${dailyAverage} · ${root.TianjiProfile.dailyDecision(fortune).level}` }
     ];
-    const agreements = [
+    const agreements = english ? [
+      `Supportive elements ${analysis.yong.map(term).join(', ')} and the current ${active ? term(active.god) : 'phase'} both suggest concentrating resources on a verifiable priority.`,
+      `${WX_NATURE_EN[chart.dayWx].drive} is a relatively stable underlying tendency; phases mostly change how it is expressed and prioritised.`
+    ] : [
       `本命喜用${analysis.yong.join('、')}与当前${active ? active.god : '阶段'}共同提示：先把资源集中到可验证的重点。`,
       `${WX_NATURE[chart.dayWx].drive}是较稳定的底层倾向，阶段变化主要影响表达方式和优先顺序。`
     ];
-    const differences = dailyAverage < 58 && active ? ['长期阶段与今日短周期节奏并不相同：今天适合收束，不代表整个大运缺少机会。'] : ['各层结果没有明显冲突，但仍应以现实反馈持续校验。'];
+    const differences = english ? (dailyAverage < 58 && active ? ["The long-term phase and today's short rhythm are different: today may favour consolidation without implying a lack of opportunity across the whole phase."] : ['The layers show no major conflict, but real feedback should continue to test the interpretation.']) : (dailyAverage < 58 && active ? ['长期阶段与今日短周期节奏并不相同：今天适合收束，不代表整个大运缺少机会。'] : ['各层结果没有明显冲突，但仍应以现实反馈持续校验。']);
     return { sources, agreements, differences };
   }
 

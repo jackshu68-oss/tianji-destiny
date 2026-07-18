@@ -2,6 +2,9 @@
 (function () {
   const $ = (s) => document.querySelector(s);
   const $$ = (s) => Array.from(document.querySelectorAll(s));
+  const t = (key, variables) => window.TianjiUI ? TianjiUI.t(key, variables) : key;
+  const translatedTerm = value => window.TianjiUI ? TianjiUI.translateTerm(value) : value;
+  const isEnglish = () => window.TianjiUI && TianjiUI.getLanguage() === 'en';
 
   const SAVE_KEY = 'tianji_profile_v1';
   let chart = null;
@@ -256,7 +259,9 @@
     bar.classList.remove('hidden');
     const displayY = p.inputY || p.y, displayM = p.inputM || p.m, displayD = p.inputD || p.d;
     const timeText = p.timeUnknown ? '时辰未知' : `${String(p.inputH != null ? p.inputH : p.h).padStart(2,'0')}:${String(p.inputMi != null ? p.inputMi : (p.mi || 0)).padStart(2,'0')}`;
-    $('#saved-text').textContent = `已保存：${displayY}年${displayM}月${displayD}日 ${timeText}${p.cityLabel ? ` · ${p.cityLabel}` : ''}（${p.gender === 'female' ? '坤造·女' : '乾造·男'}）`;
+    $('#saved-text').textContent = isEnglish()
+      ? `Saved: ${displayY}-${String(displayM).padStart(2,'0')}-${String(displayD).padStart(2,'0')} ${timeText}${p.cityLabel ? ` · ${p.cityLabel}` : ''} · ${p.gender === 'female' ? 'Female chart' : 'Male chart'}`
+      : `已保存：${displayY}年${displayM}月${displayD}日 ${timeText}${p.cityLabel ? ` · ${p.cityLabel}` : ''}（${p.gender === 'female' ? '坤造·女' : '乾造·男'}）`;
   }
 
   /* ---------- 自动加载（每日打开） ---------- */
@@ -273,7 +278,7 @@
       viewDate = new Date();
       renderAll();
       $('#result').classList.remove('hidden');
-      $('#save-status').textContent = '✓ 已自动载入你保存的命盘';
+      $('#save-status').textContent = isEnglish() ? '✓ Saved chart loaded automatically' : '✓ 已自动载入你保存的命盘';
       return true;
     } catch (e) { console.error(e); return false; }
   }
@@ -564,33 +569,42 @@
     const dSolar = Solar.fromYmd(viewDate.getFullYear(), viewDate.getMonth() + 1, viewDate.getDate());
     const f = TianjiEngine.dailyFortune(chart, dSolar);
 
-    $('#day-label').textContent = `${f.dateStr.slice(5)} ${f.week}`;
-    $('#today-gz').innerHTML = `<b>${f.dayGanZhi}</b>日　农历${f.lunarStr}　纳音「${f.naYin}」　值神${f.god}`;
+    $('#day-label').textContent = isEnglish()
+      ? `${new Intl.DateTimeFormat('en-CA', { month: 'short', day: 'numeric' }).format(viewDate)} ${translatedTerm(f.week)}`
+      : `${f.dateStr.slice(5)} ${f.week}`;
+    $('#today-gz').innerHTML = isEnglish()
+      ? `<b>${f.dayGanZhi}</b> day · Lunar ${f.lunarStr} · Na Yin ${f.naYin} · Ten God ${translatedTerm(f.god)}`
+      : `<b>${f.dayGanZhi}</b>日　农历${f.lunarStr}　纳音「${f.naYin}」　值神${f.god}`;
     const decision = TianjiProfile.dailyDecision(f);
     $('#daily-level').textContent = decision.level;
-    $('#daily-score-note').textContent = '由五个生活维度综合，不代表确定吉凶';
+    $('#daily-score-note').textContent = t('daily.scoreNote');
     $('#daily-best').textContent = decision.best;
     $('#daily-avoid').textContent = decision.avoid;
     $('#daily-reminder').textContent = decision.reminder;
 
     const colorDots = f.luckyColor.map(c => `<span class="lucky-dot" style="background:${c}"></span>`).join('');
     $('#lucky-row').innerHTML = `
-      <div class="lucky-item">幸运方位<b>${f.luckyDir}</b></div>
-      <div class="lucky-item">喜用五行<b>${f.luckyWx.join('、')}</b></div>
-      <div class="lucky-item">幸运色<span class="lucky-dots">${colorDots}</span></div>
-      <div class="lucky-item">今日冲煞<b>${f.chong} 煞${f.sha}</b></div>`;
+      <div class="lucky-item">${t('daily.luckyDirection')}<b>${isEnglish() ? translatedTerm(f.luckyDir) : f.luckyDir}</b></div>
+      <div class="lucky-item">${t('daily.supportingElements')}<b>${f.luckyWx.map(item => isEnglish() ? translatedTerm(item) : item).join(isEnglish() ? ', ' : '、')}</b></div>
+      <div class="lucky-item">${t('daily.luckyColors')}<span class="lucky-dots">${colorDots}</span></div>
+      <div class="lucky-item">${t('daily.clash')}<b>${f.chong} ${isEnglish() ? '· Sha ' : '煞'}${f.sha}</b></div>`;
 
-    const dimNames = { action: '行动', communication: '沟通', finance: '财务', relation: '关系', state: '状态' };
+    const dimNames = { action: t('daily.dim.action'), communication: t('daily.dim.communication'), finance: t('daily.dim.finance'), relation: t('daily.dim.relation'), state: t('daily.dim.state') };
     $('#res-dims').innerHTML = Object.keys(dimNames).map(k => `
       <div class="dim"><div class="d-name">${dimNames[k]}</div>
         <div class="d-bar"><div class="d-fill" data-v="${f.dims[k]}"></div></div>
         <div class="d-val">${f.dims[k]}</div></div>`).join('');
     setTimeout(() => $$('.d-fill').forEach(el => el.style.width = el.dataset.v + '%'), 60);
 
-    $('#yi-tags').innerHTML = (f.yi.length ? f.yi.slice(0, 10) : ['诸事不宜']).map(t => `<em>${t}</em>`).join('');
-    $('#ji-tags').innerHTML = (f.ji.length ? f.ji.slice(0, 10) : ['百无禁忌']).map(t => `<em>${t}</em>`).join('');
+    $('#yi-tags').innerHTML = (f.yi.length ? f.yi.slice(0, 10) : ['诸事不宜']).map(item => `<em>${isEnglish() ? translatedTerm(item) : item}</em>`).join('');
+    $('#ji-tags').innerHTML = (f.ji.length ? f.ji.slice(0, 10) : ['百无禁忌']).map(item => `<em>${isEnglish() ? translatedTerm(item) : item}</em>`).join('');
 
-    const hl = [
+    const hl = isEnglish() ? [
+      ['Lunar mansion', f.xiu], ['Supportive influences', f.jiShen.slice(0, 4).join(', ') || '—'],
+      ['Cautionary influences', (f.xiongSha && f.xiongSha.length ? f.xiongSha.slice(0, 4).join(', ') : '—')],
+      ['Peng Zu cautions', f.pengZu.join(' · ')], ['Fetal spirit position', f.taishen || '—'],
+      ['Daily clash', `${f.chong} · Sha ${f.sha}`]
+    ] : [
       ['值日星宿', f.xiu], ['吉神宜趋', f.jiShen.slice(0, 4).join('、') || '—'],
       ['凶煞宜忌', (f.xiongSha && f.xiongSha.length ? f.xiongSha.slice(0, 4).join('、') : '—')],
       ['彭祖百忌', f.pengZu.join('　')], ['今日胎神', f.taishen || '—'],
@@ -1092,6 +1106,11 @@
     toast,
     openDetail
   };
+
+  document.addEventListener('tianji:language-changed', () => {
+    refreshSavedBar();
+    if (chart) renderAll();
+  });
 
   /* ---------- 启动 ---------- */
   window.addEventListener('DOMContentLoaded', () => {

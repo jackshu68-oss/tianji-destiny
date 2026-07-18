@@ -19,6 +19,18 @@ const TianjiKnowledge = (function () {
     正印:{core:'学习、支持与系统吸收',career:'利进修、研究、证照和借力资源。',wealth:'先提升判断质量，再追求收益速度。',relation:'容易照顾别人，也要说清自身需要。'},
     偏印:{core:'洞察、专门技能与非标准路径',career:'利研究冷门问题和形成独特方法。',wealth:'收入路径可能不规则，应准备储备金。',relation:'需要独处和精神交流，避免过度猜测。'}
   };
+  const TEN_GOD_EN = {
+    比肩:{core:'Autonomy, peers and shared identity',career:'Good for independent progress and peer collaboration; avoid duplicated effort and rigid positions.',wealth:'Keep financial boundaries and partnership accounts clear.',relation:'Equality and personal space matter more.'},
+    劫财:{core:'Competition, action and resource allocation',career:'Execution is strong, but teams need explicit pace and role agreements.',wealth:'Avoid impulsive spending or vague joint investments.',relation:'Direct enthusiasm works best without turning differences into contests.'},
+    食神:{core:'Expression, nourishment and steady output',career:'Supports creative work, teaching, service and long-term operations.',wealth:'Skills and reputation are steadier sources of growth.',relation:'Care and comfort matter; do not use harmony to avoid necessary conversations.'},
+    伤官:{core:'Improvement, expression and questioning rules',career:'Supports innovation and presentation, with care around delivery in formal settings.',wealth:'Creative income can grow when experimentation has a budget.',relation:'The need to be understood is strong; check the other person\'s experience before speaking bluntly.'},
+    正财:{core:'Order, responsibility and sustainable return',career:'Supports process, operations and measurable goals.',wealth:'Prioritise budgets, cash flow and stable income.',relation:'Commitment is often expressed through practical care.'},
+    偏财:{core:'Opportunity, movement and external resources',career:'Supports markets, networks and flexible projects.',wealth:'More opportunity can also mean more volatility; do not treat a one-off win as a baseline.',relation:'Social energy is active, so keep promises and boundaries clear.'},
+    正官:{core:'Rules, responsibility and public evaluation',career:'Supports taking responsibility and earning formal recognition.',wealth:'Stabilise the professional structure before expanding.',relation:'Commitment and order matter, but requirements should not become control.'},
+    七杀:{core:'Pressure, decisiveness and intense challenge',career:'Useful for difficult problems and competition when risk buffers are protected.',wealth:'Avoid leverage and decisions made under pressure.',relation:'Protective energy is strong; slow down before resolving conflict.'},
+    正印:{core:'Learning, support and systematic absorption',career:'Supports study, research, credentials and using reliable resources.',wealth:'Improve decision quality before chasing speed of return.',relation:'You may care for others readily; state your own needs as clearly.'},
+    偏印:{core:'Insight, specialist skill and unconventional paths',career:'Supports specialised research and distinctive methods.',wealth:'Income may be irregular, so maintain a reserve.',relation:'Solitude and intellectual connection matter; avoid excessive interpretation.'}
+  };
   const QIMEN_PURPOSE = {
     综合:'先看值符、值使与全局格局，再结合与问题最相关的宫位。',
     事业:'重点看开门、值符、日干落宫及其星门神组合。',
@@ -46,14 +58,20 @@ const TianjiKnowledge = (function () {
     完成:'事情接近成形，越到后段越要防松懈。',未完:'结构尚未闭合，先补齐关键环节。'
   };
 
-  function tenGod(god) { return TEN_GOD[god] || { core:'阶段主题',career:'结合实际环境判断。',wealth:'量力而行。',relation:'保持沟通。' }; }
+  function tenGod(god) {
+    const english = window.TianjiUI && window.TianjiUI.getLanguage() === 'en';
+    const table = english ? TEN_GOD_EN : TEN_GOD;
+    return table[god] || (english
+      ? { core:'Phase theme',career:'Evaluate against the real environment.',wealth:'Keep the scale manageable.',relation:'Communicate clearly.' }
+      : { core:'阶段主题',career:'结合实际环境判断。',wealth:'量力而行。',relation:'保持沟通。' });
+  }
   function sourceBadge(type) {
     const source = SOURCES[type];
     return source ? `<div class="kb-source"><b>知识依据</b><span>${source.label}</span><p>${source.detail}</p></div>` : '';
   }
   function hexagramAction(nature) { return HEXAGRAM_ACTION[nature] || '结合体用生克、月令旺衰与现实条件分阶段判断，不以单一卦名作绝对结论。'; }
 
-  return { SOURCES, TEN_GOD, QIMEN_PURPOSE, MEIHUA_RELATION, SEASON, tenGod, sourceBadge, hexagramAction };
+  return { SOURCES, TEN_GOD, TEN_GOD_EN, QIMEN_PURPOSE, MEIHUA_RELATION, SEASON, tenGod, sourceBadge, hexagramAction };
 })();
 
 window.TianjiKnowledge = TianjiKnowledge;

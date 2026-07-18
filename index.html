@@ -11,10 +11,16 @@
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://tianji.47-86-31-98.sslip.io/" />
   <link rel="canonical" href="https://tianji.47-86-31-98.sslip.io/" />
+  <script>
+    try {
+      document.documentElement.dataset.theme = localStorage.getItem('tianji_theme_v1') === 'classic' ? 'classic' : 'modern';
+      document.documentElement.lang = localStorage.getItem('tianji_language_v1') === 'en' ? 'en-CA' : 'zh-CN';
+    } catch (_error) { document.documentElement.dataset.theme = 'modern'; }
+  </script>
   <link rel="icon" href="assets/daofa-mark.svg" type="image/svg+xml" />
   <link rel="manifest" href="manifest.webmanifest" />
   <!-- 字体使用系统字体栈（见 css/style.css），不依赖外部网络，大陆/离线均可秒开 -->
-  <link rel="stylesheet" href="css/style.css?v=20260718-12" />
+  <link rel="stylesheet" href="css/style.css?v=20260718-14" />
 </head>
 <body>
   <canvas id="stars"></canvas>
@@ -32,6 +38,10 @@
           <a href="#lenormand">雷诺曼</a>
           <a href="#zeji">择吉</a>
         </div>
+        <div class="preference-controls" aria-label="界面偏好">
+          <button id="language-toggle" class="preference-toggle language-toggle" type="button" aria-label="Switch to English" title="Switch to English">EN</button>
+          <button id="theme-toggle" class="preference-toggle theme-toggle" type="button" aria-label="切换到经典黑金风格" title="切换到经典黑金风格">◐</button>
+        </div>
         <button id="music-toggle" class="music-toggle" type="button" aria-label="播放舒缓音乐" aria-pressed="false" title="播放舒缓音乐">
           <span aria-hidden="true">♫</span>
         </button>
@@ -41,6 +51,59 @@
 
   <!-- 返回顶部浮动按钮 -->
   <button id="back-top" title="回到顶部">↑</button>
+
+  <!-- 已选命盘的每日首页 -->
+  <section class="daily-home hidden" id="daily-home" aria-labelledby="daily-home-name">
+    <div class="daily-home-inner">
+      <header class="daily-home-head">
+        <div>
+          <p class="eyebrow" id="daily-home-kicker">我的每日万年历</p>
+          <h1 id="daily-home-name">今日节奏</h1>
+          <p id="daily-home-status">当前每日首页命盘</p>
+        </div>
+        <div class="daily-home-actions">
+          <button type="button" id="daily-home-switch">切换命盘</button>
+          <button type="button" id="daily-home-full">查看完整命盘</button>
+          <button type="button" id="daily-home-new">新增命盘</button>
+        </div>
+      </header>
+
+      <div class="daily-home-datebar">
+        <button type="button" id="daily-home-prev" aria-label="前一天">‹</button>
+        <div><b id="daily-home-date"></b><span id="daily-home-lunar"></span></div>
+        <button type="button" id="daily-home-next" aria-label="后一天">›</button>
+        <button type="button" class="daily-home-today" id="daily-home-today">回到今天</button>
+      </div>
+
+      <div class="daily-home-overview">
+        <section class="daily-almanac" aria-labelledby="daily-almanac-title">
+          <div class="daily-almanac-title"><span id="daily-almanac-title">万年历</span><strong id="daily-home-day-ganzhi"></strong></div>
+          <div class="daily-pillar-grid">
+            <div><span>年柱</span><b id="daily-home-year-pillar"></b></div>
+            <div><span>月柱</span><b id="daily-home-month-pillar"></b></div>
+            <div><span>日柱</span><b id="daily-home-day-pillar"></b></div>
+            <div><span>生肖</span><b id="daily-home-zodiac"></b></div>
+          </div>
+        </section>
+
+        <section class="daily-reading" aria-labelledby="daily-reading-level">
+          <div class="daily-score"><span id="daily-home-score"></span><small>/ 100</small></div>
+          <div><span class="daily-reading-label">今日节奏</span><h2 id="daily-reading-level"></h2><p id="daily-home-reminder"></p></div>
+        </section>
+      </div>
+
+      <div class="daily-home-focus">
+        <article><span>最适合</span><b id="daily-home-best"></b></article>
+        <article><span>要避免</span><b id="daily-home-avoid"></b></article>
+        <article class="daily-home-dimensions" id="daily-home-dimensions"></article>
+      </div>
+
+      <div class="daily-home-almanac-row">
+        <section class="daily-yiji daily-yi"><div><span id="daily-yi-mark">宜</span><b id="daily-yi-label">今日宜</b></div><div id="daily-home-yi"></div></section>
+        <section class="daily-yiji daily-ji"><div><span id="daily-ji-mark">忌</span><b id="daily-ji-label">今日忌</b></div><div id="daily-home-ji"></div></section>
+      </div>
+    </div>
+  </section>
 
   <!-- Hero -->
   <header class="hero" id="top">
@@ -738,21 +801,22 @@
     </div>
   </div>
 
-  <script src="js/lunar.js?v=20260718-12"></script>
-  <script src="js/vendor/qimen-core.min.js?v=20260718-12"></script>
-  <script src="js/meihua.js?v=20260718-12"></script>
-  <script src="js/knowledge.js?v=20260718-12"></script>
-  <script src="js/profile.js?v=20260718-12"></script>
-  <script src="js/ziwei-gt.global.js?v=20260718-12"></script>
-  <script src="js/engine.js?v=20260718-12"></script>
-  <script src="js/planner.js?v=20260718-12"></script>
-  <script src="js/ziwei.js?v=20260718-12"></script>
-  <script src="js/html2canvas.min.js?v=20260718-12"></script>
-  <script src="js/app.js?v=20260718-12"></script>
-  <script src="js/divination.js?v=20260718-12"></script>
-  <script src="js/oracle.js?v=20260718-12"></script>
-  <script src="js/ai.js?v=20260718-12"></script>
-  <script src="js/ambient.js?v=20260718-12"></script>
-  <script src="js/workspace.js?v=20260718-12"></script>
+  <script src="js/lunar.js?v=20260718-14"></script>
+  <script src="js/vendor/qimen-core.min.js?v=20260718-14"></script>
+  <script src="js/meihua.js?v=20260718-14"></script>
+  <script src="js/knowledge.js?v=20260718-14"></script>
+  <script src="js/ui.js?v=20260718-14"></script>
+  <script src="js/profile.js?v=20260718-14"></script>
+  <script src="js/ziwei-gt.global.js?v=20260718-14"></script>
+  <script src="js/engine.js?v=20260718-14"></script>
+  <script src="js/planner.js?v=20260718-14"></script>
+  <script src="js/ziwei.js?v=20260718-14"></script>
+  <script src="js/html2canvas.min.js?v=20260718-14"></script>
+  <script src="js/app.js?v=20260718-14"></script>
+  <script src="js/divination.js?v=20260718-14"></script>
+  <script src="js/oracle.js?v=20260718-14"></script>
+  <script src="js/ai.js?v=20260718-14"></script>
+  <script src="js/ambient.js?v=20260718-14"></script>
+  <script src="js/workspace.js?v=20260718-16"></script>
 </body>
 </html>

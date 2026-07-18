@@ -10,8 +10,20 @@
   };
   const state = {
     chart: null, profile: null, analysis: null, ziwei: null,
-    calendarDate: new Date(), selectedDate: null, editingProfileId: null
+    calendarDate: new Date(), dailyHomeDate: new Date(), selectedDate: null, editingProfileId: null
   };
+
+  function t(key, variables) {
+    return window.TianjiUI ? TianjiUI.t(key, variables) : key;
+  }
+
+  function translatedTerm(value) {
+    return window.TianjiUI ? TianjiUI.translateTerm(value) : value;
+  }
+
+  function isEnglish() {
+    return window.TianjiUI && TianjiUI.getLanguage() === 'en';
+  }
 
   function escapeHtml(value) {
     return String(value == null ? '' : value).replace(/[&<>'"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
@@ -65,15 +77,23 @@
       existing.data = state.profile;
       existing.updatedAt = new Date().toISOString();
       write(KEYS.library, library);
+      setActiveProfileId(existing.id);
       return;
     }
-    if (!library.length) {
-      library.push({
-        id: makeId('profile'), fingerprint, nickname: '我的命盘', relation: '本人', note: '',
-        data: state.profile, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
-      });
-      write(KEYS.library, library);
-    }
+    const item = {
+      id: makeId('profile'), fingerprint, nickname: '我的命盘', relation: '本人', note: '',
+      data: state.profile, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
+    };
+    library.push(item);
+    write(KEYS.library, library);
+    setActiveProfileId(item.id);
+  }
+
+  function setActiveProfileId(id) {
+    const ui = read(KEYS.ui, {});
+    if (id) ui.activeProfileId = id;
+    else delete ui.activeProfileId;
+    write(KEYS.ui, ui);
   }
 
   function switchTab(name, shouldScroll) {
@@ -96,6 +116,58 @@
     write(KEYS.ui, ui);
   }
 
+  function renderDailyHome() {
+    if (!state.chart) return;
+    const date = state.dailyHomeDate || new Date();
+    const solar = Solar.fromYmd(date.getFullYear(), date.getMonth() + 1, date.getDate());
+    const fortune = TianjiEngine.dailyFortune(state.chart, solar);
+    const lunar = solar.getLunar();
+    const decision = TianjiProfile.dailyDecision(fortune);
+    const profileName = activeProfileName();
+    const libraryItem = loadLibrary().find(item => item.fingerprint === profileFingerprint(state.profile || {}));
+    const locale = isEnglish() ? 'en-CA' : 'zh-CN';
+    const formattedDate = new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' }).format(date);
+    const dimKeys = ['action', 'communication', 'finance', 'relation', 'state'];
+
+    $('#daily-home-kicker').textContent = t('daily.kicker');
+    $('#daily-home-name').textContent = t('daily.title', { name: profileName });
+    $('#daily-home-status').textContent = `${t('daily.current')}${libraryItem ? ` · ${isEnglish() ? EN_RELATIONS[libraryItem.relation] || libraryItem.relation : libraryItem.relation}` : ''}`;
+    $('#daily-home-date').textContent = formattedDate;
+    $('#daily-home-lunar').textContent = isEnglish()
+      ? `${t('daily.lunar')} ${fortune.lunarStr} · Na Yin ${fortune.naYin}`
+      : `${t('daily.lunar')}${fortune.lunarStr} · 纳音「${fortune.naYin}」`;
+    $('#daily-home-day-ganzhi').textContent = fortune.dayGanZhi;
+    $('#daily-home-year-pillar').textContent = lunar.getYearInGanZhi();
+    $('#daily-home-month-pillar').textContent = lunar.getMonthInGanZhi();
+    $('#daily-home-day-pillar').textContent = lunar.getDayInGanZhi();
+    $('#daily-home-zodiac').textContent = isEnglish() ? translatedTerm(lunar.getYearShengXiao()) : lunar.getYearShengXiao();
+    $('#daily-home-score').textContent = fortune.score;
+    $('#daily-reading-level').textContent = decision.level;
+    $('#daily-home-reminder').textContent = decision.reminder;
+    $('#daily-home-best').textContent = decision.best;
+    $('#daily-home-avoid').textContent = decision.avoid;
+    $('#daily-home-dimensions').innerHTML = dimKeys.map(key => `<div><span>${escapeHtml(t(`daily.dim.${key}`))}</span><b>${fortune.dims[key]}</b><i><em style="width:${fortune.dims[key]}%"></em></i></div>`).join('');
+    $('#daily-home-yi').innerHTML = (fortune.yi.length ? fortune.yi.slice(0, 10) : ['诸事不宜']).map(item => `<em>${escapeHtml(isEnglish() ? translatedTerm(item) : item)}</em>`).join('');
+    $('#daily-home-ji').innerHTML = (fortune.ji.length ? fortune.ji.slice(0, 10) : ['百无禁忌']).map(item => `<em>${escapeHtml(isEnglish() ? translatedTerm(item) : item)}</em>`).join('');
+    $('#daily-yi-mark').textContent = t('daily.yiMark');
+    $('#daily-ji-mark').textContent = t('daily.jiMark');
+    $('#daily-yi-label').textContent = t('daily.yi');
+    $('#daily-ji-label').textContent = t('daily.ji');
+    $('#daily-home-switch').textContent = t('daily.change');
+    $('#daily-home-full').textContent = t('daily.full');
+    $('#daily-home-new').textContent = t('daily.new');
+    $('#daily-home-today').textContent = t('daily.today');
+    $('#daily-home-prev').setAttribute('aria-label', t('daily.previous'));
+    $('#daily-home-next').setAttribute('aria-label', t('daily.next'));
+
+    document.body.classList.add('has-active-profile');
+    $('#daily-home').classList.remove('hidden');
+  }
+
+  const EN_RELATIONS = {
+    本人: 'Self', 伴侣: 'Partner', 子女: 'Child', 父母: 'Parent', 合作伙伴: 'Collaborator', 朋友: 'Friend', 其他: 'Other'
+  };
+
   function renderDashboard() {
     const today = TianjiEngine.dailyFortune(state.chart, Solar.fromYmd(new Date().getFullYear(), new Date().getMonth() + 1, new Date().getDate()));
     const decision = TianjiProfile.dailyDecision(today);
@@ -104,15 +176,15 @@
     $('#dashboard-profile-name').textContent = activeProfileName();
     $('#dashboard-cards').innerHTML = `
       <article class="dashboard-card dashboard-today">
-        <span>今天 · ${escapeHtml(decision.level)}</span><h3>${escapeHtml(decision.best)}</h3>
-        <p>${escapeHtml(decision.reminder)}</p><small>避免：${escapeHtml(decision.avoid)}</small>
+        <span>${escapeHtml(t('dashboard.today', { level: decision.level }))}</span><h3>${escapeHtml(decision.best)}</h3>
+        <p>${escapeHtml(decision.reminder)}</p><small>${escapeHtml(t('dashboard.avoid', { text: decision.avoid }))}</small>
       </article>
       <article class="dashboard-card">
-        <span>本月 · ${escapeHtml(month.ganZhi)} ${escapeHtml(month.god)}</span><h3>${escapeHtml(month.level)}</h3>
+        <span>${escapeHtml(t('dashboard.month', { ganZhi: month.ganZhi, god: isEnglish() ? translatedTerm(month.god) : month.god }))}</span><h3>${escapeHtml(month.level)}</h3>
         <p>${escapeHtml(month.best)}</p><small>${escapeHtml(month.watch)}</small>
       </article>
       <article class="dashboard-card">
-        <span>今年 · ${escapeHtml(year.ganZhi)} ${escapeHtml(year.god)}</span><h3>${escapeHtml(year.theme)}</h3>
+        <span>${escapeHtml(t('dashboard.year', { ganZhi: year.ganZhi, god: isEnglish() ? translatedTerm(year.god) : year.god }))}</span><h3>${escapeHtml(year.theme)}</h3>
         <p>${escapeHtml(year.career)}</p><small>${escapeHtml(year.relation)}</small>
       </article>`;
 
@@ -128,9 +200,9 @@
       <article class="life-topic-card">
         <span>${escapeHtml(topic.label)}</span><h3>${escapeHtml(topic.conclusion)}</h3>
         <dl>
-          <div><dt>依据</dt><dd>${escapeHtml(topic.evidence)}</dd></div>
-          <div><dt>现实表现</dt><dd>${escapeHtml(topic.reality)}</dd></div>
-          <div><dt>行动建议</dt><dd>${escapeHtml(topic.action)}</dd></div>
+          <div><dt>${isEnglish() ? 'Evidence' : '依据'}</dt><dd>${escapeHtml(topic.evidence)}</dd></div>
+          <div><dt>${isEnglish() ? 'In practice' : '现实表现'}</dt><dd>${escapeHtml(topic.reality)}</dd></div>
+          <div><dt>${isEnglish() ? 'Action' : '行动建议'}</dt><dd>${escapeHtml(topic.action)}</dd></div>
         </dl>
       </article>`).join('');
   }
@@ -140,17 +212,17 @@
     $('#life-timeline-list').innerHTML = timeline.map(item => `
       <article class="timeline-stage ${item.status}">
         <div class="timeline-marker"><span></span></div>
-        <div class="timeline-stage-head"><span>${item.startAge}–${item.endAge}岁</span><b>${escapeHtml(item.ganZhi)} · ${escapeHtml(item.god)}</b><em>${item.startYear}–${item.endYear}${item.status === 'current' ? ' · 当前阶段' : ''}</em></div>
+        <div class="timeline-stage-head"><span>${item.startAge}–${item.endAge}${isEnglish() ? ' yrs' : '岁'}</span><b>${escapeHtml(item.ganZhi)} · ${escapeHtml(isEnglish() ? translatedTerm(item.god) : item.god)}</b><em>${item.startYear}–${item.endYear}${item.status === 'current' ? (isEnglish() ? ' · Current phase' : ' · 当前阶段') : ''}</em></div>
         <h3>${escapeHtml(item.theme)}</h3>
         <div class="timeline-stage-grid">
-          <p><b>事业</b>${escapeHtml(item.career)}</p><p><b>财富</b>${escapeHtml(item.wealth)}</p>
-          <p><b>关系</b>${escapeHtml(item.relation)}</p><p><b>风险</b>${escapeHtml(item.risk)}</p>
+          <p><b>${isEnglish() ? 'Career' : '事业'}</b>${escapeHtml(item.career)}</p><p><b>${isEnglish() ? 'Wealth' : '财富'}</b>${escapeHtml(item.wealth)}</p>
+          <p><b>${isEnglish() ? 'Relationships' : '关系'}</b>${escapeHtml(item.relation)}</p><p><b>${isEnglish() ? 'Risk' : '风险'}</b>${escapeHtml(item.risk)}</p>
         </div><div class="timeline-action">${escapeHtml(item.action)}</div>
       </article>`).join('');
 
     $('#year-card-grid').innerHTML = TianjiPlanner.yearCards(state.chart, new Date().getFullYear() - 1, 7).map(item => `
       <article class="year-card ${item.current ? 'current' : ''}">
-        <span>${item.year}${item.current ? ' · 今年' : ''}</span><h3>${escapeHtml(item.ganZhi)} · ${escapeHtml(item.god)}</h3>
+        <span>${item.year}${item.current ? (isEnglish() ? ' · This year' : ' · 今年') : ''}</span><h3>${escapeHtml(item.ganZhi)} · ${escapeHtml(isEnglish() ? translatedTerm(item.god) : item.god)}</h3>
         <b>${escapeHtml(item.theme)}</b><p>${escapeHtml(item.career)}</p><small>${escapeHtml(item.relation)}</small>
       </article>`).join('');
 
@@ -166,7 +238,7 @@
     const year = state.calendarDate.getFullYear();
     const month = state.calendarDate.getMonth() + 1;
     const data = TianjiPlanner.calendarMonth(state.chart, year, month, loadEvents());
-    $('#calendar-label').textContent = `${year}年${month}月`;
+    $('#calendar-label').textContent = isEnglish() ? new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: 'long' }).format(new Date(year, month - 1, 1)) : `${year}年${month}月`;
     const blanks = Array.from({ length: data.firstWeekday }, () => '<span class="calendar-blank"></span>').join('');
     $('#rhythm-calendar-grid').innerHTML = blanks + data.days.map(day => `
       <button type="button" class="calendar-day ${day.tone} ${day.clash ? 'clash' : ''} ${day.events.length ? 'has-event' : ''} ${state.selectedDate === day.iso ? 'selected' : ''}" data-date="${day.iso}">
@@ -186,14 +258,16 @@
     if (rerender !== false) {
       $$('#rhythm-calendar-grid .calendar-day').forEach(button => button.classList.toggle('selected', button.dataset.date === iso));
     }
-    $('#calendar-detail').innerHTML = `<span>${escapeHtml(day.iso)} · 个人节奏 ${day.score}</span><h3>${escapeHtml(day.best)}</h3><p>需要留意：${escapeHtml(day.avoid)}</p>${day.clash ? '<small>本日地支与本命日支相冲，重要决定宜增加现实校验。</small>' : '<small>趋势只表示当天节奏，不代表确定事件。</small>'}`;
+    $('#calendar-detail').innerHTML = isEnglish()
+      ? `<span>${escapeHtml(day.iso)} · Personal rhythm ${day.score}</span><h3>${escapeHtml(day.best)}</h3><p>Watch: ${escapeHtml(day.avoid)}</p>${day.clash ? '<small>The daily branch clashes with the natal day branch; add practical checks to important decisions.</small>' : '<small>This is a rhythm indicator, not a statement of certain outcomes.</small>'}`
+      : `<span>${escapeHtml(day.iso)} · 个人节奏 ${day.score}</span><h3>${escapeHtml(day.best)}</h3><p>需要留意：${escapeHtml(day.avoid)}</p>${day.clash ? '<small>本日地支与本命日支相冲，重要决定宜增加现实校验。</small>' : '<small>趋势只表示当天节奏，不代表确定事件。</small>'}`;
     $('#event-date').value = iso;
   }
 
   function renderEventList(year, month) {
     const prefix = `${year}-${String(month).padStart(2, '0')}`;
     const events = loadEvents().filter(event => event.date.startsWith(prefix)).sort((a, b) => a.date.localeCompare(b.date));
-    $('#calendar-events').innerHTML = events.length ? events.map(event => `<div class="calendar-event"><span>${escapeHtml(event.date)}</span><b>${escapeHtml(event.title)}</b><button type="button" data-event-id="${event.id}" aria-label="删除事项">×</button></div>`).join('') : '<p class="empty-state">本月尚未加入自订事项。</p>';
+    $('#calendar-events').innerHTML = events.length ? events.map(event => `<div class="calendar-event"><span>${escapeHtml(event.date)}</span><b>${escapeHtml(event.title)}</b><button type="button" data-event-id="${event.id}" aria-label="${isEnglish() ? 'Delete event' : '删除事项'}">×</button></div>`).join('') : `<p class="empty-state">${isEnglish() ? 'No custom events have been added this month.' : '本月尚未加入自订事项。'}</p>`;
     $$('#calendar-events [data-event-id]').forEach(button => button.addEventListener('click', () => {
       write(KEYS.events, loadEvents().filter(event => event.id !== button.dataset.eventId));
       renderCalendar();
@@ -224,10 +298,10 @@
   }
 
   function activeProfileName() {
-    if (!state.profile) return '当前命盘';
+    if (!state.profile) return isEnglish() ? 'Current chart' : '当前命盘';
     const fingerprint = profileFingerprint(state.profile);
     const found = loadLibrary().find(item => item.fingerprint === fingerprint);
-    return found ? found.nickname : '当前命盘';
+    return found ? found.nickname : (isEnglish() ? 'Current chart' : '当前命盘');
   }
 
   function renderProfiles() {
@@ -235,10 +309,12 @@
     const currentFingerprint = state.profile ? profileFingerprint(state.profile) : '';
     $('#profile-library-grid').innerHTML = library.length ? library.map(item => `
       <article class="profile-library-card ${item.fingerprint === currentFingerprint ? 'active' : ''}">
-        <span>${escapeHtml(item.relation)}</span><h3>${escapeHtml(item.nickname)}</h3>
-        <p>${escapeHtml(item.data.cityLabel || item.data.city || '未设置城市')} · ${item.data.timeUnknown ? '时辰未知' : '时辰已记录'}</p>
-        <small>${escapeHtml(item.note || '暂无备注')}</small>
-        <div><button type="button" data-profile-use="${item.id}">使用</button><button type="button" data-profile-edit="${item.id}">编辑</button><button type="button" class="danger-link" data-profile-delete="${item.id}">删除</button></div>
+        <span>${escapeHtml(isEnglish() ? EN_RELATIONS[item.relation] || item.relation : item.relation)}</span>
+        ${item.fingerprint === currentFingerprint ? `<em class="profile-active-label">${escapeHtml(t('profile.active'))}</em>` : ''}
+        <h3>${escapeHtml(item.nickname)}</h3>
+        <p>${escapeHtml(item.data.cityLabel || item.data.city || t('profile.unknownCity'))} · ${item.data.timeUnknown ? t('profile.unknownTime') : t('profile.recordedTime')}</p>
+        <small>${escapeHtml(item.note || t('profile.noNote'))}</small>
+        <div><button type="button" data-profile-use="${item.id}" ${item.fingerprint === currentFingerprint ? 'disabled' : ''}>${escapeHtml(item.fingerprint === currentFingerprint ? t('profile.current') : t('profile.setActive'))}</button><button type="button" data-profile-edit="${item.id}">${escapeHtml(t('profile.edit'))}</button><button type="button" class="danger-link" data-profile-delete="${item.id}">${escapeHtml(t('profile.delete'))}</button></div>
       </article>`).join('') : '<p class="empty-state">资料库为空。生成命盘后可把当前资料加入这里。</p>';
     $$('[data-profile-use]').forEach(button => button.addEventListener('click', () => useProfile(button.dataset.profileUse)));
     $$('[data-profile-edit]').forEach(button => button.addEventListener('click', () => editProfile(button.dataset.profileEdit)));
@@ -253,24 +329,28 @@
     const library = loadLibrary();
     const fingerprint = profileFingerprint(state.profile);
     const existing = state.editingProfileId ? library.find(item => item.id === state.editingProfileId) : library.find(item => item.fingerprint === fingerprint);
+    let savedItem = existing;
     if (existing) {
       Object.assign(existing, { nickname, relation, note, fingerprint, data: state.profile, updatedAt: new Date().toISOString() });
     } else {
-      library.push({ id: makeId('profile'), nickname, relation, note, fingerprint, data: state.profile, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+      savedItem = { id: makeId('profile'), nickname, relation, note, fingerprint, data: state.profile, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+      library.push(savedItem);
     }
     if (write(KEYS.library, library)) {
+      setActiveProfileId(savedItem.id);
       state.editingProfileId = null;
       $('#profile-nickname').value = '';
       $('#profile-note').value = '';
       $('#save-current-profile').textContent = '保存当前命盘';
-      renderProfiles(); renderDashboard();
-      notify('命盘资料已保存到本机资料库。');
+      renderProfiles(); renderDashboard(); renderDailyHome();
+      notify(t('profile.savedActive'));
     }
   }
 
   function useProfile(id) {
     const item = loadLibrary().find(profile => profile.id === id);
     if (!item || !window.TianjiApp) return;
+    setActiveProfileId(item.id);
     TianjiApp.activateProfile(item.data);
     switchTab('today', true);
   }
@@ -566,10 +646,11 @@
     state.profile = detail.profile || {};
     state.analysis = detail.analysis || TianjiEngine.analyze(state.chart);
     state.ziwei = detail.ziwei || null;
+    state.dailyHomeDate = new Date();
     ensureFirstProfile();
     $('#insight-workspace').classList.remove('hidden');
     $('#mobile-workspace-nav').classList.remove('hidden');
-    renderDashboard(); renderTopics(); renderTimeline(); renderCalendar(); renderProfiles();
+    renderDailyHome(); renderDashboard(); renderTopics(); renderTimeline(); renderCalendar(); renderProfiles();
     renderRectification(); renderBacktests(); renderShareRecords(); mountAiQuestion();
   }
 
@@ -597,12 +678,20 @@
     $('#sync-restore').addEventListener('click', restoreSync);
     $('#sync-revoke').addEventListener('click', revokeSync);
     $('#create-share-link').addEventListener('click', createShare);
+    $('#daily-home-prev').addEventListener('click', () => { state.dailyHomeDate.setDate(state.dailyHomeDate.getDate() - 1); renderDailyHome(); });
+    $('#daily-home-next').addEventListener('click', () => { state.dailyHomeDate.setDate(state.dailyHomeDate.getDate() + 1); renderDailyHome(); });
+    $('#daily-home-today').addEventListener('click', () => { state.dailyHomeDate = new Date(); renderDailyHome(); });
+    $('#daily-home-switch').addEventListener('click', () => switchTab('mine', true));
+    $('#daily-home-full').addEventListener('click', () => { const result = $('#result'); if (result) result.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+    $('#daily-home-new').addEventListener('click', () => { const compute = $('#compute'); if (compute) compute.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
     $$('[data-range-output]').forEach(input => input.addEventListener('input', () => { const output = document.getElementById(input.dataset.rangeOutput); if (output) output.textContent = input.value; }));
   }
 
   document.addEventListener('tianji:chart-ready', onChartReady);
   document.addEventListener('tianji:chart-cleared', () => {
     state.chart = null; state.profile = null;
+    document.body.classList.remove('has-active-profile');
+    $('#daily-home').classList.add('hidden');
     $('#insight-workspace').classList.add('hidden');
     $('#mobile-workspace-nav').classList.add('hidden');
   });
@@ -618,7 +707,7 @@
     bindControls();
     const ui = read(KEYS.ui, {});
     setMode(ui.mode || 'simple');
-    switchTab(ui.tab || 'today', false);
+    switchTab('today', false);
     const sync = read(KEYS.sync, null);
     if (sync && sync.code) $('#sync-code').value = sync.code;
     const existing = window.TianjiApp && TianjiApp.getChart ? TianjiApp.getChart() : null;
