@@ -796,6 +796,7 @@
   function openCustomDetail(title, body) {
     $('#detail-modal .dm-title').textContent = title || '详解';
     $('#detail-modal .dm-body').innerHTML = body || '<p class="dm-empty">暂无详解。</p>';
+    if (window.TianjiAI) window.TianjiAI.mount($('#detail-modal .dm-body'), { title, body });
     $('#detail-modal').classList.remove('hidden');
     document.body.style.overflow = 'hidden';
   }
@@ -823,7 +824,7 @@
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'dm-trigger';
-      btn.textContent = '详解 ›';
+      btn.textContent = '详解 · AI ›';
       btn.addEventListener('click', (e) => { e.stopPropagation(); openDetail(sec.dataset.detail); });
       sec.appendChild(btn);
     });

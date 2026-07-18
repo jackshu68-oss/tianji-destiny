@@ -1,0 +1,22 @@
+[Unit]
+Description=Tianji DeepSeek interpretation API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=tianji-ai
+Group=tianji-ai
+WorkingDirectory=/opt/tianji-destiny/current
+EnvironmentFile=/etc/tianji-ai.env
+ExecStart=/usr/bin/python3 /opt/tianji-destiny/current/server/ai_service.py
+Restart=on-failure
+RestartSec=4
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadOnlyPaths=/opt/tianji-destiny/current
+
+[Install]
+WantedBy=multi-user.target

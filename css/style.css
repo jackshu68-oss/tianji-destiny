@@ -622,12 +622,57 @@ body {
 .dm-zw-main { color: var(--ink); }
 .dm-empty { color: var(--ink-mute); font-size: 14px; text-align: center; padding: 30px 0; }
 
+/* ============================ AI 深度解读 ============================ */
+.ai-insight {
+  margin: 30px -34px -32px;
+  padding: 26px 34px 30px;
+  border-top: 1px solid rgba(104, 190, 185, 0.28);
+  background: rgba(36, 92, 92, 0.13);
+}
+.ai-intro { display: flex; align-items: center; justify-content: space-between; gap: 22px; }
+.ai-intro > div { min-width: 0; }
+.ai-label { color: #83d4cb; font-size: 10px; letter-spacing: 2px; }
+.ai-intro h4 { margin-top: 7px; font-family: var(--serif); font-size: 18px; color: var(--ink); }
+.ai-intro p { margin-top: 7px; color: var(--ink-soft); font-size: 13px; line-height: 1.7; }
+.ai-generate {
+  flex: 0 0 auto; min-height: 42px; padding: 0 18px; border: 1px solid rgba(131,212,203,.52);
+  border-radius: 8px; background: #276d69; color: #f4fffd; cursor: pointer;
+  font: 500 13px var(--sans); transition: background .25s, border-color .25s, opacity .25s;
+}
+.ai-generate:hover { background: #31827d; border-color: #a5e5de; }
+.ai-generate:disabled { cursor: wait; opacity: .58; }
+.ai-privacy { margin-top: 10px; color: var(--ink-mute); font-size: 11px; line-height: 1.6; }
+.ai-output { display: none; }
+.ai-output.loading, .ai-output.error, .ai-output.ready { display: block; margin-top: 20px; }
+.ai-output.loading, .ai-output.error {
+  padding: 14px 16px; border-left: 3px solid #83d4cb; background: rgba(0,0,0,.17);
+  color: var(--ink-soft); font-size: 13px; line-height: 1.7;
+}
+.ai-output.error { border-left-color: var(--red); color: #f0b3ae; }
+.ai-result-head { display: flex; align-items: center; gap: 8px; padding-bottom: 13px; border-bottom: 1px solid rgba(131,212,203,.18); }
+.ai-result-head b { color: #a5e5de; font-size: 13px; }
+.ai-result-head em { margin-left: auto; color: var(--ink-mute); font-size: 10px; font-style: normal; }
+.ai-live-dot { width: 7px; height: 7px; border-radius: 50%; background: #61c5b9; box-shadow: 0 0 10px rgba(97,197,185,.7); }
+.ai-result-section { margin-top: 18px; }
+.ai-result-section h5 { color: var(--gold-soft); font: 500 14px var(--serif); margin-bottom: 8px; }
+.ai-result-section p, .ai-result-list li { color: var(--ink-soft); font-size: 13px; line-height: 1.85; }
+.ai-result-list { list-style: none; display: grid; gap: 7px; }
+.ai-result-list li { position: relative; padding-left: 15px; }
+.ai-result-list li::before { content: ''; position: absolute; left: 0; top: 10px; width: 5px; height: 5px; border-radius: 50%; background: #83d4cb; }
+.ai-caveat { margin-top: 18px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,.08); color: var(--ink-mute); font-size: 11px; line-height: 1.7; }
+.ai-result-meta { margin-top: 10px; color: var(--ink-mute); font-size: 10px; text-align: right; }
+
 @media (max-width: 560px) {
   .dm-panel { padding: 26px 20px; }
   .dm-pillars { grid-template-columns: repeat(2, 1fr); }
   .qiyun { margin-right: 0; }
   .today-block .date-nav { margin-right: 0; }
   .dm-trigger { top: 12px; right: 12px; padding: 5px 11px; font-size: 11px; }
+  .ai-insight { margin: 26px -20px -26px; padding: 22px 20px 24px; }
+  .ai-intro { align-items: stretch; flex-direction: column; gap: 14px; }
+  .ai-generate { width: 100%; }
+  .ai-result-head { align-items: flex-start; flex-wrap: wrap; }
+  .ai-result-head em { width: 100%; margin-left: 15px; }
 }
 
 /* ============================ 梅花易数与奇门遁甲 ============================ */
