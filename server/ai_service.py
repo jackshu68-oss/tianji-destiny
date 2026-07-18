@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 """Small same-origin AI interpretation service for the Tianji static site."""
 
-from __future__ import annotations
-
 import hashlib
 import json
 import os
@@ -13,7 +11,8 @@ import urllib.error
 import urllib.request
 from collections import defaultdict
 from datetime import datetime, timezone
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from socketserver import ThreadingMixIn
 
 
 ROOT = pathlib.Path(__file__).resolve().parent
@@ -37,12 +36,16 @@ PER_IP_HOUR = int(os.environ.get("TIANJI_AI_PER_IP_HOUR", "20"))
 GLOBAL_DAY = int(os.environ.get("TIANJI_AI_GLOBAL_DAY", "200"))
 
 LOCK = threading.Lock()
-CACHE: dict[str, tuple[float, dict]] = {}
-IP_REQUESTS: dict[str, list[float]] = defaultdict(list)
-GLOBAL_REQUESTS: dict[str, int] = defaultdict(int)
+CACHE = {}
+IP_REQUESTS = defaultdict(list)
+GLOBAL_REQUESTS = defaultdict(int)
 
 
-def module_for(title: str) -> str:
+class ThreadingHTTPServer(ThreadingMixIn, HTTPServer):
+    daemon_threads = True
+
+
+def module_for(title):
     if "合婚" in title or "姻缘" in title:
         return "hehun"
     if "大运" in title or "流年" in title:
@@ -56,7 +59,7 @@ def module_for(title: str) -> str:
     return "bazi"
 
 
-def normalize_analysis(value: object) -> dict:
+def normalize_analysis(value):
     if not isinstance(value, dict):
         return {
             "overview": str(value or "AI 暂未返回有效内容。"),
@@ -77,7 +80,7 @@ def normalize_analysis(value: object) -> dict:
     return result
 
 
-def parse_model_json(content: str) -> dict:
+def parse_model_json(content):
     text = (content or "").strip()
     if text.startswith("```"):
         lines = text.splitlines()
@@ -90,7 +93,7 @@ def parse_model_json(content: str) -> dict:
         return normalize_analysis({"overview": text})
 
 
-def system_prompt(module: str) -> str:
+def system_prompt(module):
     entry = KNOWLEDGE[module]
     rules = "\n".join(f"- {item}" for item in entry["rules"])
     return f"""你是传统术数文化研究助手，当前模块是「{entry['name']}」。
@@ -107,7 +110,7 @@ def system_prompt(module: str) -> str:
 {{"overview":"核心判断","evidence":["依据1"],"stages":["阶段或时间层次"],"actions":["现实建议"],"caveat":"使用边界"}}"""
 
 
-def call_deepseek(title: str, context: str, module: str) -> tuple[dict, str, dict]:
+def call_deepseek(title, context, module):
     if not API_KEY:
         raise RuntimeError("AI_SERVICE_NOT_CONFIGURED")
     payload = {
@@ -152,7 +155,7 @@ def call_deepseek(title: str, context: str, module: str) -> tuple[dict, str, dic
     return parse_model_json(content), str(raw.get("model") or MODEL), safe_usage
 
 
-def allow_request(client: str) -> tuple[bool, str]:
+def allow_request(client):
     now = time.time()
     day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     with LOCK:
@@ -170,10 +173,10 @@ def allow_request(client: str) -> tuple[bool, str]:
 class Handler(BaseHTTPRequestHandler):
     server_version = "TianjiAI/1.0"
 
-    def log_message(self, _format: str, *_args: object) -> None:
+    def log_message(self, _format, *_args):
         return
 
-    def send_json(self, status: int, payload: dict) -> None:
+    def send_json(self, status, payload):
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -183,17 +186,17 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def valid_host(self) -> bool:
+    def valid_host(self):
         host = self.headers.get("Host", "").split(":", 1)[0].lower()
         return host in ALLOWED_HOSTS
 
-    def do_GET(self) -> None:
+    def do_GET(self):
         if self.path not in ("/healthz", "/api/ai/health"):
             self.send_json(404, {"ok": False, "error": "NOT_FOUND"})
             return
         self.send_json(200, {"ok": True, "configured": bool(API_KEY), "model": MODEL})
 
-    def do_POST(self) -> None:
+    def do_POST(self):
         if self.path != "/api/ai/interpret":
             self.send_json(404, {"ok": False, "error": "NOT_FOUND"})
             return
