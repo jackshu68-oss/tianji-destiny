@@ -7,7 +7,7 @@
   <meta name="description" data-content-zh="道法自然的本机保存、AI、匿名分享、加密同步、付款与会员资料处理说明。" data-content-en="How DAOFA handles local data, AI requests, anonymous sharing, encrypted sync, payments and membership data." content="道法自然的本机保存、AI、匿名分享、加密同步、付款与会员资料处理说明。" />
   <meta name="robots" content="index,follow" />
   <meta name="theme-color" content="#f4f0e7" />
-  <link rel="canonical" href="https://tianji.47-86-31-98.sslip.io/privacy.html" />
+  <link rel="canonical" href="https://daofainsight.com/privacy.html" />
   <script>
     try {
       document.documentElement.dataset.theme = localStorage.getItem('tianji_theme_v1') === 'classic' ? 'classic' : 'modern';
@@ -55,16 +55,16 @@
       <h3 data-zh="端到端加密同步" data-en="End-to-end encrypted sync">端到端加密同步</h3>
       <p data-zh="主动建立同步时，浏览器以 PBKDF2 和 AES-GCM 使用同步密码加密资料；服务器只接收密文、盐值和初始化向量。同步密码不会上传，服务方无法读取密文或找回密码。密文最长保存 180 天，每次更新会延长保存期。" data-en="When you create sync, the browser encrypts data with PBKDF2 and AES-GCM using your passphrase. The server receives only ciphertext, salt and an initialisation vector. The passphrase is never uploaded, so the operator cannot read the data or recover the password. Ciphertext is kept for up to 180 days and the period extends on update.">主动建立同步时，浏览器以 PBKDF2 和 AES-GCM 使用同步密码加密资料；服务器只接收密文、盐值和初始化向量。同步密码不会上传，服务方无法读取密文或找回密码。密文最长保存 180 天，每次更新会延长保存期。</p>
       <h3 data-zh="付款与会员" data-en="Payments and membership">付款与会员</h3>
-      <p data-zh="人民币付款正式开通后，支付宝或微信支付会在其安全页面处理付款资料。我们不会取得或保存完整银行卡号、支付密码或安全码；服务器会保存付款邮箱、支付渠道、商户订单号、平台交易号、人民币金额、方案、支付状态、到期时间、不可逆的会员凭证摘要及必要的回调事件编号，用于开通权限、防止重复处理、恢复会员和处理退款。" data-en="Once CNY payments are live, Alipay or WeChat Pay will process payment data on their secure pages. We do not receive or store full card numbers, payment passwords or security codes. The server stores the billing email, payment channel, merchant order ID, provider transaction ID, CNY amount, plan, payment status, expiry, a one-way hash of the membership credential, and necessary callback event IDs to activate access, prevent duplicate processing, restore membership and handle refunds.">人民币付款正式开通后，支付宝或微信支付会在其安全页面处理付款资料。我们不会取得或保存完整银行卡号、支付密码或安全码；服务器会保存付款邮箱、支付渠道、商户订单号、平台交易号、人民币金额、方案、支付状态、到期时间、不可逆的会员凭证摘要及必要的回调事件编号，用于开通权限、防止重复处理、恢复会员和处理退款。</p>
+      <p data-zh="网页付款已关闭。iOS 版上线后，数字会员只通过 Apple App 内购买；Apple 处理付款资料，我们不会取得或保存完整银行卡号、支付密码或安全码。为了验证和恢复权益，应用或服务器可能处理 Apple 签名交易编号、商品编号、购买状态、购买时间与到期时间，但不会取得你的 Apple ID 密码。" data-en="Web checkout is disabled. After the iOS launch, digital memberships will be available only through Apple In-App Purchase. Apple processes payment data; we do not receive or store full card numbers, payment passwords or security codes. To verify and restore access, the app or server may process Apple-signed transaction IDs, product IDs, purchase status, purchase time and expiry, but never your Apple ID password.">网页付款已关闭。iOS 版上线后，数字会员只通过 Apple App 内购买；Apple 处理付款资料，我们不会取得或保存完整银行卡号、支付密码或安全码。为了验证和恢复权益，应用或服务器可能处理 Apple 签名交易编号、商品编号、购买状态、购买时间与到期时间，但不会取得你的 Apple ID 密码。</p>
       <h3 data-zh="会员恢复" data-en="Membership recovery">会员恢复</h3>
-      <p data-zh="主动恢复会员时，系统会保存付款邮箱、一次性验证码的不可逆摘要、到期时间和失败次数。验证码 10 分钟后失效，验证成功后即删除；单次装置会员凭证保存在该浏览器。" data-en="When you request membership recovery, the system stores the billing email, a one-way hash of the one-time code, its expiry and failed-attempt count. The code expires after 10 minutes and is deleted after successful verification. The device membership credential stays in this browser.">主动恢复会员时，系统会保存付款邮箱、一次性验证码的不可逆摘要、到期时间和失败次数。验证码 10 分钟后失效，验证成功后即删除；单次装置会员凭证保存在该浏览器。</p>
+      <p data-zh="iOS 版的会员恢复将使用 Apple 提供的购买记录与“恢复购买”流程。网页不会要求付款邮箱或短信验证码来恢复 Apple 购买。" data-en="The iOS app will restore membership using Apple purchase records and the Restore Purchases flow. The website will not request a billing email or SMS code to restore an Apple purchase.">iOS 版的会员恢复将使用 Apple 提供的购买记录与“恢复购买”流程。网页不会要求付款邮箱或短信验证码来恢复 Apple 购买。</p>
       <h3 data-zh="日志与追踪" data-en="Logs and tracking">日志与追踪</h3>
       <p data-zh="当前版本没有广告、第三方行为追踪或跨网站营销像素。服务器可保留必要的访问、安全和错误日志以防滥用及排查故障，但不会用于建立命理广告画像。" data-en="The current version has no advertising, third-party behavioural tracking or cross-site marketing pixels. Necessary access, security and error logs may be retained for abuse prevention and troubleshooting, but are not used to build divination advertising profiles.">当前版本没有广告、第三方行为追踪或跨网站营销像素。服务器可保留必要的访问、安全和错误日志以防滥用及排查故障，但不会用于建立命理广告画像。</p>
     </section>
 
     <section class="policy-section">
       <h2 data-zh="二、用途、保留与第三方" data-en="2. Purpose, retention and third parties">二、用途、保留与第三方</h2>
-      <p data-zh="资料只用于提供你主动要求的功能、安全防护、故障排查、会员履约和依法保存交易记录。人民币付款开通后，支付宝、微信支付与 DeepSeek 会按其各自政策处理发送给它们的资料；服务器和服务商可能位于你所在地区以外。" data-en="Data is used only to provide requested features, protect security, troubleshoot faults, fulfil membership purchases and retain transaction records where legally required. Once CNY checkout is live, Alipay, WeChat Pay and DeepSeek process data sent to them under their own policies, and servers or providers may be outside your region.">资料只用于提供你主动要求的功能、安全防护、故障排查、会员履约和依法保存交易记录。人民币付款开通后，支付宝、微信支付与 DeepSeek 会按其各自政策处理发送给它们的资料；服务器和服务商可能位于你所在地区以外。</p>
+      <p data-zh="资料只用于提供你主动要求的功能、安全防护、故障排查、会员履约和依法保存交易记录。iOS 购买上线后，Apple 与 DeepSeek 会按其各自政策处理发送给它们的资料；服务器和服务商可能位于你所在地区以外。" data-en="Data is used only to provide requested features, protect security, troubleshoot faults, fulfil membership purchases and retain transaction records where legally required. After iOS purchasing launches, Apple and DeepSeek process data sent to them under their own policies, and servers or providers may be outside your region.">资料只用于提供你主动要求的功能、安全防护、故障排查、会员履约和依法保存交易记录。iOS 购买上线后，Apple 与 DeepSeek 会按其各自政策处理发送给它们的资料；服务器和服务商可能位于你所在地区以外。</p>
       <p data-zh="会员及交易资料会按会计、税务、争议处理和适用法律所需期间保存；不再需要时会删除或去标识化。" data-en="Membership and transaction records are retained as needed for accounting, tax, dispute handling and applicable law, then deleted or de-identified when no longer required.">会员及交易资料会按会计、税务、争议处理和适用法律所需期间保存；不再需要时会删除或去标识化。</p>
     </section>
 
@@ -86,7 +86,7 @@
 
     <section class="policy-section" id="updates">
       <h2 data-zh="六、更新记录" data-en="6. Change log">六、更新记录</h2>
-      <div class="policy-update"><time>2026-07-18</time><p data-zh="支付方向改为人民币支付宝与微信支付，并说明一次性会员、会员凭证、邮箱恢复、付款资料与保留规则。" data-en="Changed the payment direction to CNY via Alipay and WeChat Pay, with disclosures for one-time memberships, credentials, email recovery, payment data and retention.">支付方向改为人民币支付宝与微信支付，并说明一次性会员、会员凭证、邮箱恢复、付款资料与保留规则。</p></div>
+      <div class="policy-update"><time>2026-07-18</time><p data-zh="关闭网页支付宝与微信支付入口；iOS 数字会员改为仅通过 Apple App 内购买，并更新交易验证与恢复购买说明。" data-en="Disabled Alipay and WeChat Pay on the website; digital memberships on iOS are now planned only through Apple In-App Purchase, with updated transaction-verification and restoration disclosures.">关闭网页支付宝与微信支付入口；iOS 数字会员改为仅通过 Apple App 内购买，并更新交易验证与恢复购买说明。</p></div>
       <div class="policy-update"><time>2026-07-18</time><p data-zh="新增命盘库、匿名限时分享与端到端加密同步说明。" data-en="Added chart library, expiring anonymous sharing and end-to-end encrypted sync disclosures.">新增命盘库、匿名限时分享与端到端加密同步说明。</p></div>
     </section>
 

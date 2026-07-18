@@ -3,4 +3,4 @@ Allow: /
 Disallow: /share.html
 Disallow: /api/
 
-Sitemap: https://tianji.47-86-31-98.sslip.io/sitemap.xml
+Sitemap: https://daofainsight.com/sitemap.xml

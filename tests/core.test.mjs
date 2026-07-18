@@ -274,32 +274,37 @@ test('SEO、匿名分享与私隐文件齐备', () => {
   assert.match(privacy, /180 天/);
 });
 
-test('人民币会员页只通过同源接口结账并明确不自动续费', () => {
+test('iOS 会员页只预留 Apple IAP 并关闭网页外部支付', () => {
   const pricing = fs.readFileSync(new URL('../pricing/index.html', import.meta.url), 'utf8');
   const terms = fs.readFileSync(new URL('../terms/index.html', import.meta.url), 'utf8');
   const privacy = fs.readFileSync(new URL('../privacy.html', import.meta.url), 'utf8');
   const billing = fs.readFileSync(new URL('../js/billing.js', import.meta.url), 'utf8');
   const caddy = fs.readFileSync(new URL('../deploy/Caddyfile.snippet', import.meta.url), 'utf8');
 
-  assert.match(pricing, /id="billing-email"/);
-  assert.match(pricing, /id="billing-consent"/);
+  assert.doesNotMatch(pricing, /id="billing-email"/);
+  assert.doesNotMatch(pricing, /id="billing-consent"/);
   assert.match(pricing, /data-plan-checkout="monthly"/);
   assert.match(pricing, /data-plan-checkout="yearly"/);
+  assert.match(pricing, /data-plan-checkout="monthly" disabled/);
+  assert.match(pricing, /data-plan-checkout="yearly" disabled/);
   assert.match(pricing, /¥39/);
   assert.match(pricing, /¥299/);
-  assert.match(pricing, /value="alipay"/);
-  assert.match(pricing, /value="wechat_pay"/);
-  assert.match(pricing, /到期不会自动扣款/);
+  assert.doesNotMatch(pricing, /value="alipay"/);
+  assert.doesNotMatch(pricing, /value="wechat_pay"/);
+  assert.match(pricing, /Apple App 内购买/);
+  assert.match(pricing, /到期不自动扣款/);
   assert.match(pricing, /data-en=/);
   assert.doesNotMatch(pricing, /CA\$|Stripe/);
-  assert.match(terms, /人民币价格与一次性付款/);
+  assert.match(terms, /Apple App 内购买/);
   assert.match(terms, /有效期与退款/);
   assert.doesNotMatch(terms, /Stripe/);
   assert.match(privacy, /不会取得或保存完整银行卡号、支付密码或安全码/);
+  assert.match(privacy, /Apple 签名交易编号/);
   assert.match(billing, /\/api\/billing\/checkout/);
   assert.match(billing, /\/api\/billing\/claim/);
   assert.match(billing, /\/api\/billing\/portal/);
   assert.match(billing, /\/api\/billing\/recovery\/verify/);
   assert.doesNotMatch(billing, /STRIPE_SECRET_KEY|sk_live_|whsec_/);
+  assert.match(caddy, /daofainsight\.com/);
   assert.match(caddy, /handle \/api\/billing\/\*/);
 });

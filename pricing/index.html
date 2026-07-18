@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title data-zh="会员与人民币支付｜道法自然" data-en="Membership & CNY Payments | DAOFA">会员与人民币支付｜道法自然</title>
-  <meta name="description" data-content-zh="查看道法自然免费版与人民币 Pro 会员方案，支持支付宝与微信支付。" data-content-en="Compare DAOFA Free and CNY Pro memberships with Alipay and WeChat Pay." content="查看道法自然免费版与人民币 Pro 会员方案，支持支付宝与微信支付。" />
+  <title data-zh="会员方案｜道法自然" data-en="Membership Plans | DAOFA">会员方案｜道法自然</title>
+  <meta name="description" data-content-zh="查看道法自然免费版与 Pro 会员方案。iOS 数字会员仅通过 Apple App 内购买，网页暂不收费。" data-content-en="Compare DAOFA Free and Pro memberships. Digital memberships on iOS will be available only through Apple In-App Purchase; web checkout is currently unavailable." content="查看道法自然免费版与 Pro 会员方案。iOS 数字会员仅通过 Apple App 内购买，网页暂不收费。" />
   <meta name="theme-color" content="#f4f0e7" />
-  <link rel="canonical" href="https://tianji.47-86-31-98.sslip.io/pricing/" />
+  <link rel="canonical" href="https://daofainsight.com/pricing/" />
   <script>
     try {
       document.documentElement.dataset.theme = localStorage.getItem('tianji_theme_v1') === 'classic' ? 'classic' : 'modern';
@@ -35,7 +35,7 @@
     <header class="commercial-header">
       <p class="eyebrow" data-zh="会员中心" data-en="MEMBERSHIP">会员中心</p>
       <h1 data-zh="选择适合你的使用方式" data-en="Choose how you use DAOFA">选择适合你的使用方式</h1>
-      <p data-zh="基础排盘永久免费；Pro 提供更高的 AI 详解额度和可恢复的会员权限。" data-en="Core charting stays free. Pro adds a higher AI interpretation allowance and recoverable membership access.">基础排盘永久免费；Pro 提供更高的 AI 详解额度和可恢复的会员权限。</p>
+      <p data-zh="基础排盘永久免费；Pro 计划提供更高的 AI 详解额度。iOS 版上线后仅通过 Apple App 内购买开通。" data-en="Core charting stays free. Pro is planned to add a higher AI interpretation allowance and will be offered on iOS only through Apple In-App Purchase.">基础排盘永久免费；Pro 计划提供更高的 AI 详解额度。iOS 版上线后仅通过 Apple App 内购买开通。</p>
     </header>
 
     <section class="billing-status-band" id="billing-status-band" aria-live="polite">
@@ -56,10 +56,6 @@
           <p class="eyebrow" data-zh="方案" data-en="PLANS">方案</p>
           <h2 id="pricing-title" data-zh="先免费使用，需要更多 AI 时再升级" data-en="Start free and upgrade when you need more AI">先免费使用，需要更多 AI 时再升级</h2>
         </div>
-        <label class="billing-email-field" for="billing-email">
-          <span data-zh="收据与会员恢复邮箱" data-en="Receipt and recovery email">收据与会员恢复邮箱</span>
-          <input id="billing-email" type="email" autocomplete="email" inputmode="email" maxlength="254" data-placeholder-zh="name@example.com" data-placeholder-en="name@example.com" placeholder="name@example.com" />
-        </label>
       </div>
 
       <div class="pricing-grid">
@@ -85,10 +81,10 @@
           </div>
           <ul>
             <li data-zh="每日最多 100 次 AI 智能详解" data-en="Up to 100 AI interpretations per day">每日最多 100 次 AI 智能详解</li>
-            <li data-zh="邮箱恢复会员权限" data-en="Restore membership by email">邮箱恢复会员权限</li>
-            <li data-zh="支付宝或微信支付，人民币结算" data-en="Pay in CNY with Alipay or WeChat Pay">支付宝或微信支付，人民币结算</li>
+            <li data-zh="会员恢复将由 Apple 购买记录处理" data-en="Membership restoration will use Apple purchase records">会员恢复将由 Apple 购买记录处理</li>
+            <li data-zh="iOS 版仅通过 Apple App 内购买" data-en="iOS access only through Apple In-App Purchase">iOS 版仅通过 Apple App 内购买</li>
           </ul>
-          <button type="button" data-plan-checkout="monthly">商户开通中</button>
+          <button type="button" data-plan-checkout="monthly" disabled>iOS 版上线后开放</button>
         </article>
 
         <article class="pricing-plan is-pro featured">
@@ -102,28 +98,14 @@
             <li data-zh="按当前价格比连续购买 30 天节省约 36%" data-en="About 36% less than repeating the 30-day plan">按当前价格比连续购买 30 天节省约 36%</li>
             <li data-zh="有效期清楚显示，需要时再主动续购" data-en="A clear expiry date; renew only when you choose">有效期清楚显示，需要时再主动续购</li>
           </ul>
-          <button type="button" data-plan-checkout="yearly">商户开通中</button>
+          <button type="button" data-plan-checkout="yearly" disabled>iOS 版上线后开放</button>
         </article>
       </div>
 
-      <fieldset class="billing-methods">
-        <legend data-zh="人民币付款方式" data-en="CNY payment method">人民币付款方式</legend>
-        <label class="billing-method is-alipay">
-          <input type="radio" name="payment-method" value="alipay" checked />
-          <span class="billing-method-mark" aria-hidden="true">支</span>
-          <span><strong data-zh="支付宝" data-en="Alipay">支付宝</strong><small data-zh="商户接入待审核" data-en="Merchant access pending">商户接入待审核</small></span>
-        </label>
-        <label class="billing-method is-wechat">
-          <input type="radio" name="payment-method" value="wechat_pay" />
-          <span class="billing-method-mark" aria-hidden="true">微</span>
-          <span><strong data-zh="微信支付" data-en="WeChat Pay">微信支付</strong><small data-zh="商户接入待审核" data-en="Merchant access pending">商户接入待审核</small></span>
-        </label>
-      </fieldset>
-
-      <label class="billing-consent" for="billing-consent">
-        <input id="billing-consent" type="checkbox" />
-        <span data-zh="我已阅读并同意服务条款、会员购买与退款规则及隐私政策；我明白这是一次性数字服务购买，到期不会自动扣款。" data-en="I agree to the Terms, membership purchase and refund rules, and Privacy Policy, and understand this is a one-time digital-service purchase with no automatic renewal.">我已阅读并同意服务条款、会员购买与退款规则及隐私政策；我明白这是一次性数字服务购买，到期不会自动扣款。</span>
-      </label>
+      <div class="billing-merchant-state" role="note">
+        <strong data-zh="网页付款已关闭" data-en="Web checkout is disabled">网页付款已关闭</strong>
+        <span data-zh=" 本页不提供支付宝、微信支付、收款码或外部购买链接。iOS 版的数字会员将使用 Apple App 内购买；最终价格以 App Store 显示为准。" data-en=" This page does not offer Alipay, WeChat Pay, payment codes or external purchase links. Digital memberships on iOS will use Apple In-App Purchase; final prices will be those shown in the App Store."> 本页不提供支付宝、微信支付、收款码或外部购买链接。iOS 版的数字会员将使用 Apple App 内购买；最终价格以 App Store 显示为准。</span>
+      </div>
       <p class="billing-legal-links"><a href="../terms/" data-zh="服务条款" data-en="Terms">服务条款</a><a href="../privacy.html" data-zh="隐私政策" data-en="Privacy">隐私政策</a></p>
     </section>
 

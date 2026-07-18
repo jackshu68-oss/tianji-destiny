@@ -17,14 +17,14 @@
       proDetail: '方案：{plan} · 会员邮箱：{email}',
       monthly: '月付',
       yearly: '年付',
-      ready: '人民币支付已开通；付款前会显示支付宝或微信支付的订单总额。',
-      disabled: '支付宝与微信支付商户仍在审核和接入中。当前只展示人民币方案，不会收取费用。',
+      ready: 'iOS 版会员将通过 Apple App 内购买开通。',
+      disabled: '网页付款已关闭。iOS 版上线后，数字会员仅通过 Apple App 内购买；当前不会收取费用。',
       buyMonthly: '购买 30 天 Pro',
       buyYearly: '购买 365 天 Pro',
-      merchantPending: '人民币支付待开通',
+      merchantPending: 'iOS 版上线后开放',
       emailRequired: '请先填写用于接收收据和恢复会员的有效邮箱。',
       consentRequired: '请先阅读并同意服务条款、会员购买规则与隐私政策。',
-      redirecting: '正在打开人民币安全支付页面…',
+      redirecting: '正在打开 Apple App 内购买…',
       cancelled: '你已取消本次付款，没有产生新订单。',
       claiming: '付款已返回，正在确认订单并领取会员权限…',
       claimed: '订单已确认，Pro 会员已在此装置生效。',
@@ -47,14 +47,14 @@
       proDetail: 'Plan: {plan} · Member email: {email}',
       monthly: 'Monthly',
       yearly: 'Annual',
-      ready: 'CNY checkout is live. The Alipay or WeChat Pay order total is shown before payment.',
-      disabled: 'Alipay and WeChat Pay merchant access is still under review and integration. CNY prices are shown, but no payment is collected yet.',
+      ready: 'Membership on iOS will be available through Apple In-App Purchase.',
+      disabled: 'Web checkout is disabled. Digital memberships on iOS will be available only through Apple In-App Purchase, and no payment is collected now.',
       buyMonthly: 'Buy 30 days of Pro',
       buyYearly: 'Buy 365 days of Pro',
-      merchantPending: 'CNY payment pending',
+      merchantPending: 'Available after the iOS launch',
       emailRequired: 'Enter a valid email for receipts and membership recovery.',
       consentRequired: 'Read and accept the Terms, membership purchase rules and Privacy Policy first.',
-      redirecting: 'Opening secure CNY checkout…',
+      redirecting: 'Opening Apple In-App Purchase…',
       cancelled: 'Payment was cancelled. No new order was created.',
       claiming: 'Payment returned. Confirming the order and activating membership…',
       claimed: 'Order confirmed. Pro is now active on this device.',
@@ -190,6 +190,7 @@
     const keys = {
       BILLING_NOT_CONFIGURED: 'disabled',
       CHINA_MERCHANT_PENDING: 'disabled',
+      APPLE_IAP_REQUIRED: 'disabled',
       RECOVERY_NOT_CONFIGURED: 'noRecovery',
       INVALID_EMAIL: 'emailRequired',
       NO_ACTIVE_SUBSCRIPTION: 'noActive',
@@ -290,6 +291,10 @@
 
     document.querySelectorAll('[data-plan-checkout]').forEach(button => {
       button.addEventListener('click', async () => {
+        if (!state.config || !state.config.enabled || !emailInput || !consentInput) {
+          setCopiedNotice(notice, 'disabled', 'warning');
+          return;
+        }
         const email = emailInput.value.trim();
         if (!email || !email.includes('@')) {
           setCopiedNotice(notice, 'emailRequired', 'error');
@@ -303,8 +308,7 @@
         }
         button.disabled = true;
         setCopiedNotice(notice, 'redirecting', 'loading');
-        const paymentMethod = (document.querySelector('input[name="payment-method"]:checked') || {}).value || 'alipay';
-        try { await startCheckout(button.dataset.planCheckout, email, paymentMethod); }
+        try { await startCheckout(button.dataset.planCheckout, email, 'apple_iap'); }
         catch (error) {
           displayError(notice, error);
           renderPricing();

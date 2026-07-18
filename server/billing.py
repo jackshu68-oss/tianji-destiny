@@ -32,12 +32,13 @@ class BillingService:
     def __init__(self, database_path, environ=None, stripe_transport=None, mail_sender=None):
         env = environ if environ is not None else os.environ
         self.database_path = str(database_path)
-        self.provider = str(env.get("TIANJI_PAYMENT_PROVIDER", "china_pending")).strip().lower()
+        self.provider = str(env.get("TIANJI_PAYMENT_PROVIDER", "apple_iap_pending")).strip().lower()
+        self.web_checkout_enabled = str(env.get("TIANJI_WEB_CHECKOUT_ENABLED", "0")).strip().lower() in ("1", "true", "yes")
         self.secret_key = str(env.get("STRIPE_SECRET_KEY", "")).strip()
         self.webhook_secret = str(env.get("STRIPE_WEBHOOK_SECRET", "")).strip()
         self.price_monthly = str(env.get("STRIPE_PRICE_MONTHLY_CAD", "")).strip()
         self.price_yearly = str(env.get("STRIPE_PRICE_YEARLY_CAD", "")).strip()
-        self.public_origin = str(env.get("TIANJI_PUBLIC_ORIGIN", "https://tianji.47-86-31-98.sslip.io")).strip().rstrip("/")
+        self.public_origin = str(env.get("TIANJI_PUBLIC_ORIGIN", "https://daofainsight.com")).strip().rstrip("/")
         self.api_version = str(env.get("STRIPE_API_VERSION", "2025-06-30.basil")).strip()
         if self.provider == "stripe":
             self.currency = str(env.get("TIANJI_BILLING_CURRENCY", "CAD")).strip().upper() or "CAD"
@@ -60,30 +61,29 @@ class BillingService:
 
     @property
     def enabled(self):
-        return self.provider == "stripe" and bool(
+        return self.web_checkout_enabled and self.provider == "stripe" and bool(
             self.secret_key and self.webhook_secret and self.price_monthly and self.price_yearly
         )
 
     @property
     def recovery_enabled(self):
-        return bool(self.recovery_secret and ((self.smtp_host and self.smtp_from) or self._mail_sender))
+        return self.provider == "stripe" and bool(
+            self.recovery_secret and ((self.smtp_host and self.smtp_from) or self._mail_sender)
+        )
 
     def public_config(self):
-        china_mode = self.provider != "stripe"
+        apple_mode = self.provider != "stripe"
         return {
             "ok": True,
             "enabled": self.enabled,
             "recovery_enabled": self.recovery_enabled,
             "currency": self.currency,
-            "provider": "china" if china_mode else "stripe",
-            "recurring": not china_mode,
-            "payment_methods": [
-                {"id": "alipay", "label": "支付宝 / Alipay", "enabled": False},
-                {"id": "wechat_pay", "label": "微信支付 / WeChat Pay", "enabled": False},
-            ] if china_mode else [],
+            "provider": "apple_iap" if apple_mode else "stripe",
+            "recurring": False if apple_mode else True,
+            "payment_methods": [],
             "plans": [
-                {"id": "monthly", "price": self.monthly_display, "period": "30_days" if china_mode else "month"},
-                {"id": "yearly", "price": self.yearly_display, "period": "365_days" if china_mode else "year"},
+                {"id": "monthly", "price": self.monthly_display, "period": "30_days" if apple_mode else "month", "product_id": "com.daofainsight.pro.30days" if apple_mode else ""},
+                {"id": "yearly", "price": self.yearly_display, "period": "365_days" if apple_mode else "year", "product_id": "com.daofainsight.pro.365days" if apple_mode else ""},
             ],
         }
 
@@ -217,9 +217,7 @@ class BillingService:
             if plan not in ("monthly", "yearly"):
                 raise BillingError(400, "INVALID_PLAN", "请选择有效的会员方案。")
             self._normalise_email(email)
-            if str(payment_method or "alipay").strip().lower() not in ("alipay", "wechat_pay"):
-                raise BillingError(400, "INVALID_PAYMENT_METHOD", "请选择支付宝或微信支付。")
-            raise BillingError(503, "CHINA_MERCHANT_PENDING", "人民币商户仍在审核和接入中，当前不会收取费用。")
+            raise BillingError(409, "APPLE_IAP_REQUIRED", "网页付款已关闭；iOS 数字会员仅通过 Apple App 内购买。")
         if not self.enabled:
             raise BillingError(503, "BILLING_NOT_CONFIGURED", "支付商户仍在审核或配置中。")
         plan, price_id = self._plan_price(plan)

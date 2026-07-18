@@ -49,6 +49,7 @@ class BillingTests(unittest.TestCase):
         self.sent_codes = []
         self.environ = {
             "TIANJI_PAYMENT_PROVIDER": "stripe",
+            "TIANJI_WEB_CHECKOUT_ENABLED": "1",
             "STRIPE_SECRET_KEY": "sk_test_secret",
             "STRIPE_WEBHOOK_SECRET": "whsec_test_secret",
             "STRIPE_PRICE_MONTHLY_CAD": "price_monthly",
@@ -72,20 +73,22 @@ class BillingTests(unittest.TestCase):
         claimed = self.service.claim_checkout(checkout["session_id"], self.stripe.claim)
         return checkout, claimed
 
-    def test_china_pending_configuration_never_pretends_to_checkout(self):
+    def test_apple_iap_pending_configuration_never_pretends_to_checkout(self):
         service = BillingService(self.database, environ={})
         config = service.public_config()
         self.assertFalse(config["enabled"])
-        self.assertEqual(config["provider"], "china")
+        self.assertFalse(config["recovery_enabled"])
+        self.assertEqual(config["provider"], "apple_iap")
         self.assertEqual(config["currency"], "CNY")
         self.assertFalse(config["recurring"])
         self.assertEqual([plan["price"] for plan in config["plans"]], ["¥39", "¥299"])
-        self.assertEqual([method["id"] for method in config["payment_methods"]], ["alipay", "wechat_pay"])
+        self.assertEqual(config["payment_methods"], [])
+        self.assertEqual(config["plans"][0]["product_id"], "com.daofainsight.pro.30days")
         with self.assertRaises(BillingError) as context:
-            service.create_checkout("monthly", "member@example.com", "alipay")
-        self.assertEqual(context.exception.code, "CHINA_MERCHANT_PENDING")
+            service.create_checkout("monthly", "member@example.com", "apple_iap")
+        self.assertEqual(context.exception.code, "APPLE_IAP_REQUIRED")
 
-    def test_stripe_keys_do_not_enable_china_pending_mode(self):
+    def test_stripe_keys_do_not_enable_apple_iap_pending_mode(self):
         service = BillingService(self.database, environ={
             "STRIPE_SECRET_KEY": "sk_live_should_not_activate",
             "STRIPE_WEBHOOK_SECRET": "whsec_should_not_activate",
@@ -96,7 +99,7 @@ class BillingTests(unittest.TestCase):
         })
         self.assertFalse(service.enabled)
         config = service.public_config()
-        self.assertEqual(config["provider"], "china")
+        self.assertEqual(config["provider"], "apple_iap")
         self.assertEqual(config["currency"], "CNY")
         self.assertEqual(config["plans"][0]["price"], "¥39")
 
