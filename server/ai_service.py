@@ -430,7 +430,7 @@ class Handler(BaseHTTPRequestHandler):
             if not isinstance(body, dict):
                 raise BillingError(400, "INVALID_BODY", "提交格式无效。")
             if path == "/api/billing/checkout":
-                result = BILLING.create_checkout(body.get("plan"), body.get("email"))
+                result = BILLING.create_checkout(body.get("plan"), body.get("email"), body.get("method"))
             elif path == "/api/billing/claim":
                 result = BILLING.claim_checkout(body.get("session_id"), body.get("claim"))
             elif path == "/api/billing/portal":

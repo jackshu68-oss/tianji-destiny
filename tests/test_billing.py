@@ -48,6 +48,7 @@ class BillingTests(unittest.TestCase):
         self.stripe = FakeStripe()
         self.sent_codes = []
         self.environ = {
+            "TIANJI_PAYMENT_PROVIDER": "stripe",
             "STRIPE_SECRET_KEY": "sk_test_secret",
             "STRIPE_WEBHOOK_SECRET": "whsec_test_secret",
             "STRIPE_PRICE_MONTHLY_CAD": "price_monthly",
@@ -71,12 +72,33 @@ class BillingTests(unittest.TestCase):
         claimed = self.service.claim_checkout(checkout["session_id"], self.stripe.claim)
         return checkout, claimed
 
-    def test_disabled_configuration_never_pretends_to_checkout(self):
+    def test_china_pending_configuration_never_pretends_to_checkout(self):
         service = BillingService(self.database, environ={})
-        self.assertFalse(service.public_config()["enabled"])
+        config = service.public_config()
+        self.assertFalse(config["enabled"])
+        self.assertEqual(config["provider"], "china")
+        self.assertEqual(config["currency"], "CNY")
+        self.assertFalse(config["recurring"])
+        self.assertEqual([plan["price"] for plan in config["plans"]], ["¥39", "¥299"])
+        self.assertEqual([method["id"] for method in config["payment_methods"]], ["alipay", "wechat_pay"])
         with self.assertRaises(BillingError) as context:
-            service.create_checkout("monthly", "member@example.com")
-        self.assertEqual(context.exception.code, "BILLING_NOT_CONFIGURED")
+            service.create_checkout("monthly", "member@example.com", "alipay")
+        self.assertEqual(context.exception.code, "CHINA_MERCHANT_PENDING")
+
+    def test_stripe_keys_do_not_enable_china_pending_mode(self):
+        service = BillingService(self.database, environ={
+            "STRIPE_SECRET_KEY": "sk_live_should_not_activate",
+            "STRIPE_WEBHOOK_SECRET": "whsec_should_not_activate",
+            "STRIPE_PRICE_MONTHLY_CAD": "price_monthly",
+            "STRIPE_PRICE_YEARLY_CAD": "price_yearly",
+            "TIANJI_BILLING_CURRENCY": "CAD",
+            "TIANJI_PRICE_MONTHLY_DISPLAY": "CA$9.99",
+        })
+        self.assertFalse(service.enabled)
+        config = service.public_config()
+        self.assertEqual(config["provider"], "china")
+        self.assertEqual(config["currency"], "CNY")
+        self.assertEqual(config["plans"][0]["price"], "¥39")
 
     def test_checkout_claim_status_and_portal(self):
         checkout, claimed = self.checkout_and_claim()

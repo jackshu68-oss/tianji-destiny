@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title data-zh="会员与订阅｜道法自然" data-en="Membership & Billing | DAOFA">会员与订阅｜道法自然</title>
-  <meta name="description" data-content-zh="查看道法自然免费版与 Pro 会员方案，安全订阅、恢复会员及管理续订。" data-content-en="Compare DAOFA Free and Pro, subscribe securely, restore membership and manage renewal." content="查看道法自然免费版与 Pro 会员方案，安全订阅、恢复会员及管理续订。" />
+  <title data-zh="会员与人民币支付｜道法自然" data-en="Membership & CNY Payments | DAOFA">会员与人民币支付｜道法自然</title>
+  <meta name="description" data-content-zh="查看道法自然免费版与人民币 Pro 会员方案，支持支付宝与微信支付。" data-content-en="Compare DAOFA Free and CNY Pro memberships with Alipay and WeChat Pay." content="查看道法自然免费版与人民币 Pro 会员方案，支持支付宝与微信支付。" />
   <meta name="theme-color" content="#f4f0e7" />
   <link rel="canonical" href="https://tianji.47-86-31-98.sslip.io/pricing/" />
   <script>
@@ -44,7 +44,7 @@
         <h2 id="billing-status-title">正在检查会员状态…</h2>
         <p id="billing-status-detail"></p>
       </div>
-      <button type="button" id="billing-manage" hidden data-zh="管理订阅" data-en="Manage subscription">管理订阅</button>
+      <button type="button" id="billing-manage" hidden data-zh="会员详情" data-en="Membership details">会员详情</button>
     </section>
 
     <div id="billing-notice" class="billing-notice" aria-live="polite"></div>
@@ -66,7 +66,7 @@
         <article class="pricing-plan">
           <div class="pricing-plan-head">
             <span data-zh="免费版" data-en="FREE">免费版</span>
-            <strong>CA$0</strong>
+            <strong>¥0</strong>
             <small data-zh="长期免费" data-en="Always free">长期免费</small>
           </div>
           <ul>
@@ -79,36 +79,50 @@
 
         <article class="pricing-plan is-pro">
           <div class="pricing-plan-head">
-            <span data-zh="Pro 月付" data-en="PRO MONTHLY">Pro 月付</span>
-            <strong data-price="monthly">CA$9.99</strong>
-            <small data-zh="每月自动续订" data-en="per month, recurring">每月自动续订</small>
+            <span data-zh="Pro 30 天" data-en="PRO · 30 DAYS">Pro 30 天</span>
+            <strong data-price="monthly">¥39</strong>
+            <small data-zh="一次购买，到期不自动扣款" data-en="One-time purchase, no auto-renewal">一次购买，到期不自动扣款</small>
           </div>
           <ul>
             <li data-zh="每日最多 100 次 AI 智能详解" data-en="Up to 100 AI interpretations per day">每日最多 100 次 AI 智能详解</li>
             <li data-zh="邮箱恢复会员权限" data-en="Restore membership by email">邮箱恢复会员权限</li>
-            <li data-zh="Stripe 会员中心管理或取消续订" data-en="Manage or cancel renewal in the Stripe portal">Stripe 会员中心管理或取消续订</li>
+            <li data-zh="支付宝或微信支付，人民币结算" data-en="Pay in CNY with Alipay or WeChat Pay">支付宝或微信支付，人民币结算</li>
           </ul>
           <button type="button" data-plan-checkout="monthly">商户开通中</button>
         </article>
 
         <article class="pricing-plan is-pro featured">
           <div class="pricing-plan-head">
-            <span data-zh="Pro 年付" data-en="PRO ANNUAL">Pro 年付</span>
-            <strong data-price="yearly">CA$79</strong>
-            <small data-zh="每年自动续订" data-en="per year, recurring">每年自动续订</small>
+            <span data-zh="Pro 365 天" data-en="PRO · 365 DAYS">Pro 365 天</span>
+            <strong data-price="yearly">¥299</strong>
+            <small data-zh="一次购买，到期不自动扣款" data-en="One-time purchase, no auto-renewal">一次购买，到期不自动扣款</small>
           </div>
           <ul>
             <li data-zh="与月付相同的 Pro 功能" data-en="All monthly Pro features">与月付相同的 Pro 功能</li>
-            <li data-zh="按当前价格比月付节省约 34%" data-en="About 34% less than monthly at current prices">按当前价格比月付节省约 34%</li>
-            <li data-zh="到期前可随时关闭下一期续订" data-en="Turn off the next renewal before the period ends">到期前可随时关闭下一期续订</li>
+            <li data-zh="按当前价格比连续购买 30 天节省约 36%" data-en="About 36% less than repeating the 30-day plan">按当前价格比连续购买 30 天节省约 36%</li>
+            <li data-zh="有效期清楚显示，需要时再主动续购" data-en="A clear expiry date; renew only when you choose">有效期清楚显示，需要时再主动续购</li>
           </ul>
           <button type="button" data-plan-checkout="yearly">商户开通中</button>
         </article>
       </div>
 
+      <fieldset class="billing-methods">
+        <legend data-zh="人民币付款方式" data-en="CNY payment method">人民币付款方式</legend>
+        <label class="billing-method is-alipay">
+          <input type="radio" name="payment-method" value="alipay" checked />
+          <span class="billing-method-mark" aria-hidden="true">支</span>
+          <span><strong data-zh="支付宝" data-en="Alipay">支付宝</strong><small data-zh="商户接入待审核" data-en="Merchant access pending">商户接入待审核</small></span>
+        </label>
+        <label class="billing-method is-wechat">
+          <input type="radio" name="payment-method" value="wechat_pay" />
+          <span class="billing-method-mark" aria-hidden="true">微</span>
+          <span><strong data-zh="微信支付" data-en="WeChat Pay">微信支付</strong><small data-zh="商户接入待审核" data-en="Merchant access pending">商户接入待审核</small></span>
+        </label>
+      </fieldset>
+
       <label class="billing-consent" for="billing-consent">
         <input id="billing-consent" type="checkbox" />
-        <span data-zh="我已阅读并同意服务条款、订阅与取消规则及隐私政策；我明白这是自动续订的数字服务。" data-en="I have read and agree to the Terms, subscription and cancellation rules, and Privacy Policy, and understand this is a recurring digital service.">我已阅读并同意服务条款、订阅与取消规则及隐私政策；我明白这是自动续订的数字服务。</span>
+        <span data-zh="我已阅读并同意服务条款、会员购买与退款规则及隐私政策；我明白这是一次性数字服务购买，到期不会自动扣款。" data-en="I agree to the Terms, membership purchase and refund rules, and Privacy Policy, and understand this is a one-time digital-service purchase with no automatic renewal.">我已阅读并同意服务条款、会员购买与退款规则及隐私政策；我明白这是一次性数字服务购买，到期不会自动扣款。</span>
       </label>
       <p class="billing-legal-links"><a href="../terms/" data-zh="服务条款" data-en="Terms">服务条款</a><a href="../privacy.html" data-zh="隐私政策" data-en="Privacy">隐私政策</a></p>
     </section>
@@ -139,7 +153,7 @@
   </footer>
 
   <script src="../js/ui.js?v=20260718-17"></script>
-  <script src="../js/billing.js?v=20260718-19"></script>
+  <script src="../js/billing.js?v=20260718-20"></script>
   <script src="../js/ambient.js?v=20260718-14"></script>
 </body>
 </html>

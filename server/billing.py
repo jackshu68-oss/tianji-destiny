@@ -1,4 +1,4 @@
-"""Subscription billing and entitlement support for the Tianji web app."""
+"""Membership billing and entitlement support for the Tianji web app."""
 
 import hashlib
 import hmac
@@ -32,15 +32,21 @@ class BillingService:
     def __init__(self, database_path, environ=None, stripe_transport=None, mail_sender=None):
         env = environ if environ is not None else os.environ
         self.database_path = str(database_path)
+        self.provider = str(env.get("TIANJI_PAYMENT_PROVIDER", "china_pending")).strip().lower()
         self.secret_key = str(env.get("STRIPE_SECRET_KEY", "")).strip()
         self.webhook_secret = str(env.get("STRIPE_WEBHOOK_SECRET", "")).strip()
         self.price_monthly = str(env.get("STRIPE_PRICE_MONTHLY_CAD", "")).strip()
         self.price_yearly = str(env.get("STRIPE_PRICE_YEARLY_CAD", "")).strip()
         self.public_origin = str(env.get("TIANJI_PUBLIC_ORIGIN", "https://tianji.47-86-31-98.sslip.io")).strip().rstrip("/")
         self.api_version = str(env.get("STRIPE_API_VERSION", "2025-06-30.basil")).strip()
-        self.currency = str(env.get("TIANJI_BILLING_CURRENCY", "CAD")).strip().upper() or "CAD"
-        self.monthly_display = str(env.get("TIANJI_PRICE_MONTHLY_DISPLAY", "CA$9.99")).strip()
-        self.yearly_display = str(env.get("TIANJI_PRICE_YEARLY_DISPLAY", "CA$79")).strip()
+        if self.provider == "stripe":
+            self.currency = str(env.get("TIANJI_BILLING_CURRENCY", "CAD")).strip().upper() or "CAD"
+            self.monthly_display = str(env.get("TIANJI_PRICE_MONTHLY_DISPLAY", "CA$9.99")).strip()
+            self.yearly_display = str(env.get("TIANJI_PRICE_YEARLY_DISPLAY", "CA$79")).strip()
+        else:
+            self.currency = "CNY"
+            self.monthly_display = str(env.get("TIANJI_PRICE_30D_CNY", "¥39")).strip()
+            self.yearly_display = str(env.get("TIANJI_PRICE_365D_CNY", "¥299")).strip()
         self.pro_ai_day = max(1, int(env.get("TIANJI_AI_PRO_DAY", "100")))
         self.recovery_secret = str(env.get("TIANJI_RECOVERY_SECRET", self.webhook_secret or self.secret_key)).strip()
         self.smtp_host = str(env.get("SMTP_HOST", "")).strip()
@@ -54,21 +60,30 @@ class BillingService:
 
     @property
     def enabled(self):
-        return bool(self.secret_key and self.webhook_secret and self.price_monthly and self.price_yearly)
+        return self.provider == "stripe" and bool(
+            self.secret_key and self.webhook_secret and self.price_monthly and self.price_yearly
+        )
 
     @property
     def recovery_enabled(self):
         return bool(self.recovery_secret and ((self.smtp_host and self.smtp_from) or self._mail_sender))
 
     def public_config(self):
+        china_mode = self.provider != "stripe"
         return {
             "ok": True,
             "enabled": self.enabled,
             "recovery_enabled": self.recovery_enabled,
             "currency": self.currency,
+            "provider": "china" if china_mode else "stripe",
+            "recurring": not china_mode,
+            "payment_methods": [
+                {"id": "alipay", "label": "支付宝 / Alipay", "enabled": False},
+                {"id": "wechat_pay", "label": "微信支付 / WeChat Pay", "enabled": False},
+            ] if china_mode else [],
             "plans": [
-                {"id": "monthly", "price": self.monthly_display, "period": "month"},
-                {"id": "yearly", "price": self.yearly_display, "period": "year"},
+                {"id": "monthly", "price": self.monthly_display, "period": "30_days" if china_mode else "month"},
+                {"id": "yearly", "price": self.yearly_display, "period": "365_days" if china_mode else "year"},
             ],
         }
 
@@ -196,7 +211,15 @@ class BillingService:
         except (urllib.error.URLError, TimeoutError, ValueError) as error:
             raise BillingError(502, "PAYMENT_PROVIDER_UNAVAILABLE", "支付服务暂时无法连接，请稍后再试。") from error
 
-    def create_checkout(self, plan, email):
+    def create_checkout(self, plan, email, payment_method=None):
+        if self.provider != "stripe":
+            plan = str(plan or "").strip().lower()
+            if plan not in ("monthly", "yearly"):
+                raise BillingError(400, "INVALID_PLAN", "请选择有效的会员方案。")
+            self._normalise_email(email)
+            if str(payment_method or "alipay").strip().lower() not in ("alipay", "wechat_pay"):
+                raise BillingError(400, "INVALID_PAYMENT_METHOD", "请选择支付宝或微信支付。")
+            raise BillingError(503, "CHINA_MERCHANT_PENDING", "人民币商户仍在审核和接入中，当前不会收取费用。")
         if not self.enabled:
             raise BillingError(503, "BILLING_NOT_CONFIGURED", "支付商户仍在审核或配置中。")
         plan, price_id = self._plan_price(plan)
@@ -363,6 +386,8 @@ class BillingService:
         return {"ok": True, "enabled": self.enabled, "entitlement": self._public_entitlement(self._account_for_token(access_token))}
 
     def create_portal(self, access_token):
+        if self.provider != "stripe":
+            raise BillingError(409, "NO_RECURRING_BILLING", "人民币会员到期不会自动扣款，无需取消续费。")
         account = self._account_for_token(access_token)
         if not account or account["status"] not in ACTIVE_STATUSES or not account["stripe_customer_id"]:
             raise BillingError(403, "NO_ACTIVE_SUBSCRIPTION", "未找到可管理的有效订阅。")
@@ -397,6 +422,8 @@ class BillingService:
             raise BillingError(400, "INVALID_WEBHOOK_SIGNATURE", "Webhook 签名无效。")
 
     def handle_webhook(self, raw_body, signature_header, now=None):
+        if self.provider != "stripe":
+            raise BillingError(404, "UNSUPPORTED_PAYMENT_PROVIDER", "该支付回调未启用。")
         self._verify_webhook(raw_body, signature_header, now)
         try:
             event = json.loads(raw_body.decode("utf-8"))

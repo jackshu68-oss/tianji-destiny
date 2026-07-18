@@ -1,4 +1,4 @@
-/* Subscription checkout, entitlement recovery and customer portal UI. */
+/* Membership checkout, entitlement recovery and payment-method UI. */
 (function (root) {
   'use strict';
 
@@ -17,27 +17,27 @@
       proDetail: '方案：{plan} · 会员邮箱：{email}',
       monthly: '月付',
       yearly: '年付',
-      ready: '安全支付由 Stripe 托管，可随时在会员中心取消续订。',
-      disabled: '正式商户仍在审核和配置中，暂时不会收取任何费用。',
-      buyMonthly: '订阅月付方案',
-      buyYearly: '订阅年付方案',
-      merchantPending: '商户开通中',
+      ready: '人民币支付已开通；付款前会显示支付宝或微信支付的订单总额。',
+      disabled: '支付宝与微信支付商户仍在审核和接入中。当前只展示人民币方案，不会收取费用。',
+      buyMonthly: '购买 30 天 Pro',
+      buyYearly: '购买 365 天 Pro',
+      merchantPending: '人民币支付待开通',
       emailRequired: '请先填写用于接收收据和恢复会员的有效邮箱。',
-      consentRequired: '请先阅读并同意服务条款、订阅规则与隐私政策。',
-      redirecting: '正在前往 Stripe 安全结账页面…',
-      cancelled: '你已取消本次结账，没有产生新的订阅。',
-      claiming: '付款已返回，正在确认订阅并领取会员权限…',
-      claimed: '订阅已确认，Pro 会员已在此装置生效。',
-      managing: '正在打开订阅管理页面…',
-      recoverySent: '如该邮箱有有效订阅，六位验证码会在几分钟内送达。',
+      consentRequired: '请先阅读并同意服务条款、会员购买规则与隐私政策。',
+      redirecting: '正在打开人民币安全支付页面…',
+      cancelled: '你已取消本次付款，没有产生新订单。',
+      claiming: '付款已返回，正在确认订单并领取会员权限…',
+      claimed: '订单已确认，Pro 会员已在此装置生效。',
+      managing: '正在检查会员有效期…',
+      recoverySent: '如该邮箱有有效会员，六位验证码会在几分钟内送达。',
       recovering: '正在恢复会员权限…',
       recovered: '会员权限已恢复到此装置。',
       genericError: '账户服务暂时不可用，请稍后再试。',
       noRecovery: '邮箱恢复服务仍在配置中。',
-      noActive: '未找到可管理的有效订阅。',
+      noActive: '未找到有效会员。',
       alreadyClaimed: '该付款已领取，请使用邮箱恢复会员权限。',
-      currentMonthly: '月付会员',
-      currentYearly: '年付会员'
+      currentMonthly: '30 天会员',
+      currentYearly: '365 天会员'
     },
     en: {
       loading: 'Checking membership status…',
@@ -47,27 +47,27 @@
       proDetail: 'Plan: {plan} · Member email: {email}',
       monthly: 'Monthly',
       yearly: 'Annual',
-      ready: 'Secure checkout is hosted by Stripe. You can cancel renewal from the member portal.',
-      disabled: 'The live merchant account is still under review and configuration. No payment will be collected yet.',
-      buyMonthly: 'Subscribe monthly',
-      buyYearly: 'Subscribe annually',
-      merchantPending: 'Merchant setup in progress',
+      ready: 'CNY checkout is live. The Alipay or WeChat Pay order total is shown before payment.',
+      disabled: 'Alipay and WeChat Pay merchant access is still under review and integration. CNY prices are shown, but no payment is collected yet.',
+      buyMonthly: 'Buy 30 days of Pro',
+      buyYearly: 'Buy 365 days of Pro',
+      merchantPending: 'CNY payment pending',
       emailRequired: 'Enter a valid email for receipts and membership recovery.',
-      consentRequired: 'Read and accept the Terms, subscription rules and Privacy Policy first.',
-      redirecting: 'Opening Stripe secure checkout…',
-      cancelled: 'Checkout was cancelled. No new subscription was created.',
-      claiming: 'Payment returned. Confirming the subscription and activating membership…',
-      claimed: 'Subscription confirmed. Pro is now active on this device.',
-      managing: 'Opening subscription management…',
-      recoverySent: 'If this email has an active subscription, a six-digit code will arrive within a few minutes.',
+      consentRequired: 'Read and accept the Terms, membership purchase rules and Privacy Policy first.',
+      redirecting: 'Opening secure CNY checkout…',
+      cancelled: 'Payment was cancelled. No new order was created.',
+      claiming: 'Payment returned. Confirming the order and activating membership…',
+      claimed: 'Order confirmed. Pro is now active on this device.',
+      managing: 'Checking membership validity…',
+      recoverySent: 'If this email has an active membership, a six-digit code will arrive within a few minutes.',
       recovering: 'Restoring membership…',
       recovered: 'Membership has been restored on this device.',
       genericError: 'The account service is temporarily unavailable. Please try again later.',
       noRecovery: 'Email recovery is still being configured.',
-      noActive: 'No active subscription is available to manage.',
+      noActive: 'No active membership was found.',
       alreadyClaimed: 'This purchase was already claimed. Restore membership by email.',
-      currentMonthly: 'Monthly membership',
-      currentYearly: 'Annual membership'
+      currentMonthly: '30-day membership',
+      currentYearly: '365-day membership'
     }
   };
 
@@ -133,8 +133,10 @@
     return snapshot();
   }
 
-  async function startCheckout(plan, email) {
-    const payload = await request('/api/billing/checkout', { method: 'POST', auth: false, body: { plan, email } });
+  async function startCheckout(plan, email, paymentMethod) {
+    const payload = await request('/api/billing/checkout', {
+      method: 'POST', auth: false, body: { plan, email, method: paymentMethod }
+    });
     root.location.assign(payload.url);
   }
 
@@ -187,6 +189,7 @@
   function displayError(node, error) {
     const keys = {
       BILLING_NOT_CONFIGURED: 'disabled',
+      CHINA_MERCHANT_PENDING: 'disabled',
       RECOVERY_NOT_CONFIGURED: 'noRecovery',
       INVALID_EMAIL: 'emailRequired',
       NO_ACTIVE_SUBSCRIPTION: 'noActive',
@@ -217,14 +220,14 @@
 
     const monthlyPrice = document.querySelector('[data-price="monthly"]');
     const yearlyPrice = document.querySelector('[data-price="yearly"]');
-    if (monthlyPrice) monthlyPrice.textContent = (plans.get('monthly') || {}).price || 'CA$9.99';
-    if (yearlyPrice) yearlyPrice.textContent = (plans.get('yearly') || {}).price || 'CA$79';
+    if (monthlyPrice) monthlyPrice.textContent = (plans.get('monthly') || {}).price || '¥39';
+    if (yearlyPrice) yearlyPrice.textContent = (plans.get('yearly') || {}).price || '¥299';
 
     if (entitlement.active) {
       statusTitle.textContent = copy('pro');
       statusDetail.textContent = copy('proDetail', { plan: planDisplay(entitlement.plan), email: entitlement.email_hint || '—' });
       statusBand.classList.add('is-pro');
-      manageButton.hidden = false;
+      manageButton.hidden = !config.recurring;
     } else {
       statusTitle.textContent = copy('free');
       statusDetail.textContent = copy('freeDetail');
@@ -300,7 +303,8 @@
         }
         button.disabled = true;
         setCopiedNotice(notice, 'redirecting', 'loading');
-        try { await startCheckout(button.dataset.planCheckout, email); }
+        const paymentMethod = (document.querySelector('input[name="payment-method"]:checked') || {}).value || 'alipay';
+        try { await startCheckout(button.dataset.planCheckout, email, paymentMethod); }
         catch (error) {
           displayError(notice, error);
           renderPricing();

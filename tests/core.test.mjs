@@ -274,7 +274,7 @@ test('SEO、匿名分享与私隐文件齐备', () => {
   assert.match(privacy, /180 天/);
 });
 
-test('正式会员页只通过同源接口结账并完整披露自动续订', () => {
+test('人民币会员页只通过同源接口结账并明确不自动续费', () => {
   const pricing = fs.readFileSync(new URL('../pricing/index.html', import.meta.url), 'utf8');
   const terms = fs.readFileSync(new URL('../terms/index.html', import.meta.url), 'utf8');
   const privacy = fs.readFileSync(new URL('../privacy.html', import.meta.url), 'utf8');
@@ -285,12 +285,17 @@ test('正式会员页只通过同源接口结账并完整披露自动续订', ()
   assert.match(pricing, /id="billing-consent"/);
   assert.match(pricing, /data-plan-checkout="monthly"/);
   assert.match(pricing, /data-plan-checkout="yearly"/);
-  assert.match(pricing, /每月自动续订/);
-  assert.match(pricing, /每年自动续订/);
+  assert.match(pricing, /¥39/);
+  assert.match(pricing, /¥299/);
+  assert.match(pricing, /value="alipay"/);
+  assert.match(pricing, /value="wechat_pay"/);
+  assert.match(pricing, /到期不会自动扣款/);
   assert.match(pricing, /data-en=/);
-  assert.match(terms, /Stripe/);
-  assert.match(terms, /取消与退款/);
-  assert.match(privacy, /不会取得或保存完整卡号和安全码/);
+  assert.doesNotMatch(pricing, /CA\$|Stripe/);
+  assert.match(terms, /人民币价格与一次性付款/);
+  assert.match(terms, /有效期与退款/);
+  assert.doesNotMatch(terms, /Stripe/);
+  assert.match(privacy, /不会取得或保存完整银行卡号、支付密码或安全码/);
   assert.match(billing, /\/api\/billing\/checkout/);
   assert.match(billing, /\/api\/billing\/claim/);
   assert.match(billing, /\/api\/billing\/portal/);
