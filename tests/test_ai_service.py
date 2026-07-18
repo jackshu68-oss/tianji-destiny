@@ -1,6 +1,7 @@
 import importlib.util
 import json
 import pathlib
+import tempfile
 import unittest
 import urllib.error
 from unittest import mock
@@ -14,10 +15,17 @@ SPEC.loader.exec_module(SERVICE)
 
 class AiServiceTests(unittest.TestCase):
     def setUp(self):
+        self.temp_dir = tempfile.TemporaryDirectory()
+        SERVICE.DATA_DIR = pathlib.Path(self.temp_dir.name)
+        SERVICE.DATABASE_PATH = SERVICE.DATA_DIR / "private_store.sqlite3"
         with SERVICE.LOCK:
             SERVICE.CACHE.clear()
             SERVICE.JOBS.clear()
             SERVICE.PENDING_BY_DIGEST.clear()
+            SERVICE.STORAGE_REQUESTS.clear()
+
+    def tearDown(self):
+        self.temp_dir.cleanup()
 
     def test_module_selection(self):
         self.assertEqual(SERVICE.module_for("梅花易数 · 完整详解"), "meihua")
@@ -34,12 +42,53 @@ class AiServiceTests(unittest.TestCase):
         self.assertEqual(result["overview"], "清晰")
         self.assertEqual(result["evidence"], ["依据"])
         self.assertEqual(result["actions"], ["行动"])
+        self.assertEqual(result["reality"], [])
+        self.assertEqual(result["timing"], [])
+        self.assertEqual(result["risks"], [])
         self.assertIn("传统术数", result["caveat"])
 
     def test_prompt_forbids_recalculation(self):
         prompt = SERVICE.system_prompt("qimen")
         self.assertIn("绝不能重算", prompt)
         self.assertIn("只返回一个 JSON 对象", prompt)
+        self.assertIn("直接回答用户问题", prompt)
+
+    def test_anonymous_share_sanitizer_excludes_identity_and_birth_data(self):
+        result = SERVICE.sanitize_share_payload({
+            "name": "不应保存",
+            "birth": "1990-06-15 10:30",
+            "city": "佛山",
+            "core": [{"label": "事业", "conclusion": "先聚焦", "action": "验证一项目标", "birth": "secret"}],
+            "today": {"level": "稳中有进", "best": "完成重点事项", "avoid": "避免分心", "reminder": "以现实证据为准"},
+            "created": "2026-07-18",
+        })
+        serialized = json.dumps(result, ensure_ascii=False)
+        self.assertNotIn("不应保存", serialized)
+        self.assertNotIn("1990-06-15", serialized)
+        self.assertNotIn("佛山", serialized)
+        self.assertNotIn("secret", serialized)
+        self.assertEqual(result["brand"], "道法自然")
+
+    def test_encrypted_payload_validation_and_storage_tables(self):
+        payload = SERVICE.validate_encrypted_payload({
+            "version": 1,
+            "salt": "A" * 24,
+            "iv": "B" * 16,
+            "ciphertext": "C" * 32,
+            "plaintext": "must be ignored",
+        })
+        self.assertEqual(set(payload), {"version", "salt", "iv", "ciphertext"})
+        connection = SERVICE.storage_connection()
+        try:
+            tables = {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+        finally:
+            connection.close()
+        self.assertIn("shares", tables)
+        self.assertIn("syncs", tables)
+
+    def test_invalid_encrypted_payload_is_rejected(self):
+        with self.assertRaises(ValueError):
+            SERVICE.validate_encrypted_payload({"version": 1, "salt": "short", "iv": "short", "ciphertext": "plain text"})
 
     def test_transient_network_error_is_retried_once(self):
         class FakeResponse(object):

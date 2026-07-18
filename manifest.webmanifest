@@ -1,0 +1,17 @@
+{
+  "name": "道法自然",
+  "short_name": "道法自然",
+  "description": "将八字、紫微与流年转化成现代生活语言的个人洞察工具。",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f4f1e9",
+  "theme_color": "#f4f1e9",
+  "icons": [
+    {
+      "src": "/assets/daofa-mark.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

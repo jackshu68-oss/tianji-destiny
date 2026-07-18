@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /share.html
+Disallow: /api/
+
+Sitemap: https://tianji.47-86-31-98.sslip.io/sitemap.xml

@@ -9,6 +9,8 @@ User=tianji-ai
 Group=tianji-ai
 WorkingDirectory=/opt/tianji-destiny/current
 EnvironmentFile=/etc/tianji-ai.env
+Environment=TIANJI_DATA_DIR=/var/lib/tianji-ai
+StateDirectory=tianji-ai
 ExecStart=/usr/bin/python3 /opt/tianji-destiny/current/server/ai_service.py
 Restart=on-failure
 RestartSec=4

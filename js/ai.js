@@ -41,8 +41,10 @@
       target.appendChild(section);
     }
     listSection(target, '排盘依据', analysis.evidence);
-    listSection(target, '阶段与变化', analysis.stages);
-    listSection(target, '现实建议', analysis.actions);
+    listSection(target, '现实表现', analysis.reality);
+    listSection(target, '当前时机', analysis.timing || analysis.stages);
+    listSection(target, '风险提示', analysis.risks);
+    listSection(target, '行动建议', analysis.actions);
 
     if (analysis.caveat) target.appendChild(element('p', 'ai-caveat', analysis.caveat));
     const meta = element('div', 'ai-result-meta');
@@ -191,5 +193,75 @@
     });
   }
 
-  window.TianjiAI = { mount };
+  function mountQuestion(container, options) {
+    if (!container) return;
+    container.replaceChildren();
+    const form = element('div', 'ai-question-form');
+    const textarea = element('textarea');
+    textarea.maxLength = 300;
+    textarea.placeholder = '例如：未来三个月，我在工作上更适合主动争取，还是先整理现有项目？';
+    textarea.setAttribute('aria-label', '输入命盘问题');
+    form.appendChild(textarea);
+
+    const suggestions = element('div', 'ai-question-suggestions');
+    [
+      '未来三个月的工作重点是什么？',
+      '我在关系沟通上最需要注意什么？',
+      '目前适合扩大投入还是先稳住？'
+    ].forEach(text => {
+      const suggestion = element('button', '', text);
+      suggestion.type = 'button';
+      suggestion.addEventListener('click', () => { textarea.value = text; textarea.focus(); });
+      suggestions.appendChild(suggestion);
+    });
+    form.appendChild(suggestions);
+
+    const button = element('button', 'ai-question-submit', '根据我的命盘回答');
+    button.type = 'button';
+    form.appendChild(button);
+    const privacy = element('p', 'ai-privacy', '只有本次问题及上方列明的命盘依据会发送至香港服务器；不会读取命盘库、日历备注或其他装置资料。');
+    const output = element('div', 'ai-output');
+    output.setAttribute('aria-live', 'polite');
+    container.appendChild(form);
+    container.appendChild(privacy);
+    container.appendChild(output);
+
+    button.addEventListener('click', async () => {
+      const question = textarea.value.trim();
+      const chartContext = options && typeof options.getContext === 'function' ? options.getContext() : '';
+      if (question.length < 6) {
+        output.className = 'ai-output error';
+        output.textContent = '请把问题写得更具体一些，例如说明时间范围或现实选项。';
+        return;
+      }
+      if (String(chartContext).length < 40) {
+        output.className = 'ai-output error';
+        output.textContent = '请先生成命盘，再使用 AI 命盘问答。';
+        return;
+      }
+      button.disabled = true;
+      button.textContent = '正在根据命盘整理…';
+      output.className = 'ai-output loading';
+      output.textContent = '正在提交问题并检查命盘依据。';
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 115000);
+      try {
+        const requestOptions = { title: `AI命盘问答 · ${question}` };
+        const context = `用户问题：${question}\n\n确定性命盘资料：\n${chartContext}`.slice(0, 12000);
+        const payload = await generateInterpretation(requestOptions, context, controller.signal, output);
+        output.className = 'ai-output ready';
+        renderResult(output, payload);
+        button.textContent = payload.cached ? '已回答 · 使用缓存' : '重新提问';
+      } catch (error) {
+        output.className = 'ai-output error';
+        output.textContent = error.name === 'AbortError' ? '等待时间已到，后台任务可能仍在处理。稍后再按一次会优先读取已完成结果。' : (error.message || 'AI 服务暂时不可用，请稍后重试。');
+        button.textContent = '重新尝试';
+      } finally {
+        clearTimeout(timer);
+        button.disabled = false;
+      }
+    });
+  }
+
+  window.TianjiAI = { mount, mountQuestion };
 })();

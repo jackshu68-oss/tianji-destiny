@@ -109,7 +109,7 @@ const ZiweiBoard = (function () {
         if (!c) { html += '<div class="zw-cell empty"></div>'; continue; }
         const starsHtml = c.stars.map(s =>
           `<span class="zw-star ${s.cls}">${s.name}${s.hua ? `<i class="hua hua-${s.hua}">${s.hua}</i>` : ''}</span>`).join('');
-        html += `<div class="zw-cell ${c.isMing ? 'ming' : ''}">
+        html += `<div class="zw-cell ${c.isMing ? 'ming' : ''}" role="button" tabindex="0" data-zw-duty="${c.duty}" aria-label="查看${c.duty}详情">
           <div class="zw-cap"><span class="zw-duty">${c.duty}</span><span class="zw-gz">${c.stem}${c.branch}</span></div>
           <div class="zw-stars">${starsHtml || '<span class="zw-star neu">空宫</span>'}</div>
         </div>`;

@@ -149,7 +149,31 @@
   }
 
   /* ---------- 排盘 ---------- */
-  function onCompute() {
+  function computeLoader() {
+    const box = $('#compute-loader');
+    const button = $('#btn-compute');
+    const labels = ['正在校正历法', '正在生成四柱', '正在建立紫微十二宫', '正在分析五行与十神', '正在生成大运流年'];
+    box.classList.remove('hidden');
+    button.disabled = true;
+    button.textContent = '正在建立人生图谱…';
+    return {
+      async step(index) {
+        $('#compute-loader-text').textContent = labels[index];
+        $$('#compute-loader li').forEach((item, itemIndex) => {
+          item.classList.toggle('active', itemIndex === index);
+          item.classList.toggle('done', itemIndex < index);
+        });
+        await new Promise(resolve => setTimeout(resolve, 75));
+      },
+      finish() {
+        box.classList.add('hidden');
+        button.disabled = false;
+        button.textContent = '生成我的命盘 ✦';
+      }
+    };
+  }
+
+  async function onCompute() {
     let y = parseInt($('#in-year').value, 10), m = parseInt($('#in-month').value, 10),
         d = parseInt($('#in-day').value, 10), h = parseInt($('#in-hour').value, 10),
         mi = parseInt($('#in-minute').value, 10) || 0;
@@ -160,46 +184,59 @@
     }
     const city = selectedCity();
     if (!city) { showFormError('请选择搜索结果中的出生城市。'); $('#in-city').focus(); return; }
-    const original = { y, m, d, h: timeAccuracy === 'unknown' ? 12 : h, mi: timeAccuracy === 'unknown' ? 0 : mi };
-    let calNote = '';
-    if (calMode === 'lunar') {
-      try {
+    const loader = computeLoader();
+    try {
+      await loader.step(0);
+      const original = { y, m, d, h: timeAccuracy === 'unknown' ? 12 : h, mi: timeAccuracy === 'unknown' ? 0 : mi };
+      let calNote = '';
+      if (calMode === 'lunar') {
         const isLeap = $('#in-leap').checked;
         const solar = lunarToSolar(y, m, d, isLeap);
         calNote = `农历 ${y}年${m}月${d}日${isLeap ? '（闰月）' : ''}（即阳历 ${solar.getYear()}年${solar.getMonth()}月${solar.getDay()}日）`;
         y = solar.getYear(); m = solar.getMonth(); d = solar.getDay();
-      } catch (e) { showFormError(`农历日期无效：${e.message || '请检查日期与闰月。'}`); return; }
+      }
+      const checked = TianjiProfile.validateSolarDate(y, m, d);
+      if (!checked.ok) { showFormError(checked.message); return; }
+      const localInput = { y, m, d, h: original.h, mi: original.mi, unknown: timeAccuracy === 'unknown' };
+      const localTime = TianjiProfile.inspectLocalTime(localInput, city);
+      if (!localTime.valid) { showFormError('这个当地时间处于夏令时跳过时段，请调整出生时间或选择“大约”。'); return; }
+      if (localTime.ambiguous && timeAccuracy === 'exact') { showFormError('这个当地时间在夏令时结束时重复出现，请选择“大约”并在结果中保留此限制。'); return; }
+      const corrected = TianjiProfile.applyTimeCorrection(localInput, city, timeAccuracy === 'unknown' ? 'standard' : timeMode);
+      await loader.step(1);
+      chart = TianjiEngine.buildChart(corrected.y, corrected.m, corrected.d, corrected.h, corrected.mi, gender, { timeUnknown: timeAccuracy === 'unknown' });
+      chart.calendarNote = calNote;
+      chart.city = city;
+      chart.timeAccuracy = timeAccuracy;
+      chart.timeMode = timeMode;
+      chart.timeCorrectionNote = corrected.note;
+      await loader.step(2);
+      const stored = {
+        y: corrected.y, m: corrected.m, d: corrected.d, h: corrected.h, mi: corrected.mi,
+        inputY: original.y, inputM: original.m, inputD: original.d, inputH: original.h, inputMi: original.mi,
+        gender, calMode, isLeap: $('#in-leap').checked, city: city.name, cityLabel: city.label,
+        timeZone: city.timeZone, timeAccuracy, timeMode, timeUnknown: timeAccuracy === 'unknown', correctionNote: corrected.note
+      };
+      saveProfile(stored);
+      await loader.step(3);
+      viewDate = new Date();
+      renderAll();
+      await loader.step(4);
+      $('#result').classList.remove('hidden');
+      setTimeout(() => $('#insight-workspace').scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+    } catch (error) {
+      console.error(error);
+      showFormError(calMode === 'lunar' ? `农历日期或排盘数据无效：${error.message || '请检查日期与闰月。'}` : '计算出错，请检查日期、时间与出生城市。');
+    } finally {
+      loader.finish();
     }
-    const checked = TianjiProfile.validateSolarDate(y, m, d);
-    if (!checked.ok) { showFormError(checked.message); return; }
-    const localInput = { y, m, d, h: original.h, mi: original.mi, unknown: timeAccuracy === 'unknown' };
-    const localTime = TianjiProfile.inspectLocalTime(localInput, city);
-    if (!localTime.valid) { showFormError('这个当地时间处于夏令时跳过时段，请调整出生时间或选择“大约”。'); return; }
-    if (localTime.ambiguous && timeAccuracy === 'exact') { showFormError('这个当地时间在夏令时结束时重复出现，请选择“大约”并在结果中保留此限制。'); return; }
-    const corrected = TianjiProfile.applyTimeCorrection(localInput, city, timeAccuracy === 'unknown' ? 'standard' : timeMode);
-    try { chart = TianjiEngine.buildChart(corrected.y, corrected.m, corrected.d, corrected.h, corrected.mi, gender, { timeUnknown: timeAccuracy === 'unknown' }); }
-    catch (e) { showFormError('计算出错，请检查日期是否有效。'); console.error(e); return; }
-    chart.calendarNote = calNote;
-    chart.city = city;
-    chart.timeAccuracy = timeAccuracy;
-    chart.timeMode = timeMode;
-    chart.timeCorrectionNote = corrected.note;
-    saveProfile({
-      y: corrected.y, m: corrected.m, d: corrected.d, h: corrected.h, mi: corrected.mi,
-      inputY: original.y, inputM: original.m, inputD: original.d, inputH: original.h, inputMi: original.mi,
-      gender, calMode, isLeap: $('#in-leap').checked, city: city.name, cityLabel: city.label,
-      timeZone: city.timeZone, timeAccuracy, timeMode, timeUnknown: timeAccuracy === 'unknown', correctionNote: corrected.note
-    });
-    viewDate = new Date();
-    renderAll();
-    $('#result').classList.remove('hidden');
-    setTimeout(() => $('#result').scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
   }
 
   /* ---------- 存档 ---------- */
   function saveProfile(p) {
-    try { localStorage.setItem(SAVE_KEY, JSON.stringify(p)); } catch (e) {}
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify(p)); }
+    catch (e) { toast('本机存储空间不足，命盘仍可查看，但可能无法保存。'); return false; }
     refreshSavedBar();
+    return true;
   }
   function loadProfile() {
     try { const s = localStorage.getItem(SAVE_KEY); return s ? JSON.parse(s) : null; } catch (e) { return null; }
@@ -209,6 +246,7 @@
     $('#result').classList.add('hidden');
     $('#saved-bar').classList.add('hidden');
     refreshSavedBar();
+    document.dispatchEvent(new CustomEvent('tianji:chart-cleared'));
     $('#compute').scrollIntoView({ behavior: 'smooth' });
   }
   function refreshSavedBar() {
@@ -240,6 +278,34 @@
     } catch (e) { console.error(e); return false; }
   }
 
+  function fillFormFromProfile(p) {
+    if (!p) return;
+    $('#in-year').value = p.inputY || p.y || '';
+    $('#in-month').value = p.inputM || p.m || '';
+    $('#in-day').value = p.inputD || p.d || '';
+    $('#in-hour').value = p.inputH != null ? p.inputH : (p.h == null ? 12 : p.h);
+    $('#in-minute').value = p.inputMi != null ? p.inputMi : (p.mi || 0);
+    $('#in-city').value = p.cityLabel || p.city || '';
+    $('#in-leap').checked = Boolean(p.isLeap);
+    gender = p.gender || 'male';
+    calMode = p.calMode || 'solar';
+    timeAccuracy = p.timeAccuracy || (p.timeUnknown ? 'unknown' : 'exact');
+    timeMode = p.timeMode || 'standard';
+    $$('.g-btn').forEach(button => button.classList.toggle('active', button.dataset.g === gender));
+    $$('.seg-btn').forEach(button => button.classList.toggle('active', button.dataset.cal === calMode));
+    $$('.choice-btn').forEach(button => button.classList.toggle('active', button.dataset.accuracy === timeAccuracy));
+    $$('.time-mode-btn').forEach(button => button.classList.toggle('active', button.dataset.timeMode === timeMode));
+    $('#leap-wrap').classList.toggle('hidden', calMode !== 'lunar');
+    updateTimeAccuracy(); updateCityMeta(); showFormError('');
+  }
+
+  function activateProfile(p) {
+    if (!p) return false;
+    fillFormFromProfile(p);
+    if (!saveProfile(p)) return false;
+    return autoLoad();
+  }
+
   /* ---------- 渲染全部 ---------- */
   function renderAll() {
     renderChart();
@@ -247,6 +313,9 @@
     renderProfound();
     renderZiwei();
     renderDaily();
+    document.dispatchEvent(new CustomEvent('tianji:chart-ready', {
+      detail: { chart, profile: loadProfile(), analysis: TianjiEngine.analyze(chart), ziwei: lastZiweiCells }
+    }));
   }
 
   function renderCore() {
@@ -396,6 +465,32 @@
   }
 
   /* ---------- 紫微斗数 ---------- */
+  const ZIWEI_DUTY_GUIDE = {
+    命宫: '观察自我定位、稳定倾向与面对环境的惯常方式。',
+    兄弟: '观察同辈、手足与合作关系中的支持和边界。',
+    夫妻: '观察亲密关系需求、互动方式与长期磨合议题。',
+    子女: '观察照顾、创造、传承与长期投入的表达方式。',
+    财帛: '观察资源取得、预算习惯与价值交换方式。',
+    疾厄: '传统上观察身心节奏；健康问题仍须以医疗意见为准。',
+    迁移: '观察外部环境、移动、异地发展与陌生情境的适应方式。',
+    交友: '观察朋友圈、团队协作、公众互动与合作筛选。',
+    官禄: '观察工作角色、职业责任、长期目标与成就方式。',
+    田宅: '观察居住、家庭资源、稳定感与长期资产安排。',
+    福德: '观察内在满足、休息方式、精神空间与恢复节奏。',
+    父母: '观察长辈、制度支持、学习来源与权威互动。'
+  };
+
+  function openZiweiPalace(cell) {
+    if (!cell) return;
+    const main = cell.stars.filter(star => star.cls === 'main');
+    const others = cell.stars.filter(star => star.cls !== 'main');
+    const starText = stars => stars.length ? stars.map(star => `${star.name}${star.hua ? `（化${star.hua}）` : ''}`).join('、') : '无主星，需要结合对宫与整体命盘阅读';
+    const body = sec('宫位主题', `<p>${ZIWEI_DUTY_GUIDE[cell.duty] || '结合宫位、星曜、四化与整体命盘观察，不以单一星曜下结论。'}</p>`)
+      + sec('本宫资料', `<p><b>${cell.stem}${cell.branch}</b> · ${cell.isMing ? '命宫所在' : '十二宫之一'}</p><ul class="dm-ul"><li><b>主星</b>：${starText(main)}</li><li><b>辅星与杂曜</b>：${starText(others)}</li></ul>`)
+      + sec('阅读边界', '<p>宫位内容用于整理主题和提问方向。应同时参考其他宫位、四化、八字阶段与现实经历，不作单宫定论。</p>');
+    openCustomDetail(`${cell.duty} · 紫微宫位`, body);
+  }
+
   function renderZiwei() {
     const note = $('#zw-note');
     if (chart.timeUnknown) {
@@ -411,6 +506,15 @@
     lastZiweiCells = cells;
     $('#zw-board').innerHTML = ZiweiBoard.renderBoard(cells);
     $('#zw-detail').innerHTML = ZiweiBoard.renderDetail(cells);
+    $$('#zw-board [data-zw-duty]').forEach(element => {
+      const open = () => openZiweiPalace(cells.find(cell => cell.duty === element.dataset.zwDuty));
+      element.addEventListener('click', open);
+      element.addEventListener('keydown', event => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        open();
+      });
+    });
   }
 
   /* ---------- 流年 ---------- */
@@ -445,13 +549,13 @@
   }
   function liunianTip(god) {
     const m = {
-      正官:'利事业名声，宜循规守法、把握晋升机会。', 七杀:'压力与挑战并存，宜自律进取、化压力为动力。',
-      正印:'贵人学业运佳，宜进修充电、多得长辈提携。', 偏印:'思维敏锐、偏门有得，宜专精技艺、防思虑过度。',
-      正财:'正财稳进，宜勤恳务实、稳健理财置业。', 偏财:'机遇财源广，宜把握时机、忌投机贪快。',
-      食神:'福气顺遂、才华得展，宜创作享受、广结善缘。', 伤官:'才华外露、变动较多，宜谨言慎行、化才为财。',
-      比肩:'自主独立、朋辈助力，宜合作共赢、防破财口舌。', 劫财:'开拓有力但破耗易生，宜稳守财帛、慎于合伙。'
+      正官:'职责、规则与正式评价较突出，宜明确目标和交付标准。', 七杀:'挑战与压力议题较突出，宜设风险边界并保留恢复时间。',
+      正印:'学习、支持与系统吸收较突出，宜进修并核实可用资源。', 偏印:'深度研究与非标准路径较突出，宜专注一项技能并设复盘点。',
+      正财:'秩序、预算与稳定回报较突出，宜管理现金流和可量化目标。', 偏财:'外部机会与资源流动较突出，宜先核实条件和退出成本。',
+      食神:'表达、创作与稳定产出较突出，宜完成可持续的小成果。', 伤官:'改进、质疑与公开表达较突出，宜兼顾证据和沟通方式。',
+      比肩:'自主和同辈协作较突出，宜确认分工、预算与共同目标。', 劫财:'竞争和资源分配较突出，宜把合伙账目及责任写清楚。'
     };
-    return m[god] || '运势平稳，宜按部就班。';
+    return m[god] || '阶段主题较中性，宜按现实进度持续校验。';
   }
 
   /* ---------- 每日运势 ---------- */
@@ -583,6 +687,21 @@
   }
 
   /* ---------- 择吉 ---------- */
+  const ZEJI_EVENTS = {
+    interview: { label: '面试', terms: ['会亲友', '入学', '求职'], hours: '09:00–11:00', focus: '表达清楚、提早到场并准备现实案例' },
+    contract: { label: '签约', terms: ['立券', '交易', '纳财'], hours: '09:00–11:00 / 13:00–15:00', focus: '逐条核对责任、退出机制与付款条件' },
+    opening: { label: '开业', terms: ['开市', '交易', '纳财'], hours: '09:00–11:00', focus: '先完成关键流程演练，再安排公开启动' },
+    application: { label: '提交申请', terms: ['交易', '立券', '入学'], hours: '09:00–11:00', focus: '检查资料完整度，并保留提交凭证' },
+    move: { label: '搬屋', terms: ['移徙', '入宅', '安床'], hours: '07:00–11:00', focus: '预留交通、钥匙、水电与物品清点时间' },
+    travel: { label: '旅行', terms: ['出行'], hours: '07:00–11:00', focus: '先核对天气、证件与可取消安排' },
+    launch: { label: '发布产品', terms: ['开市', '交易', '立券'], hours: '09:00–11:00 / 15:00–17:00', focus: '先设监控、回滚方案与客户回应窗口' },
+    shoot: { label: '拍摄内容', terms: ['开光', '会亲友', '修造'], hours: '09:00–11:00 / 15:00–17:00', focus: '先确认场地、设备、版权与备份流程' },
+    meeting: { label: '重要会议', terms: ['会亲友', '交易', '立券'], hours: '09:00–11:00', focus: '会前发议程，会后确认负责人和截止日期' },
+    exam: { label: '考试或开始新计划', terms: ['入学', '开光', '祈福'], hours: '07:00–11:00', focus: '前一晚完成物品检查，并给突发情况留缓冲' },
+    marriage: { label: '结婚', terms: ['嫁娶', '纳采', '订盟'], hours: '09:00–11:00 / 13:00–15:00', focus: '现实安排仍以双方家庭、场地与交通为先' },
+    renovation: { label: '装修动土', terms: ['修造', '动土', '起基'], hours: '07:00–11:00', focus: '先完成安全、邻里、施工许可与预算检查' }
+  };
+
   function initZeji() {
     const today = new Date();
     const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -592,34 +711,39 @@
     $('#btn-zeji').addEventListener('click', runZeji);
   }
   function runZeji() {
-    const event = $('#zj-event').value;
+    const config = ZEJI_EVENTS[$('#zj-event').value] || ZEJI_EVENTS.interview;
     const s = $('#zj-start').value, e = $('#zj-end').value;
     if (!s || !e) { alert('请选择起止日期'); return; }
     const parse = (str) => { const [y, m, d] = str.split('-').map(Number); return { y, m, d }; };
     let start = parse(s), end = parse(e);
     // 限制 90 天
     const days = Math.round((new Date(e) - new Date(s)) / 86400000) + 1;
+    if (!Number.isFinite(days) || days <= 0) { alert('结束日期必须晚于或等于起始日期。'); return; }
     if (days > 90) { alert('为保证体验，择吉范围请控制在 90 天内。'); return; }
     const avoidBranch = chart ? chart.pillars[2].zhi : null; // 个人日支
-    const results = TianjiEngine.zeji(event, start, end, avoidBranch);
-    const best = results.filter(r => r.suitable);
-    let html = `<div class="zj-summary">在 ${days} 天中，共找到 <b>${best.length}</b> 个「宜${event}」的吉日${avoidBranch ? '（已为你避开冲本命日支）' : ''}：</div>`;
+    const results = TianjiEngine.zeji(config.terms, start, end, avoidBranch);
+    const best = results.filter(r => r.suitable && !r.clashSelf);
+    let html = `<div class="zj-summary">在 ${days} 天中，共整理出 <b>${best.length}</b> 个较适合安排“${config.label}”的日期${avoidBranch ? '，并已检查是否冲本命日支' : ''}。</div>`;
     if (best.length === 0) {
-      html += `<div class="zj-empty">该范围内没有「宜${event}」的日子，可尝试放宽日期范围，或参考下方分数较高的日期。</div>`;
+      html += `<div class="zj-empty">该范围内没有同时满足传统事项与个人避冲条件的日期，可放宽范围或优先参考现实日程。</div>`;
     }
     html += '<div class="zj-list">';
-    results.slice(0, 18).forEach((r, i) => {
-      const level = !r.suitable ? 'none' : (r.score >= 80 ? 'top' : r.score >= 65 ? 'good' : 'ok');
-      const tag = !r.suitable ? '不宜' : (r.score >= 80 ? '大吉' : r.score >= 65 ? '吉' : '平');
+    results.slice(0, 12).forEach((r, i) => {
+      const level = !r.suitable || r.clashSelf ? 'none' : (r.score >= 80 ? 'top' : r.score >= 65 ? 'good' : 'ok');
+      const tag = !r.suitable || r.clashSelf ? '谨慎' : (r.score >= 80 ? '优先' : r.score >= 65 ? '适合' : '可选');
+      const alternative = results.slice(i + 1).find(item => item.suitable && !item.clashSelf);
+      const reason = r.matchedYi && r.matchedYi.length ? `黄历包含${r.matchedYi.join('、')}，吉神${r.jiShen.join('、') || '资料中性'}。` : `传统事项没有直接命中，主要依据综合分与现实时间安排。`;
       html += `<div class="zj-item ${level}">
         <div class="zj-date">${r.dateStr}<br><span>${r.week}</span></div>
         <div class="zj-tag">${tag}</div>
         <div class="zj-info">
           <div class="zj-gz">${r.gz}（${r.naYin}）${r.zhiXing ? ' · '+r.zhiXing : ''}</div>
-          <div class="zj-yi">宜：${(r.yi.length?r.yi.join('、'):'—')}</div>
-          <div class="zj-ji">忌：${(r.ji.length?r.ji.join('、'):'—')}</div>
-          ${r.clashSelf ? '<div class="zj-warn">⚠ 与本命日支相冲，慎选</div>' : ''}
-          <div class="zj-detail">冲${r.chong} 煞${r.sha}　吉神：${r.jiShen.join('、')||'—'}</div>
+          <div class="zj-modern"><b>推荐时段</b>${config.hours}</div>
+          <div class="zj-modern"><b>推荐原因</b>${reason}</div>
+          <div class="zj-modern"><b>现实准备</b>${config.focus}</div>
+          <div class="zj-modern"><b>个人命盘</b>${avoidBranch ? (r.clashSelf ? '与本命日支相冲，建议改选日期' : '与本命日支无直接相冲') : '未载入个人命盘，只按通用黄历筛选'}</div>
+          <div class="zj-modern"><b>冲煞提醒</b>冲${r.chong}，煞${r.sha}</div>
+          <div class="zj-modern"><b>替代日期</b>${alternative ? `${alternative.dateStr}（${alternative.week}）` : '本范围内暂无更合适替代日'}</div>
         </div>
         <div class="zj-score">${r.score}<span>分</span></div>
       </div>`;
@@ -683,63 +807,49 @@
     const res = TianjiEngine.hehun(ca, cb);
     lastHehun = { a: ca, b: cb, result: res };
     renderHehun(res);
+    document.dispatchEvent(new CustomEvent('tianji:hehun-ready', { detail: lastHehun }));
     $('#hh-result').classList.remove('hidden');
     setTimeout(() => $('#hh-result').scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
   }
 
   function renderHehun(res) {
-    const C = 2 * Math.PI * 52;
-    const off = C * (1 - res.score / 100);
     const factors = res.factors.map(f => {
       const cls = f.good > 0 ? 'good' : f.good < 0 ? 'bad' : 'flat';
-      const tag = f.good > 0 ? '吉' : f.good < 0 ? '凶' : '平';
+      const tag = f.good > 0 ? '关系优势' : f.good < 0 ? '需要磨合' : '中性观察';
       return `<div class="hh-factor ${cls}">
         <div class="hf-name">${f.name} · ${tag}</div>
         <div class="hf-detail">${f.detail}</div>
       </div>`;
     }).join('');
     $('#hh-result').innerHTML = `
-      <div class="hh-score-wrap">
-        <div class="hh-ring">
-          <svg viewBox="0 0 120 120">
-            <circle cx="60" cy="60" r="52" class="ring-bg"></circle>
-            <circle cx="60" cy="60" r="52" class="ring-fg" style="stroke-dasharray:${C};stroke-dashoffset:${C}"></circle>
-          </svg>
-          <div class="hh-num"><span>${res.score}</span><em>分</em></div>
-        </div>
-        <div>
-          <div class="hh-verdict">${res.verdict}</div>
-          <div class="hh-verdict-sub">综合生肖、纳音、日主五行、喜用神互补与地支刑冲五维测算</div>
-        </div>
+      <div class="hh-overview-modern">
+        <div><span>传统参考分</span><b>${res.score}</b></div>
+        <div><span>结构概览</span><h3>${res.verdict}</h3><p>总分只作摘要，下面的关系图谱与现实改善建议才是主要结果。</p></div>
       </div>
       <div class="hh-factors">${factors}</div>
       <div class="disclaimer">八字合婚源自传统民俗，仅供文化娱乐参考，婚姻幸福更在于彼此的理解与经营。</div>
     `;
-    requestAnimationFrame(() => {
-      const fg = $('#hh-result').querySelector('.ring-fg');
-      if (fg) fg.style.strokeDashoffset = off;
-    });
   }
 
   /* ---------- 全站「详解」弹层 ---------- */
   const TEN_GOD_DESC = {
-    比肩: '与日主同五行、同阴阳，主兄弟姐妹、朋友、自我意识与独立。',
-    劫财: '与日主同五行、异阴阳，主合作也主争夺、破耗。',
-    食神: '日主所生且同阴阳，主才华、口福、享受与子女缘。',
-    伤官: '日主所生且异阴阳，主才艺与表现，亦主叛逆不服管束。',
-    正财: '日主所克且异阴阳，主稳定收入、务实与妻子（女命论夫）。',
-    偏财: '日主所克且同阴阳，主横财、机遇、应酬与风流。',
-    正官: '克日主且异阴阳，主事业、名望、规则与丈夫（女命）。',
-    七杀: '克日主且同阴阳，主压力、权威、挑战与魄力。',
-    正印: '生日主且异阴阳，主长辈、学识、庇护与贵人。',
-    偏印: '生日主且同阴阳，主偏门技艺、冷门才华，亦主思虑孤僻。'
+    比肩: '与日主同五行、同阴阳，常用来观察自主意识、同辈协作与边界。',
+    劫财: '与日主同五行、异阴阳，常用来观察竞争、合作与资源分配。',
+    食神: '日主所生且同阴阳，常用来观察表达、稳定产出与生活感受。',
+    伤官: '日主所生且异阴阳，常用来观察创新、质疑与公开表达。',
+    正财: '日主所克且异阴阳，常用来观察预算、秩序与可量化回报。',
+    偏财: '日主所克且同阴阳，常用来观察外部机会、资源流动与应变。',
+    正官: '克日主且异阴阳，常用来观察规则、责任与职业位置。',
+    七杀: '克日主且同阴阳，常用来观察压力、挑战与决断方式。',
+    正印: '生日主且异阴阳，常用来观察学习、支持与系统吸收。',
+    偏印: '生日主且同阴阳，常用来观察专业兴趣、独立研究与转换视角。'
   };
   const WX_DESC = {
-    木: '仁 · 生发、条达，对应肝、春、东方。',
-    火: '礼 · 炎热、向上，对应心、夏、南方。',
-    土: '信 · 承载、化生，对应脾胃、长夏、中央。',
-    金: '义 · 肃杀、收敛，对应肺、秋、西方。',
-    水: '智 · 润下、流动，对应肾、冬、北方。'
+    木: '仁 · 生发、条达；传统意象对应春与东方。',
+    火: '礼 · 炎热、向上；传统意象对应夏与南方。',
+    土: '信 · 承载、化生；传统意象对应长夏与中央。',
+    金: '义 · 收敛、整理；传统意象对应秋与西方。',
+    水: '智 · 润下、流动；传统意象对应冬与北方。'
   };
 
   function sec(title, html) { return `<div class="dm-sec"><h4>${title}</h4>${html}</div>`; }
@@ -818,8 +928,8 @@
     daily(c) {
       const dSolar = window.Solar.fromYmd(viewDate.getFullYear(), viewDate.getMonth() + 1, viewDate.getDate());
       const f = TianjiEngine.dailyFortune(c, dSolar);
-      const scoreWord = f.score >= 75 ? '上吉' : f.score >= 55 ? '中吉' : f.score >= 40 ? '平顺' : '谨慎';
-      return sec('今日分数怎么来', `<p>分数结合「你的日主五行」与「当日干支」的生克关系：遇<b>印</b>（生我）、<b>比劫</b>（同我）为吉而加分；遇<b>官杀</b>（克我）则减分。若当日地支<b>冲</b>你本命日支则再减分，<b>六合</b>则加分。基础分约 62 分上下浮动，最终落在 30–98 之间。</p>`)
+      const scoreWord = f.score >= 75 ? '较适合推进' : f.score >= 55 ? '稳步处理' : f.score >= 40 ? '先做准备' : '增加校验';
+      return sec('今日分数怎么来', `<p>分数结合「你的日主五行」与「当日干支」的传统生克关系：遇<b>印</b>（生我）、<b>比劫</b>（同我）提高节奏分；遇<b>官杀</b>（克我）降低节奏分。若当日地支<b>冲</b>本命日支则再调整，<b>六合</b>亦会计入。基础分约 62 分上下浮动，最终落在 30–98 之间。</p>`)
         + sec('今日概况（${f.dateStr}）', `<p>当日干支 <b>${f.dayGanZhi}</b>，十神为「<b>${f.god}</b>」：${TEN_GOD_DESC[f.god] || ''}</p>
           <p>评分 <b style="color:${wxColor(c.dayWx)}">${f.score}</b> 分，属「${scoreWord}」。${f.advice}</p>`)
         + sec('宜 / 忌与黄历', `<p>宜忌取自当日黄历：宜 <b style="color:var(--green)">${(f.yi.length ? f.yi.join('、') : '诸事不宜')}</b>；忌 <b style="color:var(--red)">${(f.ji.length ? f.ji.join('、') : '百无禁忌')}</b>。</p>
@@ -873,7 +983,7 @@
         + sec('判断次序', `<p>先看当前十年大运提供的背景，再看流年干支如何触发本命。流年主题只表示当年更容易出现的议题，具体选择仍应以现实条件和风险承受能力为准。</p>`);
     },
     hehunPrinciple() {
-      return sec('测算原理', `<p>八字合婚从五个维度综合评分，基础分 50 分，各维度按吉凶加减，最终落在 5–100 分：</p>
+      return sec('计算原理', `<p>关系结构参考从五组传统变量整理，基础值为 50，各维度按协调与摩擦因素调整，最终落在 5–100：</p>
         <ul class="dm-ul">
           <li><b>生肖配对（±12）</b>：看双方年支的六合、三合、六冲、相害、相刑。</li>
           <li><b>年命纳音（±10）</b>：双方年柱纳音五行的生克比和。</li>
@@ -881,7 +991,7 @@
           <li><b>用神互补（±14）</b>：对方八字五行能量，是否补足你方的喜用神。</li>
           <li><b>地支刑冲（±12）</b>：双方八个地支两两配对，统计合局、六冲、相刑、相害。</li>
         </ul>`)
-        + sec('分数与判语', `<p>≥80 天作之合；≥65 上等姻缘；≥50 中平相配；≥35 略有波折；<35 缘分较浅。分数仅供文化娱乐参考，婚姻幸福更在于彼此的理解与经营。</p>`);
+        + sec('分数如何阅读', `<p>≥80 表示结构协调度较高；≥65 表示有多项可协作优势；≥50 表示优势与摩擦并存；≥35 表示需要重点讨论差异；&lt;35 表示结构分歧较多。分数不判断关系成败，真实相处、沟通和共同选择始终优先。</p>`);
     },
     hehun(data) {
       if (!data) return Detail.hehunPrinciple() + sec('本次结果', '<p>请先填写甲乙双方生辰并完成测算，随后这里会显示双方逐项详解。</p>');
@@ -895,7 +1005,7 @@
           '合局利协作，刑冲常表现为节奏、表达或生活习惯差异，可通过规则和沟通减轻。';
         return `<b>${f.name} · ${label(f.good)}</b>：${f.detail}。${advice}`;
       });
-      return sec('本次合婚概览', `<p>综合分 <b>${result.score}</b>，判语为“<b>${result.verdict}</b>”。甲方日主 ${data.a.dayGan}${data.a.dayWx}、喜用 ${A.yong.join('、')}；乙方日主 ${data.b.dayGan}${data.b.dayWx}、喜用 ${B.yong.join('、')}。</p>`)
+      return sec('本次关系概览', `<p>传统结构参考分 <b>${result.score}</b>，结构摘要为“<b>${result.verdict}</b>”。甲方日主 ${data.a.dayGan}${data.a.dayWx}、喜用 ${A.yong.join('、')}；乙方日主 ${data.b.dayGan}${data.b.dayWx}、喜用 ${B.yong.join('、')}。</p>`)
         + sec('五个维度逐项解释', `<ul class="dm-ul">${factors.map(item => `<li>${item}</li>`).join('')}</ul>`)
         + sec('双方相处提示', `<ul class="dm-ul"><li><b>甲方表达重点</b>：日主${data.a.dayWx}，当前命局${A.level}，在关系中宜把需求说成可执行的请求。</li><li><b>乙方表达重点</b>：日主${data.b.dayWx}，当前命局${B.level}，在关系中宜明确边界与回应时间。</li><li><b>共同校验</b>：把分歧落到金钱、时间、家庭责任、居住与长期目标五个现实议题逐一讨论。</li></ul>`)
         + Detail.hehunPrinciple();
@@ -932,7 +1042,7 @@
     const titles = {
       overview: '命主概览 · 详解', bazi: '四柱八字 · 详解', profound: '八字精批 · 详解',
       ziwei: '紫微斗数 · 详解', wuxing: '五行分布 · 详解', daily: '每日运势 · 详解',
-      dayun: '大运流转 · 详解', liunian: '流年运程 · 详解', hehun: '八字合婚 · 测算原理'
+      dayun: '大运流转 · 详解', liunian: '流年运程 · 详解', hehun: '关系图谱 · 计算原理'
     };
     const body = buildDetail(type);
     if (body === null) return;
@@ -973,10 +1083,21 @@
     if (brand) brand.addEventListener('click', () => scrollTo({ top: 0, behavior: 'smooth' }));
   }
 
+  window.TianjiApp = {
+    getChart: () => chart,
+    getProfile: loadProfile,
+    getZiweiCells: () => lastZiweiCells,
+    getLastHehun: () => lastHehun,
+    activateProfile,
+    toast,
+    openDetail
+  };
+
   /* ---------- 启动 ---------- */
   window.addEventListener('DOMContentLoaded', () => {
     initStars(); initForm(); initDateNav(); initShare(); initZeji(); initFloat(); initHehun();
     injectDetailButtons(); initDetailModal(); initQuickNav();
     refreshSavedBar();
+    if (loadProfile()) autoLoad();
   });
 })();

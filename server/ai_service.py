@@ -6,6 +6,7 @@ import json
 import os
 import pathlib
 import secrets
+import sqlite3
 import threading
 import time
 import urllib.error
@@ -32,6 +33,7 @@ ALLOWED_HOSTS = {
 }
 MAX_BODY_BYTES = 48 * 1024
 MAX_CONTEXT_CHARS = 12000
+MAX_STORAGE_BODY = 420 * 1024
 CACHE_TTL = 12 * 60 * 60
 JOB_TTL = 15 * 60
 PER_IP_HOUR = int(os.environ.get("TIANJI_AI_PER_IP_HOUR", "20"))
@@ -43,6 +45,10 @@ JOBS = {}
 PENDING_BY_DIGEST = {}
 IP_REQUESTS = defaultdict(list)
 GLOBAL_REQUESTS = defaultdict(int)
+STORAGE_REQUESTS = defaultdict(list)
+DATA_DIR = pathlib.Path(os.environ.get("TIANJI_DATA_DIR", "/tmp/tianji-ai-data"))
+DATABASE_PATH = DATA_DIR / "private_store.sqlite3"
+CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 
 
 class ThreadingHTTPServer(ThreadingMixIn, HTTPServer):
@@ -72,6 +78,9 @@ def normalize_analysis(value):
         return {
             "overview": str(value or "AI 暂未返回有效内容。"),
             "evidence": [],
+            "reality": [],
+            "timing": [],
+            "risks": [],
             "stages": [],
             "actions": [],
             "caveat": "传统术数解读仅供文化研究与娱乐参考。",
@@ -79,11 +88,14 @@ def normalize_analysis(value):
     result = {
         "overview": str(value.get("overview") or value.get("summary") or "").strip(),
         "evidence": value.get("evidence") if isinstance(value.get("evidence"), list) else [],
+        "reality": value.get("reality") if isinstance(value.get("reality"), list) else [],
+        "timing": value.get("timing") if isinstance(value.get("timing"), list) else [],
+        "risks": value.get("risks") if isinstance(value.get("risks"), list) else [],
         "stages": value.get("stages") if isinstance(value.get("stages"), list) else [],
         "actions": value.get("actions") if isinstance(value.get("actions"), list) else [],
         "caveat": str(value.get("caveat") or "传统术数解读仅供文化研究与娱乐参考。").strip(),
     }
-    for key in ("evidence", "stages", "actions"):
+    for key in ("evidence", "reality", "timing", "risks", "stages", "actions"):
         result[key] = [str(item).strip() for item in result[key] if str(item).strip()][:6]
     return result
 
@@ -114,8 +126,9 @@ def system_prompt(module):
 2. 每条判断都要对应输入中的具体依据；没有依据就明确说资料不足。
 3. 给出可执行、可验证的现实建议，不制造恐惧。
 4. 涉及健康、法律、投资或人身安全时，不给专业结论。
-5. 只返回一个 JSON 对象，不使用 Markdown，结构必须为：
-{{"overview":"核心判断","evidence":["依据1"],"stages":["阶段或时间层次"],"actions":["现实建议"],"caveat":"使用边界"}}"""
+5. 直接回答用户问题，不重复介绍网站，不输出通用心理鸡汤。
+6. 只返回一个 JSON 对象，不使用 Markdown，结构必须为：
+{{"overview":"直接结论","evidence":["具体命盘依据"],"reality":["现实表现"],"timing":["当前时机"],"risks":["风险提示"],"actions":["可执行建议"],"caveat":"分析限制与使用边界"}}"""
 
 
 def call_deepseek(title, context, module):
@@ -215,6 +228,94 @@ def cleanup_jobs(now):
             PENDING_BY_DIGEST.pop(digest, None)
 
 
+def storage_connection():
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    connection = sqlite3.connect(str(DATABASE_PATH), timeout=8)
+    connection.execute("PRAGMA journal_mode=WAL")
+    connection.execute(
+        "CREATE TABLE IF NOT EXISTS shares (code TEXT PRIMARY KEY, payload TEXT NOT NULL, created INTEGER NOT NULL, expires INTEGER NOT NULL, revoke_hash TEXT NOT NULL)"
+    )
+    connection.execute(
+        "CREATE TABLE IF NOT EXISTS syncs (code TEXT PRIMARY KEY, payload TEXT NOT NULL, created INTEGER NOT NULL, updated INTEGER NOT NULL, expires INTEGER NOT NULL, revoke_hash TEXT NOT NULL)"
+    )
+    connection.commit()
+    return connection
+
+
+def random_code(length):
+    return "".join(secrets.choice(CODE_ALPHABET) for _ in range(length))
+
+
+def token_hash(token):
+    return hashlib.sha256(str(token or "").encode("utf-8")).hexdigest()
+
+
+def iso_time(timestamp):
+    return datetime.fromtimestamp(timestamp, timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def valid_code(value, minimum=8, maximum=24):
+    text = str(value or "").strip().upper()
+    return text if minimum <= len(text) <= maximum and all(char in CODE_ALPHABET for char in text) else ""
+
+
+def allow_storage_request(client):
+    now = time.time()
+    with LOCK:
+        recent = [stamp for stamp in STORAGE_REQUESTS[client] if now - stamp < 3600]
+        STORAGE_REQUESTS[client] = recent
+        if len(recent) >= 40:
+            return False
+        recent.append(now)
+    return True
+
+
+def sanitize_share_payload(value):
+    if not isinstance(value, dict):
+        raise ValueError("INVALID_SHARE")
+    core = []
+    for item in value.get("core") or []:
+        if not isinstance(item, dict) or len(core) >= 4:
+            continue
+        core.append({
+            "label": str(item.get("label") or "").strip()[:40],
+            "conclusion": str(item.get("conclusion") or "").strip()[:180],
+            "action": str(item.get("action") or "").strip()[:240],
+        })
+    today = value.get("today") if isinstance(value.get("today"), dict) else {}
+    clean = {
+        "brand": "道法自然",
+        "core": core,
+        "today": {
+            "level": str(today.get("level") or "").strip()[:40],
+            "best": str(today.get("best") or "").strip()[:220],
+            "avoid": str(today.get("avoid") or "").strip()[:220],
+            "reminder": str(today.get("reminder") or "").strip()[:260],
+        },
+        "created": str(value.get("created") or "").strip()[:20],
+    }
+    if not core or not clean["today"]["best"]:
+        raise ValueError("INVALID_SHARE")
+    return clean
+
+
+def validate_encrypted_payload(value):
+    if not isinstance(value, dict):
+        raise ValueError("INVALID_SYNC")
+    clean = {
+        "version": int(value.get("version") or 0),
+        "salt": str(value.get("salt") or ""),
+        "iv": str(value.get("iv") or ""),
+        "ciphertext": str(value.get("ciphertext") or ""),
+    }
+    if clean["version"] != 1 or not (16 <= len(clean["salt"]) <= 64) or not (12 <= len(clean["iv"]) <= 48) or not (24 <= len(clean["ciphertext"]) <= 380000):
+        raise ValueError("INVALID_SYNC")
+    allowed = set("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=")
+    if any(char not in allowed for field in ("salt", "iv", "ciphertext") for char in clean[field]):
+        raise ValueError("INVALID_SYNC")
+    return clean
+
+
 def run_job(job_id, title, context, module, digest):
     try:
         analysis, model, usage = call_deepseek(title, context, module)
@@ -266,12 +367,178 @@ class Handler(BaseHTTPRequestHandler):
         host = self.headers.get("Host", "").split(":", 1)[0].lower()
         return host in ALLOWED_HOSTS
 
+    def client_id(self):
+        forwarded = self.headers.get("X-Forwarded-For", "")
+        return (forwarded.split(",", 1)[0].strip() or self.client_address[0])[:80]
+
+    def read_json_body(self, maximum=MAX_BODY_BYTES):
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            length = 0
+        if length <= 0 or length > maximum:
+            self.send_json(413, {"ok": False, "message": "提交内容过长。"})
+            return None
+        try:
+            return json.loads(self.rfile.read(length).decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            self.send_json(400, {"ok": False, "message": "提交格式无效。"})
+            return None
+
+    def handle_storage_get(self):
+        now = int(time.time())
+        if self.path.startswith("/api/share/"):
+            kind, code = "shares", valid_code(self.path[len("/api/share/"):].split("?", 1)[0])
+        elif self.path.startswith("/api/sync/"):
+            kind, code = "syncs", valid_code(self.path[len("/api/sync/"):].split("?", 1)[0])
+        else:
+            self.send_json(404, {"ok": False, "message": "资料不存在或已过期。"})
+            return
+        if not code:
+            self.send_json(404, {"ok": False, "message": "资料不存在或已过期。"})
+            return
+        connection = storage_connection()
+        try:
+            connection.execute("DELETE FROM {} WHERE expires <= ?".format(kind), (now,))
+            row = connection.execute("SELECT payload, expires FROM {} WHERE code = ?".format(kind), (code,)).fetchone()
+            connection.commit()
+        finally:
+            connection.close()
+        if not row:
+            self.send_json(404, {"ok": False, "message": "资料不存在、已过期或已被撤销。"})
+            return
+        self.send_json(200, {"ok": True, "code": code, "payload": json.loads(row[0]), "expires_at": iso_time(row[1])})
+
+    def handle_storage_post(self, body):
+        if not isinstance(body, dict):
+            self.send_json(400, {"ok": False, "message": "提交格式无效。"})
+            return
+        path = self.path
+        now = int(time.time())
+        if path == "/api/share/create":
+            try:
+                payload = sanitize_share_payload(body.get("payload"))
+            except (ValueError, TypeError):
+                self.send_json(400, {"ok": False, "message": "分享内容不符合匿名分享规则。"})
+                return
+            hours = int(body.get("expires_hours") or 168)
+            if hours not in (24, 168, 720):
+                hours = 168
+            code, token = random_code(10), secrets.token_urlsafe(24)
+            connection = storage_connection()
+            try:
+                for _attempt in range(4):
+                    try:
+                        connection.execute(
+                            "INSERT INTO shares(code,payload,created,expires,revoke_hash) VALUES(?,?,?,?,?)",
+                            (code, json.dumps(payload, ensure_ascii=False), now, now + hours * 3600, token_hash(token)),
+                        )
+                        connection.commit()
+                        break
+                    except sqlite3.IntegrityError:
+                        code = random_code(10)
+                else:
+                    raise RuntimeError("CODE_COLLISION")
+            finally:
+                connection.close()
+            self.send_json(201, {"ok": True, "code": code, "revoke_token": token, "expires_at": iso_time(now + hours * 3600)})
+            return
+
+        if path == "/api/share/revoke":
+            code, token = valid_code(body.get("code")), str(body.get("revoke_token") or "")
+            connection = storage_connection()
+            try:
+                cursor = connection.execute("DELETE FROM shares WHERE code = ? AND revoke_hash = ?", (code, token_hash(token)))
+                connection.commit()
+                changed = cursor.rowcount
+            finally:
+                connection.close()
+            if not changed:
+                self.send_json(403, {"ok": False, "message": "撤销凭证无效或分享已不存在。"})
+            else:
+                self.send_json(200, {"ok": True})
+            return
+
+        if path == "/api/sync/create":
+            try:
+                payload = validate_encrypted_payload(body.get("payload"))
+            except (ValueError, TypeError):
+                self.send_json(400, {"ok": False, "message": "加密同步资料格式无效。"})
+                return
+            code, token = random_code(12), secrets.token_urlsafe(24)
+            expires = now + 180 * 86400
+            connection = storage_connection()
+            try:
+                for _attempt in range(4):
+                    try:
+                        connection.execute(
+                            "INSERT INTO syncs(code,payload,created,updated,expires,revoke_hash) VALUES(?,?,?,?,?,?)",
+                            (code, json.dumps(payload), now, now, expires, token_hash(token)),
+                        )
+                        connection.commit()
+                        break
+                    except sqlite3.IntegrityError:
+                        code = random_code(12)
+                else:
+                    raise RuntimeError("CODE_COLLISION")
+            finally:
+                connection.close()
+            self.send_json(201, {"ok": True, "code": code, "revoke_token": token, "expires_at": iso_time(expires)})
+            return
+
+        if path == "/api/sync/update":
+            code, token = valid_code(body.get("code")), str(body.get("revoke_token") or "")
+            try:
+                payload = validate_encrypted_payload(body.get("payload"))
+            except (ValueError, TypeError):
+                self.send_json(400, {"ok": False, "message": "加密同步资料格式无效。"})
+                return
+            expires = now + 180 * 86400
+            connection = storage_connection()
+            try:
+                cursor = connection.execute(
+                    "UPDATE syncs SET payload = ?, updated = ?, expires = ? WHERE code = ? AND revoke_hash = ?",
+                    (json.dumps(payload), now, expires, code, token_hash(token)),
+                )
+                connection.commit()
+                changed = cursor.rowcount
+            finally:
+                connection.close()
+            if not changed:
+                self.send_json(403, {"ok": False, "message": "同步码或更新凭证无效。"})
+            else:
+                self.send_json(200, {"ok": True, "code": code, "expires_at": iso_time(expires)})
+            return
+
+        if path == "/api/sync/revoke":
+            code, token = valid_code(body.get("code")), str(body.get("revoke_token") or "")
+            connection = storage_connection()
+            try:
+                cursor = connection.execute("DELETE FROM syncs WHERE code = ? AND revoke_hash = ?", (code, token_hash(token)))
+                connection.commit()
+                changed = cursor.rowcount
+            finally:
+                connection.close()
+            if not changed:
+                self.send_json(403, {"ok": False, "message": "撤销凭证无效或同步资料已不存在。"})
+            else:
+                self.send_json(200, {"ok": True})
+            return
+
+        self.send_json(404, {"ok": False, "error": "NOT_FOUND"})
+
     def do_GET(self):
         if self.path in ("/healthz", "/api/ai/health"):
             self.send_json(200, {"ok": True, "configured": bool(API_KEY), "model": MODEL})
             return
+        if not self.valid_host():
+            self.send_json(404, {"ok": False, "error": "NOT_FOUND"})
+            return
+        if self.path.startswith("/api/share/") or self.path.startswith("/api/sync/"):
+            self.handle_storage_get()
+            return
         prefix = "/api/ai/result/"
-        if not self.path.startswith(prefix) or not self.valid_host():
+        if not self.path.startswith(prefix):
             self.send_json(404, {"ok": False, "error": "NOT_FOUND"})
             return
         job_id = self.path[len(prefix):].split("?", 1)[0]
@@ -288,22 +555,27 @@ class Handler(BaseHTTPRequestHandler):
         self.send_json(snapshot.get("status_code", 500), snapshot.get("payload") or {"ok": False, "message": "AI 任务没有返回结果。"})
 
     def do_POST(self):
+        if self.path.startswith("/api/share/") or self.path.startswith("/api/sync/"):
+            if not self.valid_host():
+                self.send_json(403, {"ok": False, "message": "请求来源无效。"})
+                return
+            if not allow_storage_request(self.client_id()):
+                self.send_json(429, {"ok": False, "message": "本小时存储操作过多，请稍后再试。"})
+                return
+            body = self.read_json_body(MAX_STORAGE_BODY)
+            if body is not None:
+                self.handle_storage_post(body)
+            return
         if self.path != "/api/ai/interpret":
             self.send_json(404, {"ok": False, "error": "NOT_FOUND"})
             return
         if not self.valid_host():
             self.send_json(403, {"ok": False, "message": "请求来源无效。"})
             return
-        try:
-            length = int(self.headers.get("Content-Length", "0"))
-        except ValueError:
-            length = 0
-        if length <= 0 or length > MAX_BODY_BYTES:
-            self.send_json(413, {"ok": False, "message": "提交内容过长。"})
+        body = self.read_json_body()
+        if body is None:
             return
-        try:
-            body = json.loads(self.rfile.read(length).decode("utf-8"))
-        except (UnicodeDecodeError, json.JSONDecodeError):
+        if not isinstance(body, dict):
             self.send_json(400, {"ok": False, "message": "提交格式无效。"})
             return
 
@@ -335,9 +607,7 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json(202, {"ok": True, "pending": True, "job_id": pending_job_id, "poll_after_ms": 1600, "deduplicated": True})
             return
 
-        forwarded = self.headers.get("X-Forwarded-For", "")
-        client = (forwarded.split(",", 1)[0].strip() or self.client_address[0])[:80]
-        allowed, message = allow_request(client)
+        allowed, message = allow_request(self.client_id())
         if not allowed:
             self.send_json(429, {"ok": False, "message": message})
             return

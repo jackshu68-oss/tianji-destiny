@@ -5,8 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>道法自然｜看懂自己，把握时机</title>
   <meta name="description" content="输入出生资料，快速了解性格底层、事业财运、关系模式与目前人生阶段。结合八字、紫微与流年，以现代方式解读传统智慧。" />
+  <meta name="theme-color" content="#f4f0e7" />
+  <meta property="og:title" content="道法自然｜看懂自己，把握时机" />
+  <meta property="og:description" content="把八字、紫微与流年转化成现代生活语言的个人洞察与节奏工具。" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://tianji.47-86-31-98.sslip.io/" />
+  <link rel="canonical" href="https://tianji.47-86-31-98.sslip.io/" />
+  <link rel="icon" href="assets/daofa-mark.svg" type="image/svg+xml" />
+  <link rel="manifest" href="manifest.webmanifest" />
   <!-- 字体使用系统字体栈（见 css/style.css），不依赖外部网络，大陆/离线均可秒开 -->
-  <link rel="stylesheet" href="css/style.css?v=20260718-9" />
+  <link rel="stylesheet" href="css/style.css?v=20260718-12" />
 </head>
 <body>
   <canvas id="stars"></canvas>
@@ -75,6 +83,162 @@
       <button class="saved-btn ghost" id="saved-reset">重新排盘</button>
     </div>
   </div>
+
+  <!-- 生成后的个人工作台 -->
+  <section class="insight-workspace hidden" id="insight-workspace">
+    <div class="workspace-head">
+      <div>
+        <p class="eyebrow">个人工作台</p>
+        <h2 id="dashboard-profile-name">当前命盘</h2>
+        <p>先看今天与当前阶段，再按需要进入时间轴、日历和工具。</p>
+      </div>
+      <div class="workspace-mode" role="group" aria-label="阅读模式">
+        <button type="button" class="mode-btn active" data-mode="simple">简洁</button>
+        <button type="button" class="mode-btn" data-mode="professional">专业</button>
+      </div>
+    </div>
+
+    <div class="workspace-tabs" role="tablist" aria-label="个人工作台">
+      <button type="button" class="workspace-tab active" data-ws-tab="today">今日</button>
+      <button type="button" class="workspace-tab" data-ws-tab="analysis">人生分析</button>
+      <button type="button" class="workspace-tab" data-ws-tab="timeline">时间轴</button>
+      <button type="button" class="workspace-tab" data-ws-tab="calendar">日历</button>
+      <button type="button" class="workspace-tab" data-ws-tab="tools">决策工具</button>
+      <button type="button" class="workspace-tab" data-ws-tab="mine">我的资料</button>
+    </div>
+
+    <div class="workspace-panel" data-ws-panel="today">
+      <div class="dashboard-grid" id="dashboard-cards"></div>
+      <section class="workspace-band cross-validation">
+        <div class="workspace-band-head"><span>多层交叉整理</span><h3>一致、分歧与依据</h3><p>分别展示本命、十年阶段、紫微关键宫与短周期节奏，不把不同时间尺度混成一个结论。</p></div>
+        <div class="cross-sources" id="cross-sources"></div>
+        <div class="cross-findings"><div><b>一致提示</b><ul id="cross-agreements"></ul></div><div><b>需要区分</b><ul id="cross-differences"></ul></div></div>
+      </section>
+    </div>
+
+    <div class="workspace-panel hidden" data-ws-panel="analysis">
+      <div class="workspace-band-head"><span>按人生问题阅读</span><h3>结论、依据、现实表现与行动建议</h3><p>每一项都保留推导依据，避免只给一段无法校验的笼统描述。</p></div>
+      <div class="life-topic-grid" id="life-topic-grid"></div>
+      <section class="workspace-band ai-question-band">
+        <div class="workspace-band-head"><span>AI 命盘问答</span><h3>只根据你的命盘回答</h3><p>回答会引用日主、结构、大运和未来三个月窗口；资料不足时必须明确说明限制。</p></div>
+        <div id="ai-question-panel"></div>
+      </section>
+    </div>
+
+    <div class="workspace-panel hidden" data-ws-panel="timeline">
+      <section class="workspace-band">
+        <div class="workspace-band-head"><span>人生时间轴</span><h3>十年阶段的主题与现实管理</h3><p>每段同时呈现事业、财富、关系、风险和建议，不使用“必定发生”的语言。</p></div>
+        <div class="life-timeline-list" id="life-timeline-list"></div>
+      </section>
+      <section class="workspace-band">
+        <div class="workspace-band-head"><span>年度卡</span><h3>近七年观察窗口</h3></div>
+        <div class="year-card-grid" id="year-card-grid"></div>
+      </section>
+      <section class="workspace-band">
+        <div class="workspace-band-head"><span>流月窗口</span><h3>未来六个月的推进与收束节奏</h3></div>
+        <div class="month-window-grid" id="month-window-grid"></div>
+      </section>
+    </div>
+
+    <div class="workspace-panel hidden" data-ws-panel="calendar">
+      <section class="workspace-band rhythm-calendar">
+        <div class="calendar-toolbar">
+          <div><span>个人节奏日历</span><h3 id="calendar-label"></h3></div>
+          <div><button type="button" id="calendar-prev" aria-label="上个月">‹</button><button type="button" id="calendar-today">今天</button><button type="button" id="calendar-next" aria-label="下个月">›</button></div>
+        </div>
+        <div class="calendar-week"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
+        <div class="rhythm-calendar-grid" id="rhythm-calendar-grid"></div>
+        <div class="calendar-detail" id="calendar-detail"></div>
+        <div class="calendar-actions">
+          <div class="field"><label for="event-date">日期</label><input type="date" id="event-date" /></div>
+          <div class="field"><label for="event-title">自订事项</label><input type="text" id="event-title" maxlength="80" placeholder="例如：重要会议" /></div>
+          <button type="button" id="add-calendar-event">加入日历</button>
+          <button type="button" id="export-calendar">导出 Apple / Google 日历</button>
+        </div>
+        <div class="calendar-events" id="calendar-events"></div>
+      </section>
+    </div>
+
+    <div class="workspace-panel hidden" data-ws-panel="tools">
+      <section class="workspace-band decision-tool">
+        <div class="workspace-band-head"><span>推测性工具</span><h3>出生时辰校正</h3><p>根据大概时段、性格特征与一项已发生事件比较候选时辰；结果不能代替出生证明或家庭记录。</p></div>
+        <div class="tool-form-grid rectification-form">
+          <div class="field"><label for="rectify-year">出生年</label><input type="number" id="rectify-year" min="1901" max="2099" /></div>
+          <div class="field"><label for="rectify-month">月</label><input type="number" id="rectify-month" min="1" max="12" /></div>
+          <div class="field"><label for="rectify-day">日</label><input type="number" id="rectify-day" min="1" max="31" /></div>
+          <div class="field"><label for="rectify-period">大概时段</label><select id="rectify-period"><option value="unknown">完全不知道</option><option value="dawn">清晨 04–07</option><option value="morning">上午 08–11</option><option value="noon">中午 12–14</option><option value="afternoon">下午 14–17</option><option value="evening">晚上 18–21</option><option value="night">深夜 22–03</option></select></div>
+          <fieldset class="trait-options" id="rectify-traits"><legend>较稳定的性格表现</legend><label><input type="checkbox" value="expressive" />善于表达</label><label><input type="checkbox" value="structured" />重视秩序</label><label><input type="checkbox" value="decisive" />决断直接</label><label><input type="checkbox" value="reflective" />思考深入</label></fieldset>
+          <div class="field"><label for="rectify-event-year">一项重要事件年份</label><input type="number" id="rectify-event-year" min="1901" max="2099" placeholder="可选" /></div>
+          <div class="field"><label for="rectify-event-type">事件类别</label><select id="rectify-event-type"><option value="career">事业变化</option><option value="finance">财务变化</option><option value="relation">关系变化</option><option value="study">学习进修</option><option value="move">搬迁远行</option></select></div>
+        </div>
+        <button type="button" class="btn-primary" id="run-rectification">比较候选时辰</button>
+        <div class="rectify-result" id="rectify-result"></div>
+      </section>
+
+      <section class="workspace-band decision-tool">
+        <div class="workspace-band-head"><span>选项比较器</span><h3>把两个现实选项放在同一组标准下</h3><p>先由你评价现实条件，再结合当前节奏；系统不会替你作绝对决定。</p></div>
+        <div class="option-compare-grid">
+          <div class="option-input"><input type="text" id="option-a-name" value="选项 A" aria-label="选项 A 名称" />
+            <label>当前时机 <output id="oa-timing-out">3</output><input type="range" id="option-a-timing" min="1" max="5" value="3" data-range-output="oa-timing-out" /></label>
+            <label>现实风险 <output id="oa-risk-out">3</output><input type="range" id="option-a-risk" min="1" max="5" value="3" data-range-output="oa-risk-out" /></label>
+            <label>稳定程度 <output id="oa-stability-out">3</output><input type="range" id="option-a-stability" min="1" max="5" value="3" data-range-output="oa-stability-out" /></label>
+            <label>成长空间 <output id="oa-growth-out">3</output><input type="range" id="option-a-growth" min="1" max="5" value="3" data-range-output="oa-growth-out" /></label>
+          </div>
+          <div class="option-input"><input type="text" id="option-b-name" value="选项 B" aria-label="选项 B 名称" />
+            <label>当前时机 <output id="ob-timing-out">3</output><input type="range" id="option-b-timing" min="1" max="5" value="3" data-range-output="ob-timing-out" /></label>
+            <label>现实风险 <output id="ob-risk-out">3</output><input type="range" id="option-b-risk" min="1" max="5" value="3" data-range-output="ob-risk-out" /></label>
+            <label>稳定程度 <output id="ob-stability-out">3</output><input type="range" id="option-b-stability" min="1" max="5" value="3" data-range-output="ob-stability-out" /></label>
+            <label>成长空间 <output id="ob-growth-out">3</output><input type="range" id="option-b-growth" min="1" max="5" value="3" data-range-output="ob-growth-out" /></label>
+          </div>
+        </div>
+        <button type="button" class="btn-primary" id="run-comparison">开始比较</button>
+        <div class="comparison-result" id="comparison-result"></div>
+      </section>
+
+      <section class="workspace-band decision-tool">
+        <div class="workspace-band-head"><span>事件回测</span><h3>检查规则与既往经历是否真的有对应</h3><p>无对应时会直接显示，不会为了迎合结果强行解释。</p></div>
+        <div class="tool-form-grid">
+          <div class="field"><label for="backtest-year">事件年份</label><input type="number" id="backtest-year" min="1901" max="2099" /></div>
+          <div class="field"><label for="backtest-type">事件类别</label><select id="backtest-type"><option value="career">事业变化</option><option value="finance">财务变化</option><option value="relation">关系变化</option><option value="study">学习进修</option><option value="move">搬迁远行</option></select></div>
+          <div class="field field-wide"><label for="backtest-note">事件备注</label><input type="text" id="backtest-note" maxlength="120" placeholder="只保存在本机，可选" /></div>
+        </div>
+        <button type="button" class="btn-primary" id="run-backtest">加入回测</button>
+        <div class="backtest-result" id="backtest-result"></div>
+      </section>
+    </div>
+
+    <div class="workspace-panel hidden" data-ws-panel="mine">
+      <section class="workspace-band profile-library">
+        <div class="workspace-band-head"><span>多人命盘库</span><h3>本人、伴侣、家人和合作伙伴</h3><p>昵称、关系、备注和出生资料只保存在当前装置，除非你主动使用下方加密同步。</p></div>
+        <div class="profile-editor">
+          <div class="field"><label for="profile-nickname">昵称</label><input type="text" id="profile-nickname" maxlength="40" placeholder="例如：妈妈" /></div>
+          <div class="field"><label for="profile-relation">关系</label><select id="profile-relation"><option>本人</option><option>伴侣</option><option>子女</option><option>父母</option><option>合作伙伴</option><option>朋友</option><option>其他</option></select></div>
+          <div class="field field-wide"><label for="profile-note">备注</label><input type="text" id="profile-note" maxlength="180" placeholder="只保存在本机" /></div>
+          <button type="button" id="save-current-profile">保存当前命盘</button>
+        </div>
+        <div class="profile-library-grid" id="profile-library-grid"></div>
+      </section>
+
+      <section class="workspace-band share-center">
+        <div class="workspace-band-head"><span>匿名分享</span><h3>分享结论，不分享出生资料</h3><p>服务器只保存概括性结果。每条链接有随机分享码、有效期，并可在本装置撤销。</p></div>
+        <div class="share-controls"><label for="share-expiry">有效期</label><select id="share-expiry"><option value="24">24 小时</option><option value="168" selected>7 天</option><option value="720">30 天</option></select><button type="button" id="create-share-link">预览并建立分享链接</button></div>
+        <div class="share-preview" id="share-preview"></div>
+        <div class="share-records" id="share-records"></div>
+      </section>
+
+      <section class="workspace-band encrypted-sync">
+        <div class="workspace-band-head"><span>双模式存储</span><h3>本机私隐模式 / 端到端加密同步</h3><p>同步前由浏览器使用你的密码加密，香港服务器只保存密文。密码不会上传，也无法替你找回。</p></div>
+        <div class="sync-form"><div class="field"><label for="sync-code">同步码</label><input type="text" id="sync-code" maxlength="24" autocomplete="off" placeholder="新建后自动生成" /></div><div class="field"><label for="sync-passphrase">同步密码</label><input type="password" id="sync-passphrase" minlength="8" autocomplete="new-password" placeholder="至少 8 个字符" /></div></div>
+        <div class="sync-actions"><button type="button" id="sync-create">建立加密同步</button><button type="button" id="sync-update">更新云端密文</button><button type="button" id="sync-restore">在本机恢复</button><button type="button" class="danger-link" id="sync-revoke">撤销云端资料</button></div>
+        <div class="sync-status" id="sync-status">默认仍为本机私隐模式。</div>
+      </section>
+
+      <section class="workspace-band local-backup">
+        <div class="workspace-band-head"><span>本机备份</span><h3>导出或恢复资料文件</h3></div>
+        <div class="backup-actions"><button type="button" id="export-backup">导出 JSON 备份</button><label for="import-backup-file">选择备份文件</label><input type="file" id="import-backup-file" accept="application/json,.json" /></div>
+      </section>
+    </div>
+  </section>
 
   <!-- 输入区 -->
   <section class="compute" id="compute">
@@ -174,6 +338,10 @@
 
       <div class="form-error hidden" id="form-error" role="alert"></div>
       <button class="btn-primary btn-block" id="btn-compute">生成我的命盘 ✦</button>
+      <div class="compute-loader hidden" id="compute-loader" role="status" aria-live="polite">
+        <div><span></span><b id="compute-loader-text">正在校正历法</b></div>
+        <ol><li>校正历法</li><li>生成四柱</li><li>建立紫微十二宫</li><li>分析五行与十神</li><li>生成大运流年</li></ol>
+      </div>
       <p class="form-hint">资料只在当前浏览器计算并保存在本机。AI 功能只会在你主动点击时发送当前详解文本。</p>
     </div>
   </section>
@@ -327,23 +495,25 @@
     <div class="section-head">
       <p class="eyebrow">择吉</p>
       <h2>选个好日子</h2>
-      <p class="sub">选择要做的事与日期范围，系统扫描每日黄历宜忌、值神与冲煞，为你挑选最适宜的吉日。</p>
+      <p class="sub">选择要做的事与日期范围，系统综合每日黄历宜忌、值神、冲煞与现实准备，整理相对协调的日期供你比较。</p>
     </div>
     <div class="zeji-card">
       <div class="form-grid zeji-grid">
         <div class="field">
           <label>择吉事项</label>
           <select id="zj-event">
-            <option value="嫁娶">嫁娶 · 结婚</option>
-            <option value="开市">开市 · 开业</option>
-            <option value="动土">动土 · 装修</option>
-            <option value="出行">出行 · 旅游</option>
-            <option value="搬家">移徙 · 搬家</option>
-            <option value="入宅">入宅 · 迁居</option>
-            <option value="安葬">安葬</option>
-            <option value="祈福">祈福 · 祭祀</option>
-            <option value="订盟">订婚 · 纳采</option>
-            <option value="求嗣">求子 · 求嗣</option>
+            <option value="interview">面试</option>
+            <option value="contract">签约</option>
+            <option value="opening">开业</option>
+            <option value="application">提交申请</option>
+            <option value="move">搬屋</option>
+            <option value="travel">旅行</option>
+            <option value="launch">发布产品</option>
+            <option value="shoot">拍摄内容</option>
+            <option value="meeting">重要会议</option>
+            <option value="exam">考试或开始新计划</option>
+            <option value="marriage">结婚</option>
+            <option value="renovation">装修动土</option>
           </select>
         </div>
         <div class="field">
@@ -365,8 +535,8 @@
   <section class="hehun" id="hehun" data-detail="hehun">
     <div class="section-head">
       <p class="eyebrow">八字合婚</p>
-      <h2>两人生辰 · 姻缘配对</h2>
-      <p class="sub">输入双方生辰，从生肖、纳音、日主五行、喜用神互补与地支刑冲五个维度，综合测算你们的缘分分数。</p>
+      <h2>两人生辰 · 关系结构</h2>
+      <p class="sub">输入双方生辰，从情绪理解、沟通模式、生活节奏、资源观念与长期磨合五个方向，整理关系优势与现实摩擦。</p>
     </div>
     <div class="hehun-card">
       <div class="hehun-cols">
@@ -403,9 +573,10 @@
           </div>
         </div>
       </div>
-      <button class="btn-primary btn-block" id="btn-hehun">测算姻缘分数 ✦</button>
+      <button class="btn-primary btn-block" id="btn-hehun">生成关系图谱 ✦</button>
       <p class="form-hint">仅在本地浏览器计算，不上传任何个人信息。</p>
       <div class="hehun-result hidden" id="hh-result"></div>
+      <div class="relationship-graph" id="relationship-graph"></div>
     </div>
   </section>
 
@@ -544,6 +715,13 @@
     </div>
   </footer>
 
+  <nav class="mobile-workspace-nav hidden" id="mobile-workspace-nav" aria-label="手机工作台导航">
+    <button type="button" class="active" data-ws-tab="today"><span>今</span>今日</button>
+    <button type="button" data-ws-tab="analysis"><span>析</span>分析</button>
+    <button type="button" data-ws-tab="calendar"><span>历</span>日历</button>
+    <button type="button" data-ws-tab="mine"><span>我</span>我的</button>
+  </nav>
+
   <!-- 分享卡片（截图用，默认隐藏） -->
   <div id="share-stage" class="share-stage"></div>
 
@@ -560,19 +738,21 @@
     </div>
   </div>
 
-  <script src="js/lunar.js?v=20260718-9"></script>
-  <script src="js/vendor/qimen-core.min.js?v=20260718-9"></script>
-  <script src="js/meihua.js?v=20260718-9"></script>
-  <script src="js/knowledge.js?v=20260718-9"></script>
-  <script src="js/profile.js?v=20260718-9"></script>
-  <script src="js/ziwei-gt.global.js?v=20260718-9"></script>
-  <script src="js/engine.js?v=20260718-9"></script>
-  <script src="js/ziwei.js?v=20260718-9"></script>
-  <script src="js/html2canvas.min.js?v=20260718-9"></script>
-  <script src="js/app.js?v=20260718-9"></script>
-  <script src="js/divination.js?v=20260718-9"></script>
-  <script src="js/oracle.js?v=20260718-9"></script>
-  <script src="js/ai.js?v=20260718-9"></script>
-  <script src="js/ambient.js?v=20260718-9"></script>
+  <script src="js/lunar.js?v=20260718-12"></script>
+  <script src="js/vendor/qimen-core.min.js?v=20260718-12"></script>
+  <script src="js/meihua.js?v=20260718-12"></script>
+  <script src="js/knowledge.js?v=20260718-12"></script>
+  <script src="js/profile.js?v=20260718-12"></script>
+  <script src="js/ziwei-gt.global.js?v=20260718-12"></script>
+  <script src="js/engine.js?v=20260718-12"></script>
+  <script src="js/planner.js?v=20260718-12"></script>
+  <script src="js/ziwei.js?v=20260718-12"></script>
+  <script src="js/html2canvas.min.js?v=20260718-12"></script>
+  <script src="js/app.js?v=20260718-12"></script>
+  <script src="js/divination.js?v=20260718-12"></script>
+  <script src="js/oracle.js?v=20260718-12"></script>
+  <script src="js/ai.js?v=20260718-12"></script>
+  <script src="js/ambient.js?v=20260718-12"></script>
+  <script src="js/workspace.js?v=20260718-12"></script>
 </body>
 </html>

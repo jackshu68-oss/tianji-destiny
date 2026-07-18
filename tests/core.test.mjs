@@ -15,6 +15,17 @@ function browserContext(extra = {}) {
   return context;
 }
 
+function plannerFixture() {
+  const context = browserContext();
+  context.window.Solar = lunar.Solar;
+  for (const file of ['profile.js', 'knowledge.js', 'engine.js', 'planner.js']) {
+    vm.runInContext(fs.readFileSync(new URL(`../js/${file}`, import.meta.url), 'utf8'), context);
+  }
+  const engine = context.window.TianjiEngine;
+  const chart = engine.buildChart(1990, 6, 15, 10, 30, 'male');
+  return { context, engine, planner: context.window.TianjiPlanner, chart };
+}
+
 test('梅花时间起卦复现观梅占基准', () => {
   const context = browserContext();
   context.window.Solar = lunar.Solar;
@@ -120,6 +131,53 @@ test('未知出生时辰只使用三柱并提供五维每日决策数据', () =>
   assert.deepEqual(Object.keys(daily.dims).slice(0, 5), ['action', 'communication', 'finance', 'relation', 'state']);
 });
 
+test('现代工作台规划层输出完整时间轴、年度与流月窗口', () => {
+  const { planner, chart } = plannerFixture();
+  const timeline = planner.lifeTimeline(chart, 2026);
+  const years = planner.yearCards(chart, 2026, 7);
+  const months = planner.monthWindows(chart, new Date(2026, 6, 18), 6);
+  assert.ok(timeline.length >= 8);
+  assert.equal(timeline.filter(item => item.status === 'current').length, 1);
+  assert.equal(years.length, 7);
+  assert.equal(years[0].year, 2026);
+  assert.equal(months.length, 6);
+  assert.ok(months.every(item => item.score >= 0 && item.score <= 100));
+});
+
+test('节律日历、关系结构与决策工具返回可操作资料', () => {
+  const { engine, planner, chart } = plannerFixture();
+  const calendar = planner.calendarMonth(chart, 2026, 7, [{ date: '2026-07-18', title: '重要会议' }]);
+  assert.equal(calendar.days.length, 31);
+  assert.equal(calendar.days.find(item => item.iso === '2026-07-18').events.length, 1);
+
+  const other = engine.buildChart(1992, 3, 8, 14, 0, 'female');
+  const graph = planner.relationshipGraph(chart, other, engine.hehun(chart, other));
+  assert.equal(graph.dimensions.length, 5);
+  assert.ok(graph.dimensions.every(item => item.score >= 0 && item.score <= 100));
+
+  const candidates = planner.rectifyTime(
+    { y: 1990, m: 6, d: 15, gender: 'male' },
+    { period: 'morning', traits: ['structured'], eventYear: 2020, eventType: 'career' }
+  );
+  assert.equal(candidates.length, 4);
+  assert.equal(candidates[0].rank, 1);
+
+  const comparison = planner.compareOptions(chart, [
+    { name: '留任', timing: 3, risk: 2, stability: 5, growth: 2 },
+    { name: '转职', timing: 4, risk: 4, stability: 2, growth: 5 }
+  ]);
+  assert.equal(comparison.rows.length, 2);
+  assert.match(comparison.caveat, /不替你作决定/);
+
+  const backtest = planner.backtestEvent(chart, { year: 2020, type: 'career' });
+  assert.equal(backtest.year, 2020);
+  assert.match(backtest.caveat, /不能反向证明/);
+
+  const ics = planner.buildIcs([{ date: '2026-07-18', title: '重要会议' }], '个人节奏');
+  assert.match(ics, /BEGIN:VCALENDAR/);
+  assert.match(ics, /DTSTART;VALUE=DATE:20260718/);
+});
+
 test('页面包含新增排盘、现代摘要、隐私入口和本地脚本', () => {
   const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
   assert.match(html, /id="meihua"/);
@@ -130,6 +188,13 @@ test('页面包含新增排盘、现代摘要、隐私入口和本地脚本', ()
   assert.match(html, /id="core-grid"/);
   assert.match(html, /data-accuracy="unknown"/);
   assert.match(html, /id="in-city"/);
+  assert.match(html, /id="insight-workspace"/);
+  assert.match(html, /id="life-timeline-list"/);
+  assert.match(html, /id="rhythm-calendar-grid"/);
+  assert.match(html, /id="ai-question-panel"/);
+  assert.match(html, /id="relationship-graph"/);
+  assert.match(html, /id="sync-create"/);
+  assert.match(html, /id="create-share-link"/);
   assert.match(html, /class="professional-details"/);
   assert.match(html, /privacy\.html/);
   assert.match(html, /js\/meihua\.js/);
@@ -139,9 +204,42 @@ test('页面包含新增排盘、现代摘要、隐私入口和本地脚本', ()
   assert.match(html, /js\/ambient\.js/);
   assert.match(html, /js\/profile\.js/);
   assert.match(html, /js\/ai\.js/);
+  assert.match(html, /js\/planner\.js/);
+  assert.match(html, /js\/workspace\.js/);
+  const ids = [...html.matchAll(/\sid="([^"]+)"/g)].map(match => match[1]);
+  assert.deepEqual(ids.filter((id, index) => ids.indexOf(id) !== index), []);
   const aiSource = fs.readFileSync(new URL('../js/ai.js', import.meta.url), 'utf8');
   assert.match(aiSource, /\/api\/ai\/interpret/);
   assert.match(aiSource, /\/api\/ai\/result\//);
   assert.match(aiSource, /payload\.pending/);
   assert.doesNotMatch(aiSource, /Bearer\s|DEEPSEEK_API_KEY|api\.deepseek\.com/);
+});
+
+test('紫微十二宫支持键盘与点击打开宫位详情', () => {
+  const context = browserContext();
+  vm.runInContext(fs.readFileSync(new URL('../js/ziwei.js', import.meta.url), 'utf8'), context);
+  const ziweiBoard = vm.runInContext('ZiweiBoard', context);
+  const board = ziweiBoard.renderBoard([
+    { branch: '巳', stem: '己', duty: '命宫', isMing: true, stars: [{ name: '紫微', cls: 'main', hua: '' }] }
+  ]);
+  assert.match(board, /role="button"/);
+  assert.match(board, /tabindex="0"/);
+  assert.match(board, /data-zw-duty="命宫"/);
+});
+
+test('SEO、匿名分享与私隐文件齐备', () => {
+  const routes = ['about', 'auspicious-date', 'bazi', 'compatibility', 'daily', 'guide', 'privacy', 'ziwei'];
+  for (const route of routes) {
+    const html = fs.readFileSync(new URL(`../${route}/index.html`, import.meta.url), 'utf8');
+    assert.match(html, /<title>.+<\/title>/);
+    assert.match(html, /canonical|refresh/);
+  }
+  const shared = fs.readFileSync(new URL('../share.html', import.meta.url), 'utf8');
+  assert.match(shared, /noindex,nofollow/);
+  assert.match(shared, /不包含姓名、出生日期/);
+  assert.match(fs.readFileSync(new URL('../robots.txt', import.meta.url), 'utf8'), /sitemap\.xml/i);
+  assert.match(fs.readFileSync(new URL('../sitemap.xml', import.meta.url), 'utf8'), /<urlset/);
+  const privacy = fs.readFileSync(new URL('../privacy.html', import.meta.url), 'utf8');
+  assert.match(privacy, /AES-GCM/);
+  assert.match(privacy, /180 天/);
 });

@@ -236,6 +236,7 @@ const TianjiEngine = (function () {
   /* ---------- 择吉：扫描日期范围内最宜某事项的日子 ---------- */
   function zeji(event, start, end, avoidBranch) {
     const Solar = window.Solar;
+    const eventTerms = Array.isArray(event) ? event.filter(Boolean) : [event];
     const DAY = 86400000;
     let t = new Date(start.y, start.m - 1, start.d).getTime();
     const tEnd = new Date(end.y, end.m - 1, end.d).getTime();
@@ -257,8 +258,10 @@ const TianjiEngine = (function () {
       const xiong = lunar.getDayXiongSha ? lunar.getDayXiongSha() : [];
       const naYin = lunar.getDayNaYin();
       const zhiXing = lunar.getDayZhiXing ? lunar.getDayZhiXing() : '';
-      const suitable = yi.indexOf(event) >= 0;
-      const forbidden = ji.indexOf(event) >= 0;
+      const matchedYi = eventTerms.filter(term => yi.indexOf(term) >= 0);
+      const matchedJi = eventTerms.filter(term => ji.indexOf(term) >= 0);
+      const suitable = matchedYi.length > 0;
+      const forbidden = matchedJi.length > 0;
 
       let score = 48;
       if (suitable) score += 32;
@@ -277,7 +280,7 @@ const TianjiEngine = (function () {
         ji: ji.slice(0, 10),
         chong: chongDesc, sha,
         zhiXing,
-        suitable, forbidden, clashSelf,
+        suitable, forbidden, clashSelf, matchedYi, matchedJi,
         score: Math.round(score),
         jiShen: jiShen.slice(0, 4),
         xiong: xiong.slice(0, 4)
@@ -331,14 +334,14 @@ const TianjiEngine = (function () {
     const HUAGAI = { 寅: '戌', 午: '戌', 戌: '戌', 申: '辰', 子: '辰', 辰: '辰', 亥: '未', 卯: '未', 未: '未', 巳: '丑', 酉: '丑', 丑: '丑' };
     const YANGREN = { 甲: '卯', 乙: '辰', 丙: '午', 戊: '午', 丁: '未', 己: '未', 庚: '酉', 辛: '戌', 壬: '子', 癸: '丑' };
     const LU = { 甲: '寅', 乙: '卯', 丙: '巳', 戊: '巳', 丁: '午', 己: '午', 庚: '申', 辛: '酉', 壬: '亥', 癸: '子' };
-    if (TIANYI[dayGan]) out.push({ name: '天乙贵人', where: TIANYI[dayGan].join('、'), desc: '逢凶化吉，得贵人提携。' });
-    if (WENCHANG[dayGan]) out.push({ name: '文昌贵人', where: WENCHANG[dayGan], desc: '聪明好学，利功名文书。' });
-    if (TAOHUA[yearZhi]) out.push({ name: '桃花', where: TAOHUA[yearZhi], desc: '异性缘与人缘佳。' });
-    if (YIMA[yearZhi]) out.push({ name: '驿马', where: YIMA[yearZhi], desc: '主变动、远行、奔波。' });
-    if (HUAGAI[yearZhi]) out.push({ name: '华盖', where: HUAGAI[yearZhi], desc: '聪颖孤高，喜技艺玄学。' });
-    if (YANGREN[dayGan]) out.push({ name: '羊刃', where: YANGREN[dayGan], desc: '刚烈勇猛，亦主刑伤。' });
-    if (LU[dayGan]) out.push({ name: '禄神', where: LU[dayGan], desc: '俸禄财源，安稳有依。' });
-    if (TAOHUA[dayZhi]) out.push({ name: '日坐桃花', where: TAOHUA[dayZhi], desc: '自身魅力强，重情缘。' });
+    if (TIANYI[dayGan]) out.push({ name: '天乙贵人', where: TIANYI[dayGan].join('、'), desc: '传统上用于观察支持、协助与人际资源。' });
+    if (WENCHANG[dayGan]) out.push({ name: '文昌贵人', where: WENCHANG[dayGan], desc: '传统上用于观察学习、表达与文书主题。' });
+    if (TAOHUA[yearZhi]) out.push({ name: '桃花', where: TAOHUA[yearZhi], desc: '传统上用于观察社交、吸引力与关系议题。' });
+    if (YIMA[yearZhi]) out.push({ name: '驿马', where: YIMA[yearZhi], desc: '传统上用于观察变动、远行与环境转换。' });
+    if (HUAGAI[yearZhi]) out.push({ name: '华盖', where: HUAGAI[yearZhi], desc: '传统上用于观察独立思考、技艺与精神兴趣。' });
+    if (YANGREN[dayGan]) out.push({ name: '羊刃', where: YANGREN[dayGan], desc: '传统上用于观察行动强度、边界与冲突管理。' });
+    if (LU[dayGan]) out.push({ name: '禄神', where: LU[dayGan], desc: '传统上用于观察职责、资源与稳定经营。' });
+    if (TAOHUA[dayZhi]) out.push({ name: '日坐桃花', where: TAOHUA[dayZhi], desc: '传统上用于观察个人表达与亲密关系需要。' });
     return out;
   }
 
@@ -438,7 +441,7 @@ const TianjiEngine = (function () {
     if (z1 === z2 && ZIXING.includes(z1)) return { label: '自刑', good: -1 };
     return { label: '普通', good: 0 };
   }
-  // 五行关系：相生/比和为吉，相克为凶
+  // 五行关系：保留传统生克结构，由展示层转化为协作与磨合语言。
   function elementRel(x, y) {
     if (x === y) return { label: '比和', good: 1 };
     if (SHENG[x] === y) return { label: '相生(' + x + '生' + y + ')', good: 1 };
@@ -504,12 +507,16 @@ const TianjiEngine = (function () {
     score += Math.max(-12, Math.min(12, branchScore));
 
     score = Math.max(5, Math.min(100, Math.round(score)));
-    const verdict = score >= 80 ? '天作之合，佳偶天成' :
-                    score >= 65 ? '上等姻缘，宜结连理' :
-                    score >= 50 ? '中平相配，用心则久' :
-                    score >= 35 ? '略有波折，多些包容' : '缘分较浅，且行且惜';
+    const verdict = score >= 80 ? '结构协调度较高' :
+                    score >= 65 ? '有多项可协作优势' :
+                    score >= 50 ? '优势与摩擦并存' :
+                    score >= 35 ? '需要重点讨论差异' : '结构分歧较多';
     return { score, factors, verdict };
   }
 
   return { buildChart, dailyFortune, zeji, analyze, hehun, WUXING_COLOR, GAN_WUXING, ZHI_WUXING };
 })();
+
+// The modern workspace is loaded as a separate classic script and reads the
+// deterministic engine through an explicit browser API.
+window.TianjiEngine = TianjiEngine;
