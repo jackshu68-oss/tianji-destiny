@@ -51,6 +51,96 @@
     target.appendChild(meta);
   }
 
+  function wait(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  function requestError(message, retryable) {
+    const error = new Error(message);
+    error.retryable = Boolean(retryable);
+    return error;
+  }
+
+  async function readApiResponse(response) {
+    const text = await response.text();
+    let payload;
+    try {
+      payload = text ? JSON.parse(text) : {};
+    } catch (_error) {
+      throw requestError('服务器连接被中途打断，正在尝试重新连接。', true);
+    }
+    if (!response.ok || !payload.ok) {
+      throw requestError(payload.message || `AI 服务返回错误（${response.status}）`, response.status >= 500);
+    }
+    return payload;
+  }
+
+  async function pollJob(jobId, signal, output, firstWait) {
+    const deadline = Date.now() + 105000;
+    let delay = Math.max(800, Number(firstWait) || 1600);
+    let transientFailures = 0;
+
+    while (Date.now() < deadline) {
+      await wait(delay);
+      try {
+        const response = await fetch(`/api/ai/result/${encodeURIComponent(jobId)}`, {
+          credentials: 'same-origin',
+          cache: 'no-store',
+          signal
+        });
+        const payload = await readApiResponse(response);
+        transientFailures = 0;
+        if (response.status === 202 || payload.pending) {
+          delay = Math.max(800, Number(payload.poll_after_ms) || 1600);
+          continue;
+        }
+        return payload;
+      } catch (error) {
+        if (error.name === 'AbortError') throw error;
+        const retryable = error.retryable || error instanceof TypeError;
+        transientFailures += 1;
+        if (!retryable || transientFailures > 5) throw error;
+        output.textContent = '手机网络有短暂波动，正在重新连接后台任务，生成不会中断。';
+        delay = Math.min(3500, 1200 + transientFailures * 400);
+      }
+    }
+    throw requestError('AI 仍在后台处理，但本页等待时间已到。请稍后再按一次，系统会优先读取已完成的结果。', false);
+  }
+
+  async function generateInterpretation(options, context, signal, output) {
+    const body = JSON.stringify({ title: options.title || '传统术数详解', context });
+    let payload;
+    let lastError;
+
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        const response = await fetch('/api/ai/interpret', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          cache: 'no-store',
+          signal,
+          body
+        });
+        payload = await readApiResponse(response);
+        break;
+      } catch (error) {
+        if (error.name === 'AbortError') throw error;
+        lastError = error;
+        const retryable = error.retryable || error instanceof TypeError;
+        if (!retryable || attempt === 1) throw error;
+        output.textContent = '正在重新连接服务器，已提交的任务不会重复生成。';
+        await wait(1200);
+      }
+    }
+
+    if (!payload) throw lastError || requestError('AI 任务未能建立，请稍后重试。', false);
+    if (!payload.pending) return payload;
+
+    output.textContent = 'AI 已接单，正在后台生成。即使手机网络短暂中断，服务器也会继续处理。';
+    return pollJob(payload.job_id, signal, output, payload.poll_after_ms);
+  }
+
   function mount(container, options) {
     if (!container) return;
     const existing = container.querySelector('.ai-insight');
@@ -80,25 +170,19 @@
       button.disabled = true;
       button.textContent = '正在综合分析...';
       output.className = 'ai-output loading';
-      output.textContent = '正在核对排盘依据并组织详解，通常需要数秒。';
+      output.textContent = '正在提交 AI 详解任务。';
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 70000);
+      const timer = setTimeout(() => controller.abort(), 115000);
       try {
-        const response = await fetch('/api/ai/interpret', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'same-origin',
-          signal: controller.signal,
-          body: JSON.stringify({ title: options.title || '传统术数详解', context })
-        });
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok || !payload.ok) throw new Error(payload.message || 'AI 暂时没有返回结果');
+        const payload = await generateInterpretation(options, context, controller.signal, output);
         output.className = 'ai-output ready';
         renderResult(output, payload);
         button.textContent = payload.cached ? '已生成 · 使用缓存' : '重新生成';
       } catch (error) {
         output.className = 'ai-output error';
-        output.textContent = error.name === 'AbortError' ? 'AI 响应时间较长，本次已停止等待，请稍后再试。' : (error.message || 'AI 服务暂时不可用。');
+        output.textContent = error.name === 'AbortError'
+          ? '本页等待时间已到，但服务器任务不会因此中断。请稍后再按一次读取结果。'
+          : (error.message || 'AI 服务暂时不可用，请稍后重试。');
         button.textContent = '重新尝试';
       } finally {
         clearTimeout(timer);

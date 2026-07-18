@@ -83,5 +83,9 @@ test('页面包含两种新增排盘和本地脚本', () => {
   assert.match(html, /js\/vendor\/qimen-core\.min\.js/);
   assert.match(html, /js\/divination\.js/);
   assert.match(html, /js\/ai\.js/);
-  assert.match(fs.readFileSync(new URL('../js/ai.js', import.meta.url), 'utf8'), /\/api\/ai\/interpret/);
+  const aiSource = fs.readFileSync(new URL('../js/ai.js', import.meta.url), 'utf8');
+  assert.match(aiSource, /\/api\/ai\/interpret/);
+  assert.match(aiSource, /\/api\/ai\/result\//);
+  assert.match(aiSource, /payload\.pending/);
+  assert.doesNotMatch(aiSource, /Bearer\s|DEEPSEEK_API_KEY|api\.deepseek\.com/);
 });

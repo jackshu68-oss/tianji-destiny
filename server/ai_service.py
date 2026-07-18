@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 import pathlib
+import secrets
 import threading
 import time
 import urllib.error
@@ -32,11 +33,14 @@ ALLOWED_HOSTS = {
 MAX_BODY_BYTES = 48 * 1024
 MAX_CONTEXT_CHARS = 12000
 CACHE_TTL = 12 * 60 * 60
+JOB_TTL = 15 * 60
 PER_IP_HOUR = int(os.environ.get("TIANJI_AI_PER_IP_HOUR", "20"))
 GLOBAL_DAY = int(os.environ.get("TIANJI_AI_GLOBAL_DAY", "200"))
 
 LOCK = threading.Lock()
 CACHE = {}
+JOBS = {}
+PENDING_BY_DIGEST = {}
 IP_REQUESTS = defaultdict(list)
 GLOBAL_REQUESTS = defaultdict(int)
 
@@ -184,8 +188,58 @@ def allow_request(client):
     return True, ""
 
 
+def public_error(code):
+    if code == "AI_SERVICE_NOT_CONFIGURED":
+        return 503, {"ok": False, "code": code, "message": "AI 服务尚未完成配置。"}
+    if code in ("UPSTREAM_HTTP_401", "UPSTREAM_HTTP_402", "UPSTREAM_HTTP_403"):
+        return 503, {"ok": False, "code": code, "message": "AI 账户或余额暂时不可用，管理员正在检查。"}
+    if code == "UPSTREAM_HTTP_429":
+        return 503, {"ok": False, "code": code, "message": "DeepSeek 当前繁忙，系统自动重试后仍未响应，请稍后再按一次。"}
+    if code == "UPSTREAM_HTTP_400":
+        return 502, {"ok": False, "code": code, "message": "当前排盘内容未能完成 AI 解读，请换一个问题后重试。"}
+    if code == "INTERNAL_ERROR":
+        return 500, {"ok": False, "code": code, "message": "AI 任务处理出现异常，请重新生成。"}
+    return 502, {"ok": False, "code": code, "message": "网络出现短暂波动，系统自动重试后仍未返回，请稍后再按一次。"}
+
+
+def cleanup_jobs(now):
+    expired = [job_id for job_id, job in JOBS.items() if now - job["created"] > JOB_TTL]
+    for job_id in expired:
+        digest = JOBS[job_id].get("digest")
+        JOBS.pop(job_id, None)
+        if digest and PENDING_BY_DIGEST.get(digest) == job_id:
+            PENDING_BY_DIGEST.pop(digest, None)
+
+
+def run_job(job_id, title, context, module, digest):
+    try:
+        analysis, model, usage = call_deepseek(title, context, module)
+        result = {"ok": True, "analysis": analysis, "model": model, "usage": usage, "cached": False}
+        with LOCK:
+            CACHE[digest] = (time.time(), result)
+            if len(CACHE) > 300:
+                oldest = min(CACHE, key=lambda key: CACHE[key][0])
+                CACHE.pop(oldest, None)
+            job = JOBS.get(job_id)
+            if job:
+                job.update({"status": "done", "updated": time.time(), "status_code": 200, "payload": result})
+            if PENDING_BY_DIGEST.get(digest) == job_id:
+                PENDING_BY_DIGEST.pop(digest, None)
+        print("AI job completed: {} module={} tokens={}".format(job_id[:8], module, usage.get("total_tokens", 0)), flush=True)
+    except Exception as error:
+        code = str(error).split(":", 1)[0] if isinstance(error, RuntimeError) else "INTERNAL_ERROR"
+        status, payload = public_error(code)
+        with LOCK:
+            job = JOBS.get(job_id)
+            if job:
+                job.update({"status": "error", "updated": time.time(), "status_code": status, "payload": payload})
+            if PENDING_BY_DIGEST.get(digest) == job_id:
+                PENDING_BY_DIGEST.pop(digest, None)
+        print("AI job failed: {} module={} code={}".format(job_id[:8], module, code), flush=True)
+
+
 class Handler(BaseHTTPRequestHandler):
-    server_version = "TianjiAI/1.0"
+    server_version = "TianjiAI/1.1"
 
     def log_message(self, _format, *_args):
         return
@@ -198,17 +252,36 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Cache-Control", "no-store")
         self.send_header("X-Content-Type-Options", "nosniff")
         self.end_headers()
-        self.wfile.write(body)
+        try:
+            self.wfile.write(body)
+        except (BrokenPipeError, ConnectionResetError):
+            # Mobile browsers may close a response early; background jobs must continue.
+            pass
 
     def valid_host(self):
         host = self.headers.get("Host", "").split(":", 1)[0].lower()
         return host in ALLOWED_HOSTS
 
     def do_GET(self):
-        if self.path not in ("/healthz", "/api/ai/health"):
+        if self.path in ("/healthz", "/api/ai/health"):
+            self.send_json(200, {"ok": True, "configured": bool(API_KEY), "model": MODEL})
+            return
+        prefix = "/api/ai/result/"
+        if not self.path.startswith(prefix) or not self.valid_host():
             self.send_json(404, {"ok": False, "error": "NOT_FOUND"})
             return
-        self.send_json(200, {"ok": True, "configured": bool(API_KEY), "model": MODEL})
+        job_id = self.path[len(prefix):].split("?", 1)[0]
+        with LOCK:
+            cleanup_jobs(time.time())
+            job = JOBS.get(job_id)
+            snapshot = dict(job) if job else None
+        if not snapshot:
+            self.send_json(404, {"ok": False, "code": "JOB_NOT_FOUND", "message": "AI 任务已过期，请重新生成。"})
+            return
+        if snapshot["status"] == "pending":
+            self.send_json(202, {"ok": True, "pending": True, "job_id": job_id, "poll_after_ms": 1600})
+            return
+        self.send_json(snapshot.get("status_code", 500), snapshot.get("payload") or {"ok": False, "message": "AI 任务没有返回结果。"})
 
     def do_POST(self):
         if self.path != "/api/ai/interpret":
@@ -238,12 +311,25 @@ class Handler(BaseHTTPRequestHandler):
         module = module_for(title)
         digest = hashlib.sha256(f"{MODEL}\0{module}\0{title}\0{context}".encode("utf-8")).hexdigest()
         now = time.time()
+        cached_payload = None
+        pending_job_id = None
         with LOCK:
+            cleanup_jobs(now)
             cached = CACHE.get(digest)
             if cached and now - cached[0] < CACHE_TTL:
-                self.send_json(200, {**cached[1], "cached": True})
-                return
-            CACHE.pop(digest, None)
+                cached_payload = dict(cached[1])
+                cached_payload["cached"] = True
+            else:
+                CACHE.pop(digest, None)
+                candidate = PENDING_BY_DIGEST.get(digest)
+                if candidate and JOBS.get(candidate, {}).get("status") == "pending":
+                    pending_job_id = candidate
+        if cached_payload:
+            self.send_json(200, cached_payload)
+            return
+        if pending_job_id:
+            self.send_json(202, {"ok": True, "pending": True, "job_id": pending_job_id, "poll_after_ms": 1600, "deduplicated": True})
+            return
 
         forwarded = self.headers.get("X-Forwarded-For", "")
         client = (forwarded.split(",", 1)[0].strip() or self.client_address[0])[:80]
@@ -251,30 +337,22 @@ class Handler(BaseHTTPRequestHandler):
         if not allowed:
             self.send_json(429, {"ok": False, "message": message})
             return
-        try:
-            analysis, model, usage = call_deepseek(title, context, module)
-        except RuntimeError as error:
-            code = str(error).split(":", 1)[0]
-            print("AI request failed: {}".format(code), flush=True)
-            if code == "AI_SERVICE_NOT_CONFIGURED":
-                self.send_json(503, {"ok": False, "code": code, "message": "AI 服务尚未完成配置。"})
-            elif code in ("UPSTREAM_HTTP_401", "UPSTREAM_HTTP_402", "UPSTREAM_HTTP_403"):
-                self.send_json(503, {"ok": False, "code": code, "message": "AI 账户或余额暂时不可用，管理员正在检查。"})
-            elif code == "UPSTREAM_HTTP_429":
-                self.send_json(503, {"ok": False, "code": code, "message": "DeepSeek 当前繁忙，系统自动重试后仍未响应，请稍后再按一次。"})
-            elif code == "UPSTREAM_HTTP_400":
-                self.send_json(502, {"ok": False, "code": code, "message": "当前排盘内容未能完成 AI 解读，请换一个问题后重试。"})
-            else:
-                self.send_json(502, {"ok": False, "code": code, "message": "网络出现短暂波动，系统自动重试后仍未返回，请稍后再按一次。"})
-            return
-
-        result = {"ok": True, "analysis": analysis, "model": model, "usage": usage, "cached": False}
+        job_id = secrets.token_urlsafe(18)
         with LOCK:
-            CACHE[digest] = (now, result)
-            if len(CACHE) > 300:
-                oldest = min(CACHE, key=lambda key: CACHE[key][0])
-                CACHE.pop(oldest, None)
-        self.send_json(200, result)
+            candidate = PENDING_BY_DIGEST.get(digest)
+            if candidate and JOBS.get(candidate, {}).get("status") == "pending":
+                job_id = candidate
+                duplicate = True
+            else:
+                JOBS[job_id] = {"status": "pending", "created": now, "updated": now, "digest": digest}
+                PENDING_BY_DIGEST[digest] = job_id
+                duplicate = False
+        if not duplicate:
+            worker = threading.Thread(target=run_job, args=(job_id, title, context, module, digest))
+            worker.daemon = True
+            worker.start()
+            print("AI job accepted: {} module={}".format(job_id[:8], module), flush=True)
+        self.send_json(202, {"ok": True, "pending": True, "job_id": job_id, "poll_after_ms": 1600, "deduplicated": duplicate})
 
 
 if __name__ == "__main__":

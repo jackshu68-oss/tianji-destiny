@@ -13,6 +13,12 @@ SPEC.loader.exec_module(SERVICE)
 
 
 class AiServiceTests(unittest.TestCase):
+    def setUp(self):
+        with SERVICE.LOCK:
+            SERVICE.CACHE.clear()
+            SERVICE.JOBS.clear()
+            SERVICE.PENDING_BY_DIGEST.clear()
+
     def test_module_selection(self):
         self.assertEqual(SERVICE.module_for("梅花易数 · 完整详解"), "meihua")
         self.assertEqual(SERVICE.module_for("奇门遁甲 · 全局详解"), "qimen")
@@ -64,6 +70,61 @@ class AiServiceTests(unittest.TestCase):
         self.assertEqual(analysis["overview"], "已恢复")
         self.assertEqual(model, "test-model")
         self.assertEqual(usage["total_tokens"], 12)
+
+    def test_background_job_stores_result_and_cache(self):
+        job_id = "job-success"
+        digest = "digest-success"
+        with SERVICE.LOCK:
+            SERVICE.JOBS[job_id] = {
+                "status": "pending",
+                "created": 1,
+                "updated": 1,
+                "digest": digest,
+            }
+            SERVICE.PENDING_BY_DIGEST[digest] = job_id
+
+        analysis = SERVICE.normalize_analysis({"overview": "后台完成"})
+        with mock.patch.object(
+            SERVICE,
+            "call_deepseek",
+            return_value=(analysis, "test-model", {"total_tokens": 21}),
+        ):
+            SERVICE.run_job(job_id, "奇门详解", "完整排盘资料", "qimen", digest)
+
+        with SERVICE.LOCK:
+            job = dict(SERVICE.JOBS[job_id])
+            cached = SERVICE.CACHE[digest][1]
+        self.assertEqual(job["status"], "done")
+        self.assertEqual(job["status_code"], 200)
+        self.assertEqual(job["payload"]["analysis"]["overview"], "后台完成")
+        self.assertEqual(cached["usage"]["total_tokens"], 21)
+        self.assertNotIn(digest, SERVICE.PENDING_BY_DIGEST)
+
+    def test_background_job_records_upstream_failure(self):
+        job_id = "job-error"
+        digest = "digest-error"
+        with SERVICE.LOCK:
+            SERVICE.JOBS[job_id] = {
+                "status": "pending",
+                "created": 1,
+                "updated": 1,
+                "digest": digest,
+            }
+            SERVICE.PENDING_BY_DIGEST[digest] = job_id
+
+        with mock.patch.object(
+            SERVICE,
+            "call_deepseek",
+            side_effect=RuntimeError("UPSTREAM_UNAVAILABLE"),
+        ):
+            SERVICE.run_job(job_id, "梅花详解", "完整排盘资料", "meihua", digest)
+
+        with SERVICE.LOCK:
+            job = dict(SERVICE.JOBS[job_id])
+        self.assertEqual(job["status"], "error")
+        self.assertEqual(job["status_code"], 502)
+        self.assertFalse(job["payload"]["ok"])
+        self.assertNotIn(digest, SERVICE.PENDING_BY_DIGEST)
 
 
 if __name__ == "__main__":
