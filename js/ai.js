@@ -65,9 +65,11 @@
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
-  function requestError(message, retryable) {
+  function requestError(message, retryable, code, status) {
     const error = new Error(message);
     error.retryable = Boolean(retryable);
+    error.code = code || '';
+    error.status = Number(status) || 0;
     return error;
   }
 
@@ -84,7 +86,7 @@
       throw requestError('服务器连接被中途打断，正在尝试重新连接。', true);
     }
     if (!response.ok || !payload.ok) {
-      throw requestError(payload.message || `AI 服务返回错误（${response.status}）`, response.status >= 500);
+      throw requestError(payload.message || `AI 服务返回错误（${response.status}）`, response.status >= 500, payload.code, response.status);
     }
     return payload;
   }
@@ -156,6 +158,29 @@
     return pollJob(payload.job_id, signal, output, payload.poll_after_ms);
   }
 
+  function renderAccessPrompt(output, error) {
+    if (!error || !['AUTH_REQUIRED', 'MEMBERSHIP_REQUIRED'].includes(error.code)) return false;
+    output.replaceChildren();
+    output.className = 'ai-output error ai-access-required';
+    const title = error.code === 'AUTH_REQUIRED'
+      ? copy('免费体验已结束', 'Your free trial has ended')
+      : copy('当前为免费版', 'Free plan active');
+    const detail = error.code === 'AUTH_REQUIRED'
+      ? copy('请先使用手机号注册或登录。', 'Register or sign in with your phone number.')
+      : copy('免费版可继续使用基础查询，详细解读需要会员。', 'Basic queries remain available. Detailed interpretations require membership.');
+    output.appendChild(element('b', '', title));
+    output.appendChild(element('p', '', detail));
+    const actions = element('div', 'ai-access-actions');
+    const target = error.code === 'AUTH_REQUIRED'
+      ? `/account/?next=${encodeURIComponent(`${location.pathname}${location.search}${location.hash}`)}`
+      : '/pricing/';
+    const link = element('a', '', error.code === 'AUTH_REQUIRED' ? copy('登录或注册', 'Sign in or register') : copy('查看会员方案', 'View membership plans'));
+    link.href = target;
+    actions.appendChild(link);
+    output.appendChild(actions);
+    return true;
+  }
+
   function mount(container, options) {
     if (!container) return;
     const existing = container.querySelector('.ai-insight');
@@ -194,10 +219,12 @@
         renderResult(output, payload);
         button.textContent = payload.cached ? '已生成 · 使用缓存' : '重新生成';
       } catch (error) {
-        output.className = 'ai-output error';
-        output.textContent = error.name === 'AbortError'
-          ? '本页等待时间已到，但服务器任务不会因此中断。请稍后再按一次读取结果。'
-          : (error.message || 'AI 服务暂时不可用，请稍后重试。');
+        if (!renderAccessPrompt(output, error)) {
+          output.className = 'ai-output error';
+          output.textContent = error.name === 'AbortError'
+            ? '本页等待时间已到，但服务器任务不会因此中断。请稍后再按一次读取结果。'
+            : (error.message || 'AI 服务暂时不可用，请稍后重试。');
+        }
         button.textContent = '重新尝试';
       } finally {
         clearTimeout(timer);
@@ -270,8 +297,10 @@
         renderResult(output, payload);
         button.textContent = payload.cached ? copy('已回答 · 使用缓存', 'Answered · cached') : copy('重新提问', 'Ask again');
       } catch (error) {
-        output.className = 'ai-output error';
-        output.textContent = error.name === 'AbortError' ? '等待时间已到，后台任务可能仍在处理。稍后再按一次会优先读取已完成结果。' : (error.message || 'AI 服务暂时不可用，请稍后重试。');
+        if (!renderAccessPrompt(output, error)) {
+          output.className = 'ai-output error';
+          output.textContent = error.name === 'AbortError' ? '等待时间已到，后台任务可能仍在处理。稍后再按一次会优先读取已完成结果。' : (error.message || 'AI 服务暂时不可用，请稍后重试。');
+        }
         button.textContent = copy('重新尝试', 'Try again');
       } finally {
         clearTimeout(timer);
@@ -341,10 +370,12 @@
         renderResult(output, payload);
         button.textContent = payload.cached ? copy('已生成 · 使用缓存', 'Generated · cached') : copy('重新生成报告', 'Regenerate report');
       } catch (error) {
-        output.className = 'ai-output ai-report-output error';
-        output.textContent = error.name === 'AbortError'
-          ? copy('本页等待时间已到，但服务器任务不会因此中断。稍后再按一次即可读取结果。', 'This page stopped waiting, but the server task continues. Press again shortly to retrieve the result.')
-          : (error.message || copy('AI 服务暂时不可用，请稍后重试。', 'AI is temporarily unavailable. Please try again shortly.'));
+        if (!renderAccessPrompt(output, error)) {
+          output.className = 'ai-output ai-report-output error';
+          output.textContent = error.name === 'AbortError'
+            ? copy('本页等待时间已到，但服务器任务不会因此中断。稍后再按一次即可读取结果。', 'This page stopped waiting, but the server task continues. Press again shortly to retrieve the result.')
+            : (error.message || copy('AI 服务暂时不可用，请稍后重试。', 'AI is temporarily unavailable. Please try again shortly.'));
+        }
         button.textContent = copy('重新尝试', 'Try again');
       } finally {
         clearTimeout(timer);

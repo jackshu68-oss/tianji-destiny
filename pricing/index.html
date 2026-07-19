@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title data-zh="会员方案｜道法自然" data-en="Membership Plans | DAOFA">会员方案｜道法自然</title>
-  <meta name="description" data-content-zh="查看道法自然免费版与 Pro 会员方案。iOS 数字会员仅通过 Apple App 内购买，网页暂不收费。" data-content-en="Compare DAOFA Free and Pro memberships. Digital memberships on iOS will be available only through Apple In-App Purchase; web checkout is currently unavailable." content="查看道法自然免费版与 Pro 会员方案。iOS 数字会员仅通过 Apple App 内购买，网页暂不收费。" />
+  <meta name="description" data-content-zh="查看道法自然免费版、30 天会员与 365 天会员方案。" data-content-en="Compare DAOFA Free, 30-day and 365-day memberships." content="查看道法自然免费版、30 天会员与 365 天会员方案。" />
   <meta name="theme-color" content="#f4f0e7" />
   <link rel="canonical" href="https://daofainsight.com/pricing/" />
   <script>
@@ -14,7 +14,7 @@
     } catch (_error) { document.documentElement.dataset.theme = 'modern'; }
   </script>
   <link rel="icon" href="../assets/daofa-mark.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="../css/style.css?v=20260718-18" />
+  <link rel="stylesheet" href="../css/style.css?v=20260718-22" />
 </head>
 <body class="commercial-page" data-billing-root>
   <canvas id="stars"></canvas>
@@ -23,6 +23,7 @@
       <a class="brand brand-link" href="../">道法自然<span class="brand-en">DAOFA</span></a>
       <div class="nav-actions">
         <a class="commercial-home-link" href="../" data-zh="返回主页" data-en="Home">返回主页</a>
+        <a class="commercial-home-link" href="../account/" data-zh="登录" data-en="Sign in">登录</a>
         <div class="preference-controls" aria-label="界面偏好">
           <button id="language-toggle" class="preference-toggle language-toggle" type="button" aria-label="Switch to English" title="Switch to English">EN</button>
           <button id="theme-toggle" class="preference-toggle theme-toggle" type="button" aria-label="切换到经典黑金风格" title="切换到经典黑金风格">◐</button>
@@ -34,8 +35,8 @@
   <main class="commercial-main">
     <header class="commercial-header">
       <p class="eyebrow" data-zh="会员中心" data-en="MEMBERSHIP">会员中心</p>
-      <h1 data-zh="选择适合你的使用方式" data-en="Choose how you use DAOFA">选择适合你的使用方式</h1>
-      <p data-zh="基础排盘永久免费；Pro 计划提供更高的 AI 详解额度。iOS 版上线后仅通过 Apple App 内购买开通。" data-en="Core charting stays free. Pro is planned to add a higher AI interpretation allowance and will be offered on iOS only through Apple In-App Purchase.">基础排盘永久免费；Pro 计划提供更高的 AI 详解额度。iOS 版上线后仅通过 Apple App 内购买开通。</p>
+      <h1 data-zh="会员方案" data-en="Membership plans">会员方案</h1>
+      <p data-zh="免费版用于基础查询，会员提供完整解读。" data-en="Free includes basic queries. Membership unlocks complete interpretations.">免费版用于基础查询，会员提供完整解读。</p>
     </header>
 
     <section class="billing-status-band" id="billing-status-band" aria-live="polite">
@@ -54,7 +55,7 @@
       <div class="pricing-purchase-head">
         <div>
           <p class="eyebrow" data-zh="方案" data-en="PLANS">方案</p>
-          <h2 id="pricing-title" data-zh="先免费使用，需要更多 AI 时再升级" data-en="Start free and upgrade when you need more AI">先免费使用，需要更多 AI 时再升级</h2>
+          <h2 id="pricing-title" data-zh="选择方案" data-en="Choose a plan">选择方案</h2>
         </div>
       </div>
 
@@ -66,66 +67,47 @@
             <small data-zh="长期免费" data-en="Always free">长期免费</small>
           </div>
           <ul>
-            <li data-zh="八字、紫微、每日万年历与传统工具" data-en="BaZi, Zi Wei, daily almanac and traditional tools">八字、紫微、每日万年历与传统工具</li>
-            <li data-zh="命盘与日历默认保存在当前装置" data-en="Charts and calendar stored on this device by default">命盘与日历默认保存在当前装置</li>
-            <li data-zh="共享 AI 详解额度" data-en="Shared AI interpretation allowance">共享 AI 详解额度</li>
+            <li data-zh="基础查询功能" data-en="Basic query tools">基础查询功能</li>
+            <li data-zh="不含详细解读" data-en="No detailed interpretation">不含详细解读</li>
           </ul>
           <span class="pricing-current" data-zh="无需付款" data-en="No payment required">无需付款</span>
         </article>
 
         <article class="pricing-plan is-pro">
           <div class="pricing-plan-head">
-            <span data-zh="Pro 30 天" data-en="PRO · 30 DAYS">Pro 30 天</span>
+            <span data-zh="月付方案 · 30 天" data-en="MONTHLY · 30 DAYS">月付方案 · 30 天</span>
             <strong data-price="monthly">¥39</strong>
-            <small data-zh="一次购买，到期不自动扣款" data-en="One-time purchase, no auto-renewal">一次购买，到期不自动扣款</small>
+            <small data-zh="30 天会员" data-en="30-day access">30 天会员</small>
           </div>
           <ul>
-            <li data-zh="每日最多 100 次 AI 智能详解" data-en="Up to 100 AI interpretations per day">每日最多 100 次 AI 智能详解</li>
-            <li data-zh="会员恢复将由 Apple 购买记录处理" data-en="Membership restoration will use Apple purchase records">会员恢复将由 Apple 购买记录处理</li>
-            <li data-zh="iOS 版仅通过 Apple App 内购买" data-en="iOS access only through Apple In-App Purchase">iOS 版仅通过 Apple App 内购买</li>
+            <li data-zh="不限次数使用" data-en="Unlimited use">不限次数使用</li>
+            <li data-zh="优先调用" data-en="Priority access">优先调用</li>
+            <li data-zh="更详细的讲解" data-en="More detailed explanations">更详细的讲解</li>
           </ul>
-          <button type="button" data-plan-checkout="monthly" disabled>iOS 版上线后开放</button>
+          <button type="button" data-plan-checkout="monthly" disabled data-zh="暂未开放" data-en="Coming soon">暂未开放</button>
         </article>
 
         <article class="pricing-plan is-pro featured">
           <div class="pricing-plan-head">
-            <span data-zh="Pro 365 天" data-en="PRO · 365 DAYS">Pro 365 天</span>
+            <span data-zh="年付方案 · 365 天" data-en="ANNUAL · 365 DAYS">年付方案 · 365 天</span>
             <strong data-price="yearly">¥299</strong>
-            <small data-zh="一次购买，到期不自动扣款" data-en="One-time purchase, no auto-renewal">一次购买，到期不自动扣款</small>
+            <small data-zh="365 天会员" data-en="365-day access">365 天会员</small>
           </div>
           <ul>
-            <li data-zh="与月付相同的 Pro 功能" data-en="All monthly Pro features">与月付相同的 Pro 功能</li>
-            <li data-zh="按当前价格比连续购买 30 天节省约 36%" data-en="About 36% less than repeating the 30-day plan">按当前价格比连续购买 30 天节省约 36%</li>
-            <li data-zh="有效期清楚显示，需要时再主动续购" data-en="A clear expiry date; renew only when you choose">有效期清楚显示，需要时再主动续购</li>
+            <li data-zh="不限次数使用" data-en="Unlimited use">不限次数使用</li>
+            <li data-zh="优先调用" data-en="Priority access">优先调用</li>
+            <li data-zh="更详细的讲解" data-en="More detailed explanations">更详细的讲解</li>
           </ul>
-          <button type="button" data-plan-checkout="yearly" disabled>iOS 版上线后开放</button>
+          <button type="button" data-plan-checkout="yearly" disabled data-zh="暂未开放" data-en="Coming soon">暂未开放</button>
         </article>
       </div>
 
-      <div class="billing-merchant-state" role="note">
-        <strong data-zh="网页付款已关闭" data-en="Web checkout is disabled">网页付款已关闭</strong>
-        <span data-zh=" 本页不提供支付宝、微信支付、收款码或外部购买链接。iOS 版的数字会员将使用 Apple App 内购买；最终价格以 App Store 显示为准。" data-en=" This page does not offer Alipay, WeChat Pay, payment codes or external purchase links. Digital memberships on iOS will use Apple In-App Purchase; final prices will be those shown in the App Store."> 本页不提供支付宝、微信支付、收款码或外部购买链接。iOS 版的数字会员将使用 Apple App 内购买；最终价格以 App Store 显示为准。</span>
-      </div>
       <p class="billing-legal-links"><a href="../terms/" data-zh="服务条款" data-en="Terms">服务条款</a><a href="../privacy.html" data-zh="隐私政策" data-en="Privacy">隐私政策</a></p>
-    </section>
-
-    <section class="billing-recovery" id="billing-recovery" hidden>
-      <div>
-        <p class="eyebrow" data-zh="更换装置" data-en="NEW DEVICE">更换装置</p>
-        <h2 data-zh="恢复已有会员" data-en="Restore an existing membership">恢复已有会员</h2>
-        <p data-zh="输入付款邮箱，我们会发送六位验证码。验证码不会显示账户是否存在。" data-en="Enter the billing email and we will send a six-digit code. The response does not reveal whether an account exists.">输入付款邮箱，我们会发送六位验证码。验证码不会显示账户是否存在。</p>
-      </div>
-      <div class="billing-recovery-form">
-        <label><span data-zh="付款邮箱" data-en="Billing email">付款邮箱</span><input id="billing-recovery-email" type="email" autocomplete="email" maxlength="254" /></label>
-        <button type="button" id="billing-recovery-send" data-zh="发送验证码" data-en="Send code">发送验证码</button>
-        <label><span data-zh="六位验证码" data-en="Six-digit code">六位验证码</span><input id="billing-recovery-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" disabled /></label>
-        <button type="button" id="billing-recovery-verify" disabled data-zh="恢复会员" data-en="Restore membership">恢复会员</button>
-      </div>
     </section>
 
     <section class="commercial-boundary">
       <h2 data-zh="会员不会改变解读边界" data-en="Membership does not change the interpretation boundary">会员不会改变解读边界</h2>
-      <p data-zh="Pro 购买的是更高的服务用量与账户功能，不代表结果更准确，也不提供确定性预测。所有内容仍只用于传统文化研究、自我观察与娱乐参考。" data-en="Pro purchases higher service usage and account features. It does not make results more accurate or provide certain predictions. All content remains for traditional-culture study, self-reflection and entertainment.">Pro 购买的是更高的服务用量与账户功能，不代表结果更准确，也不提供确定性预测。所有内容仍只用于传统文化研究、自我观察与娱乐参考。</p>
+      <p data-zh="会员不会令结果更准确，也不提供确定性预测。所有内容仍只用于传统文化研究、自我观察与娱乐参考。" data-en="Membership does not make results more accurate or provide certain predictions. All content remains for traditional-culture study, self-reflection and entertainment.">会员不会令结果更准确，也不提供确定性预测。所有内容仍只用于传统文化研究、自我观察与娱乐参考。</p>
     </section>
   </main>
 
@@ -135,7 +117,8 @@
   </footer>
 
   <script src="../js/ui.js?v=20260718-17"></script>
-  <script src="../js/billing.js?v=20260718-20"></script>
+  <script src="../js/auth.js?v=20260718-22"></script>
+  <script src="../js/billing.js?v=20260718-22"></script>
   <script src="../js/ambient.js?v=20260718-14"></script>
 </body>
 </html>

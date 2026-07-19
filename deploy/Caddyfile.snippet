@@ -15,6 +15,10 @@ daofainsight.com, www.daofainsight.com, tianji.47-86-31-98.sslip.io {
         reverse_proxy 127.0.0.1:8788
     }
 
+    handle /api/auth/* {
+        reverse_proxy 127.0.0.1:8788
+    }
+
     handle {
         reverse_proxy 127.0.0.1:8081
     }

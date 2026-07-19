@@ -12,16 +12,18 @@
     zh: {
       loading: '正在检查会员状态…',
       free: '当前为免费版',
-      freeDetail: '基础排盘、本机保存与共享 AI 额度可继续使用。',
-      pro: 'Pro 会员已生效',
-      proDetail: '方案：{plan} · 会员邮箱：{email}',
+      freeDetail: '可使用基础查询，不含详细解读。',
+      trial: '1 天免费体验',
+      trialDetail: '本次免登录体验已开始。',
+      pro: '会员已生效',
+      proDetail: '方案：{plan} · 账户：{identity}',
       monthly: '月付',
       yearly: '年付',
-      ready: 'iOS 版会员将通过 Apple App 内购买开通。',
-      disabled: '网页付款已关闭。iOS 版上线后，数字会员仅通过 Apple App 内购买；当前不会收取费用。',
-      buyMonthly: '购买 30 天 Pro',
-      buyYearly: '购买 365 天 Pro',
-      merchantPending: 'iOS 版上线后开放',
+      ready: '会员购买通道已开放。',
+      disabled: '购买通道准备中。',
+      buyMonthly: '开通 30 天会员',
+      buyYearly: '开通 365 天会员',
+      merchantPending: '暂未开放',
       emailRequired: '请先填写用于接收收据和恢复会员的有效邮箱。',
       consentRequired: '请先阅读并同意服务条款、会员购买规则与隐私政策。',
       redirecting: '正在打开 Apple App 内购买…',
@@ -42,16 +44,18 @@
     en: {
       loading: 'Checking membership status…',
       free: 'Free plan active',
-      freeDetail: 'Core charts, local storage and the shared AI allowance remain available.',
-      pro: 'Pro membership active',
-      proDetail: 'Plan: {plan} · Member email: {email}',
+      freeDetail: 'Basic queries are available without detailed interpretations.',
+      trial: '1-day free trial',
+      trialDetail: 'Your no-sign-in trial has started.',
+      pro: 'Membership active',
+      proDetail: 'Plan: {plan} · Account: {identity}',
       monthly: 'Monthly',
       yearly: 'Annual',
-      ready: 'Membership on iOS will be available through Apple In-App Purchase.',
-      disabled: 'Web checkout is disabled. Digital memberships on iOS will be available only through Apple In-App Purchase, and no payment is collected now.',
-      buyMonthly: 'Buy 30 days of Pro',
-      buyYearly: 'Buy 365 days of Pro',
-      merchantPending: 'Available after the iOS launch',
+      ready: 'Membership purchasing is available.',
+      disabled: 'Purchasing is coming soon.',
+      buyMonthly: 'Activate 30-day membership',
+      buyYearly: 'Activate 365-day membership',
+      merchantPending: 'Coming soon',
       emailRequired: 'Enter a valid email for receipts and membership recovery.',
       consentRequired: 'Read and accept the Terms, membership purchase rules and Privacy Policy first.',
       redirecting: 'Opening Apple In-App Purchase…',
@@ -226,9 +230,14 @@
 
     if (entitlement.active) {
       statusTitle.textContent = copy('pro');
-      statusDetail.textContent = copy('proDetail', { plan: planDisplay(entitlement.plan), email: entitlement.email_hint || '—' });
+      statusDetail.textContent = copy('proDetail', { plan: planDisplay(entitlement.plan), identity: entitlement.phone_hint || entitlement.email_hint || '—' });
       statusBand.classList.add('is-pro');
       manageButton.hidden = !config.recurring;
+    } else if (entitlement.plan === 'trial' && entitlement.status === 'trialing') {
+      statusTitle.textContent = copy('trial');
+      statusDetail.textContent = copy('trialDetail');
+      statusBand.classList.remove('is-pro');
+      manageButton.hidden = true;
     } else {
       statusTitle.textContent = copy('free');
       statusDetail.textContent = copy('freeDetail');
@@ -245,7 +254,7 @@
         ? copy(plan === 'yearly' ? 'buyYearly' : 'buyMonthly')
         : copy('merchantPending');
     });
-    recoveryPanel.hidden = !config.recovery_enabled;
+    if (recoveryPanel) recoveryPanel.hidden = !config.recovery_enabled;
   }
 
   async function handleCheckoutReturn(notice) {
@@ -316,13 +325,15 @@
       });
     });
 
-    document.getElementById('billing-manage').addEventListener('click', async () => {
+    const manageButton = document.getElementById('billing-manage');
+    if (manageButton) manageButton.addEventListener('click', async () => {
       setCopiedNotice(notice, 'managing', 'loading');
       try { await openPortal(); }
       catch (error) { displayError(notice, error); }
     });
 
-    document.getElementById('billing-recovery-send').addEventListener('click', async () => {
+    const recoverySend = document.getElementById('billing-recovery-send');
+    if (recoverySend) recoverySend.addEventListener('click', async () => {
       try {
         await startRecovery(recoveryEmail.value.trim());
         setCopiedNotice(notice, 'recoverySent', 'success');
@@ -332,7 +343,7 @@
       } catch (error) { displayError(notice, error); }
     });
 
-    recoveryVerify.addEventListener('click', async () => {
+    if (recoveryVerify) recoveryVerify.addEventListener('click', async () => {
       setCopiedNotice(notice, 'recovering', 'loading');
       try {
         await verifyRecovery(recoveryEmail.value.trim(), recoveryCode.value.trim());

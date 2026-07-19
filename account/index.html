@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title data-zh="登录与注册｜道法自然" data-en="Sign in | DAOFA">登录与注册｜道法自然</title>
+  <meta name="description" data-content-zh="使用中国大陆手机号注册或登录道法自然。" data-content-en="Create or access your DAOFA account with a mainland China phone number." content="使用中国大陆手机号注册或登录道法自然。" />
+  <meta name="theme-color" content="#f4f0e7" />
+  <link rel="canonical" href="https://daofainsight.com/account/" />
+  <script>
+    try {
+      document.documentElement.dataset.theme = localStorage.getItem('tianji_theme_v1') === 'classic' ? 'classic' : 'modern';
+      document.documentElement.lang = localStorage.getItem('tianji_language_v1') === 'en' ? 'en-CA' : 'zh-CN';
+    } catch (_error) { document.documentElement.dataset.theme = 'modern'; }
+  </script>
+  <link rel="icon" href="../assets/daofa-mark.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="../css/style.css?v=20260718-22" />
+</head>
+<body class="commercial-page auth-page" data-auth-page>
+  <canvas id="stars"></canvas>
+  <nav class="nav">
+    <div class="nav-inner">
+      <a class="brand brand-link" href="../">道法自然<span class="brand-en">DAOFA</span></a>
+      <div class="nav-actions">
+        <a class="commercial-home-link" href="../" data-zh="返回主页" data-en="Home">返回主页</a>
+        <div class="preference-controls" aria-label="界面偏好">
+          <button id="language-toggle" class="preference-toggle language-toggle" type="button" aria-label="Switch to English" title="Switch to English">EN</button>
+          <button id="theme-toggle" class="preference-toggle theme-toggle" type="button" aria-label="切换到经典黑金风格" title="切换到经典黑金风格">◐</button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="auth-main">
+    <header class="auth-header">
+      <p class="eyebrow" data-zh="账户" data-en="ACCOUNT">账户</p>
+      <h1 data-zh="登录道法自然" data-en="Sign in to DAOFA">登录道法自然</h1>
+      <p data-zh="首次注册使用短信验证码，以后直接用手机号和密码登录。" data-en="Verify your phone once, then sign in with your phone number and password.">首次注册使用短信验证码，以后直接用手机号和密码登录。</p>
+    </header>
+
+    <section class="auth-account-summary" id="auth-signed-in" hidden>
+      <div>
+        <span data-zh="已登录" data-en="SIGNED IN">已登录</span>
+        <strong id="auth-account-phone"></strong>
+        <small id="auth-account-plan"></small>
+      </div>
+      <div class="auth-account-actions">
+        <a href="../pricing/" data-zh="会员方案" data-en="Membership">会员方案</a>
+        <button type="button" id="auth-logout" data-zh="退出登录" data-en="Sign out">退出登录</button>
+      </div>
+    </section>
+
+    <section class="auth-panel" id="auth-signed-out">
+      <div class="auth-tabs" role="tablist" aria-label="账户操作">
+        <button type="button" data-auth-mode="login" role="tab" data-zh="登录" data-en="Sign in">登录</button>
+        <button type="button" data-auth-mode="register" role="tab" data-zh="注册" data-en="Register">注册</button>
+        <button type="button" data-auth-mode="recover" role="tab" data-zh="忘记密码" data-en="Reset password">忘记密码</button>
+      </div>
+
+      <div id="auth-notice" class="auth-notice" aria-live="polite"></div>
+
+      <form class="auth-form" data-auth-form="login" novalidate>
+        <label>
+          <span data-zh="手机号码" data-en="Phone number">手机号码</span>
+          <div class="auth-phone-input"><b>+86</b><input name="phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="18" placeholder="176 0000 0000" required /></div>
+        </label>
+        <label>
+          <span data-zh="密码" data-en="Password">密码</span>
+          <input name="password" type="password" autocomplete="current-password" maxlength="72" required />
+        </label>
+        <button class="auth-primary" type="submit" data-zh="登录" data-en="Sign in">登录</button>
+      </form>
+
+      <form class="auth-form" data-auth-form="register" novalidate hidden>
+        <label>
+          <span data-zh="手机号码" data-en="Phone number">手机号码</span>
+          <div class="auth-phone-input"><b>+86</b><input name="phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="18" placeholder="176 0000 0000" required /></div>
+        </label>
+        <label>
+          <span data-zh="短信验证码" data-en="SMS code">短信验证码</span>
+          <div class="auth-code-row"><input name="code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required /><button type="button" data-send-otp="register" data-zh="发送验证码" data-en="Send code">发送验证码</button></div>
+        </label>
+        <label>
+          <span data-zh="设置密码" data-en="Create password">设置密码</span>
+          <input name="password" type="password" autocomplete="new-password" minlength="8" maxlength="72" required />
+          <small data-zh="至少 8 个字符，同时包含英文字母和数字" data-en="At least 8 characters with letters and numbers">至少 8 个字符，同时包含英文字母和数字</small>
+        </label>
+        <label>
+          <span data-zh="确认密码" data-en="Confirm password">确认密码</span>
+          <input name="confirm-password" type="password" autocomplete="new-password" minlength="8" maxlength="72" required />
+        </label>
+        <button class="auth-primary" type="submit" data-zh="注册并登录" data-en="Register and sign in">注册并登录</button>
+      </form>
+
+      <form class="auth-form" data-auth-form="recover" novalidate hidden>
+        <label>
+          <span data-zh="已注册手机号码" data-en="Registered phone number">已注册手机号码</span>
+          <div class="auth-phone-input"><b>+86</b><input name="phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="18" placeholder="176 0000 0000" required /></div>
+        </label>
+        <label>
+          <span data-zh="短信验证码" data-en="SMS code">短信验证码</span>
+          <div class="auth-code-row"><input name="code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required /><button type="button" data-send-otp="recover" data-zh="发送验证码" data-en="Send code">发送验证码</button></div>
+        </label>
+        <label>
+          <span data-zh="新密码" data-en="New password">新密码</span>
+          <input name="password" type="password" autocomplete="new-password" minlength="8" maxlength="72" required />
+        </label>
+        <label>
+          <span data-zh="确认新密码" data-en="Confirm new password">确认新密码</span>
+          <input name="confirm-password" type="password" autocomplete="new-password" minlength="8" maxlength="72" required />
+        </label>
+        <button class="auth-primary" type="submit" data-zh="重设密码并登录" data-en="Reset password and sign in">重设密码并登录</button>
+      </form>
+
+      <p class="auth-terms"><span data-zh="继续即表示你同意" data-en="By continuing, you agree to the">继续即表示你同意</span> <a href="../terms/" data-zh="服务条款" data-en="Terms">服务条款</a> <span data-zh="与" data-en="and">与</span> <a href="../privacy.html" data-zh="隐私政策" data-en="Privacy Policy">隐私政策</a>。</p>
+    </section>
+  </main>
+
+  <footer class="commercial-footer">
+    <span>© 道法自然 DAOFA</span>
+    <a href="mailto:jackshu68@gmail.com">jackshu68@gmail.com</a>
+  </footer>
+
+  <script src="../js/ui.js?v=20260718-17"></script>
+  <script src="../js/auth.js?v=20260718-22"></script>
+  <script src="../js/ambient.js?v=20260718-14"></script>
+</body>
+</html>

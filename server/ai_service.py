@@ -13,13 +13,16 @@ import urllib.error
 import urllib.request
 from collections import defaultdict
 from datetime import datetime, timezone
+from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from socketserver import ThreadingMixIn
 
 try:
     from billing import BillingError, BillingService
+    from auth import AuthError, AuthService
 except ModuleNotFoundError:
     from server.billing import BillingError, BillingService
+    from server.auth import AuthError, AuthService
 
 
 ROOT = pathlib.Path(__file__).resolve().parent
@@ -54,6 +57,7 @@ STORAGE_REQUESTS = defaultdict(list)
 DATA_DIR = pathlib.Path(os.environ.get("TIANJI_DATA_DIR", "/tmp/tianji-ai-data"))
 DATABASE_PATH = DATA_DIR / "private_store.sqlite3"
 BILLING = BillingService(DATABASE_PATH)
+AUTH = AuthService(DATABASE_PATH)
 CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 
 
@@ -359,13 +363,15 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, _format, *_args):
         return
 
-    def send_json(self, status, payload):
+    def send_json(self, status, payload, headers=None):
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
         self.send_header("X-Content-Type-Options", "nosniff")
+        for name, value in headers or []:
+            self.send_header(name, value)
         self.end_headers()
         try:
             self.wfile.write(body)
@@ -385,6 +391,27 @@ class Handler(BaseHTTPRequestHandler):
         authorization = self.headers.get("Authorization", "")
         scheme, separator, token = authorization.partition(" ")
         return token.strip() if separator and scheme.lower() == "bearer" else ""
+
+    def cookie_value(self, name):
+        try:
+            cookie = SimpleCookie(self.headers.get("Cookie", ""))
+            value = cookie.get(name)
+            return value.value if value else ""
+        except Exception:
+            return ""
+
+    def session_token(self):
+        return self.cookie_value("tianji_session")
+
+    def trial_token(self):
+        return self.cookie_value("tianji_trial")
+
+    def cookie_header(self, name, value, max_age):
+        host = self.headers.get("Host", "").split(":", 1)[0].lower()
+        parts = ["{}={}".format(name, value), "Path=/", "HttpOnly", "SameSite=Lax", "Max-Age={}".format(int(max_age))]
+        if host not in ("127.0.0.1", "localhost"):
+            parts.append("Secure")
+        return "; ".join(parts)
 
     def read_raw_body(self, maximum=MAX_BODY_BYTES):
         try:
@@ -409,12 +436,81 @@ class Handler(BaseHTTPRequestHandler):
     def send_billing_error(self, error):
         self.send_json(error.status, {"ok": False, "code": error.code, "message": error.message})
 
+    def send_auth_error(self, error):
+        self.send_json(error.status, {"ok": False, "code": error.code, "message": error.message})
+
+    def handle_auth_get(self, path):
+        if path == "/api/auth/status":
+            self.send_json(200, AUTH.status(self.session_token(), self.trial_token()))
+            return
+        self.send_json(404, {"ok": False, "error": "NOT_FOUND"})
+
+    def handle_auth_post(self, path):
+        try:
+            if not allow_storage_request(self.client_id()):
+                raise AuthError(429, "AUTH_RATE_LIMIT", "本小时账户操作过多，请稍后再试。")
+            body = self.read_json_body(16 * 1024)
+            if body is None:
+                return
+            if not isinstance(body, dict):
+                raise AuthError(400, "INVALID_BODY", "提交格式无效。")
+            headers = []
+            if path == "/api/auth/otp/start":
+                result = AUTH.start_otp(body.get("phone"), body.get("purpose"))
+            elif path == "/api/auth/register":
+                result = AUTH.register(body.get("phone"), body.get("code"), body.get("password"))
+                token = result.pop("session_token")
+                headers.append(("Set-Cookie", self.cookie_header("tianji_session", token, AUTH.session_seconds)))
+            elif path == "/api/auth/login":
+                result = AUTH.login(body.get("phone"), body.get("password"))
+                token = result.pop("session_token")
+                headers.append(("Set-Cookie", self.cookie_header("tianji_session", token, AUTH.session_seconds)))
+            elif path == "/api/auth/password/reset":
+                result = AUTH.reset_password(body.get("phone"), body.get("code"), body.get("password"))
+                token = result.pop("session_token")
+                headers.append(("Set-Cookie", self.cookie_header("tianji_session", token, AUTH.session_seconds)))
+            elif path == "/api/auth/logout":
+                result = AUTH.logout(self.session_token())
+                headers.append(("Set-Cookie", self.cookie_header("tianji_session", "", 0)))
+            else:
+                self.send_json(404, {"ok": False, "error": "NOT_FOUND"})
+                return
+            self.send_json(200, result, headers)
+        except AuthError as error:
+            self.send_auth_error(error)
+        except Exception as error:
+            print("Auth request failed: {} {}".format(path, type(error).__name__), flush=True)
+            self.send_json(500, {"ok": False, "code": "AUTH_INTERNAL_ERROR", "message": "账户服务暂时不可用，请稍后再试。"})
+
     def handle_billing_get(self, path):
         if path == "/api/billing/config":
             self.send_json(200, BILLING.public_config())
             return
         if path == "/api/billing/status":
-            self.send_json(200, BILLING.status(self.bearer_token()))
+            result = BILLING.status(self.bearer_token())
+            auth = AUTH.status(self.session_token(), self.trial_token())
+            result["auth"] = auth
+            if not result["entitlement"].get("active"):
+                account = auth.get("account") or {}
+                trial = auth.get("trial") or {}
+                if account.get("active"):
+                    result["entitlement"] = {
+                        "authenticated": True,
+                        "active": True,
+                        "plan": account.get("plan"),
+                        "status": "active",
+                        "current_period_end": account.get("plan_expires", 0),
+                        "phone_hint": account.get("phone_hint", ""),
+                    }
+                elif trial.get("active"):
+                    result["entitlement"].update({
+                        "plan": "trial", "status": "trialing", "trial_expires": trial.get("expires", 0),
+                    })
+                elif auth.get("authenticated"):
+                    result["entitlement"].update({
+                        "authenticated": True, "phone_hint": account.get("phone_hint", ""),
+                    })
+            self.send_json(200, result)
             return
         self.send_json(404, {"ok": False, "error": "NOT_FOUND"})
 
@@ -605,6 +701,9 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json(404, {"ok": False, "error": "NOT_FOUND"})
             return
         path = self.path.split("?", 1)[0]
+        if path.startswith("/api/auth/"):
+            self.handle_auth_get(path)
+            return
         if path.startswith("/api/billing/"):
             self.handle_billing_get(path)
             return
@@ -630,6 +729,12 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         path = self.path.split("?", 1)[0]
+        if path.startswith("/api/auth/"):
+            if not self.valid_host():
+                self.send_json(403, {"ok": False, "message": "请求来源无效。"})
+                return
+            self.handle_auth_post(path)
+            return
         if path.startswith("/api/billing/"):
             if not self.valid_host():
                 self.send_json(403, {"ok": False, "message": "请求来源无效。"})
@@ -665,6 +770,21 @@ class Handler(BaseHTTPRequestHandler):
         if not title or len(context) < 20:
             self.send_json(400, {"ok": False, "message": "请先完成排盘，再生成 AI 详解。"})
             return
+        response_headers = []
+        billing_entitlement = BILLING.status(self.bearer_token()).get("entitlement") or {}
+        access_tier = "pro" if billing_entitlement.get("active") else ""
+        if not access_tier:
+            try:
+                access = AUTH.authorise_ai(self.session_token(), self.trial_token())
+            except AuthError as error:
+                self.send_auth_error(error)
+                return
+            access_tier = access.get("tier") or "trial"
+            if access.get("trial_token"):
+                response_headers.append((
+                    "Set-Cookie",
+                    self.cookie_header("tianji_trial", access["trial_token"], AUTH.trial_seconds),
+                ))
         module = module_for(title)
         digest = hashlib.sha256(f"{MODEL}\0{module}\0{title}\0{context}".encode("utf-8")).hexdigest()
         now = time.time()
@@ -682,17 +802,19 @@ class Handler(BaseHTTPRequestHandler):
                 if candidate and JOBS.get(candidate, {}).get("status") == "pending":
                     pending_job_id = candidate
         if cached_payload:
-            self.send_json(200, cached_payload)
+            cached_payload["access"] = access_tier
+            self.send_json(200, cached_payload, response_headers)
             return
         if pending_job_id:
-            self.send_json(202, {"ok": True, "pending": True, "job_id": pending_job_id, "poll_after_ms": 1600, "deduplicated": True})
+            self.send_json(202, {"ok": True, "pending": True, "job_id": pending_job_id, "poll_after_ms": 1600, "deduplicated": True, "access": access_tier}, response_headers)
             return
 
-        pro_allowed, pro_account_id = BILLING.consume_pro_usage(self.bearer_token())
-        if pro_account_id and not pro_allowed:
-            self.send_json(429, {"ok": False, "message": "今日 Pro AI 详解额度已用完，请明天再试。"})
-            return
-        if not pro_allowed:
+        if billing_entitlement.get("active"):
+            pro_allowed, pro_account_id = BILLING.consume_pro_usage(self.bearer_token())
+            if pro_account_id and not pro_allowed:
+                self.send_json(429, {"ok": False, "message": "今日 Pro AI 详解额度已用完，请明天再试。"})
+                return
+        elif access_tier == "trial":
             allowed, message = allow_request(self.client_id())
             if not allowed:
                 self.send_json(429, {"ok": False, "message": message})
@@ -712,7 +834,7 @@ class Handler(BaseHTTPRequestHandler):
             worker.daemon = True
             worker.start()
             print("AI job accepted: {} module={}".format(job_id[:8], module), flush=True)
-        self.send_json(202, {"ok": True, "pending": True, "job_id": job_id, "poll_after_ms": 1600, "deduplicated": duplicate})
+        self.send_json(202, {"ok": True, "pending": True, "job_id": job_id, "poll_after_ms": 1600, "deduplicated": duplicate, "access": access_tier}, response_headers)
 
 
 if __name__ == "__main__":

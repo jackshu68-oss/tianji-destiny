@@ -295,8 +295,10 @@ test('SEO、匿名分享与私隐文件齐备', () => {
   assert.match(privacy, /180 天/);
 });
 
-test('iOS 会员页只预留 Apple IAP 并关闭网页外部支付', () => {
+test('会员页简洁列出免费、30 天和 365 天方案并关闭网页外部支付', () => {
   const pricing = fs.readFileSync(new URL('../pricing/index.html', import.meta.url), 'utf8');
+  const account = fs.readFileSync(new URL('../account/index.html', import.meta.url), 'utf8');
+  const auth = fs.readFileSync(new URL('../js/auth.js', import.meta.url), 'utf8');
   const terms = fs.readFileSync(new URL('../terms/index.html', import.meta.url), 'utf8');
   const privacy = fs.readFileSync(new URL('../privacy.html', import.meta.url), 'utf8');
   const billing = fs.readFileSync(new URL('../js/billing.js', import.meta.url), 'utf8');
@@ -312,8 +314,13 @@ test('iOS 会员页只预留 Apple IAP 并关闭网页外部支付', () => {
   assert.match(pricing, /¥299/);
   assert.doesNotMatch(pricing, /value="alipay"/);
   assert.doesNotMatch(pricing, /value="wechat_pay"/);
-  assert.match(pricing, /Apple App 内购买/);
-  assert.match(pricing, /到期不自动扣款/);
+  assert.match(pricing, /基础查询功能/);
+  assert.match(pricing, /不含详细解读/);
+  assert.match(pricing, /不限次数使用/);
+  assert.match(pricing, /优先调用/);
+  assert.match(pricing, /更详细的讲解/);
+  assert.match(billing, /购买通道准备中/);
+  assert.doesNotMatch(pricing, /先免费使用，需要更多 AI 时再升级/);
   assert.match(pricing, /data-en=/);
   assert.doesNotMatch(pricing, /CA\$|Stripe/);
   assert.match(terms, /Apple App 内购买/);
@@ -328,4 +335,11 @@ test('iOS 会员页只预留 Apple IAP 并关闭网页外部支付', () => {
   assert.doesNotMatch(billing, /STRIPE_SECRET_KEY|sk_live_|whsec_/);
   assert.match(caddy, /daofainsight\.com/);
   assert.match(caddy, /handle \/api\/billing\/\*/);
+  assert.match(caddy, /handle \/api\/auth\/\*/);
+  assert.match(account, /data-auth-form="login"/);
+  assert.match(account, /data-auth-form="register"/);
+  assert.match(account, /data-auth-form="recover"/);
+  assert.match(account, /autocomplete="current-password"/);
+  assert.match(auth, /\/api\/auth\/otp\/start/);
+  assert.match(auth, /\/api\/auth\/password\/reset/);
 });

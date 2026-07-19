@@ -1185,6 +1185,52 @@ body {
 .commercial-boundary p { margin-top: 10px; color: var(--ink-soft); }
 .commercial-footer { position: relative; z-index: 1; display: flex; justify-content: space-between; gap: 20px; max-width: 1120px; margin: 0 auto; padding: 24px; color: var(--ink-mute); border-top: 1px solid var(--panel-line); font-size: 12px; }
 
+/* 手机账户 */
+.auth-main { position: relative; z-index: 1; width: min(620px,100%); min-height: calc(100vh - 90px); margin: 0 auto; padding: 128px 24px 72px; }
+.auth-header { padding-bottom: 28px; }
+.auth-header h1 { margin-top: 8px; font: 700 42px/1.2 var(--serif); }
+.auth-header > p:last-child { max-width: 540px; margin-top: 12px; color: var(--ink-soft); }
+.auth-panel { border-top: 1px solid var(--panel-line); }
+.auth-tabs { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); border-bottom: 1px solid var(--panel-line); }
+.auth-tabs button { min-width: 0; min-height: 54px; padding: 0 8px; color: var(--ink-mute); background: transparent; border: 0; border-bottom: 2px solid transparent; cursor: pointer; font: 650 13px var(--sans); }
+.auth-tabs button.active { color: var(--ink); border-bottom-color: var(--gold); }
+.auth-notice { margin-top: 18px; padding: 12px 14px; color: var(--ink-soft); background: rgba(32,38,33,.045); border-left: 3px solid var(--gold-soft); font-size: 13px; }
+.auth-notice:empty { display: none; }
+.auth-notice.success { color: var(--green); border-left-color: var(--green); }
+.auth-notice.error { color: var(--red); border-left-color: var(--red); }
+.auth-form { display: grid; gap: 18px; padding: 28px 0 8px; }
+.auth-form[hidden] { display: none; }
+.auth-form label { display: grid; gap: 7px; color: var(--ink-soft); font-size: 12px; }
+.auth-form label > small { color: var(--ink-mute); font-size: 10px; }
+.auth-form input { width: 100%; min-width: 0; min-height: 50px; padding: 0 14px; color: var(--ink); background: rgba(255,255,255,.72); border: 1px solid var(--panel-line); border-radius: 6px; outline: none; font: 15px var(--sans); }
+.auth-form input:focus { border-color: var(--gold-soft); box-shadow: 0 0 0 3px rgba(166,70,59,.08); }
+.auth-phone-input { display: grid; grid-template-columns: 58px minmax(0,1fr); }
+.auth-phone-input b { min-height: 50px; display: grid; place-items: center; color: var(--ink-soft); background: rgba(32,38,33,.045); border: 1px solid var(--panel-line); border-right: 0; border-radius: 6px 0 0 6px; font-size: 13px; }
+.auth-phone-input input { border-radius: 0 6px 6px 0; }
+.auth-code-row { display: grid; grid-template-columns: minmax(0,1fr) 132px; gap: 9px; }
+.auth-code-row button, .auth-primary, .auth-account-actions button, .auth-account-actions a { min-height: 50px; display: inline-flex; align-items: center; justify-content: center; padding: 0 17px; border: 1px solid var(--panel-line); border-radius: 6px; cursor: pointer; font: 650 13px var(--sans); text-decoration: none; }
+.auth-code-row button { color: var(--ink); background: transparent; }
+.auth-primary { width: 100%; color: #fff; background: var(--ink); border-color: var(--ink); }
+.auth-code-row button:hover, .auth-primary:hover { color: #fff; background: var(--gold); border-color: var(--gold); }
+.auth-form button:disabled, .auth-form input:disabled { cursor: wait; opacity: .6; }
+.auth-terms { margin-top: 20px; color: var(--ink-mute); font-size: 11px; text-align: center; }
+.auth-terms a { color: var(--gold); }
+.auth-account-summary { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 26px 0; border-top: 1px solid var(--panel-line); border-bottom: 1px solid var(--panel-line); }
+.auth-account-summary[hidden], .auth-panel[hidden] { display: none; }
+.auth-account-summary > div:first-child { display: grid; gap: 4px; }
+.auth-account-summary span { color: var(--gold-soft); font-size: 10px; letter-spacing: 2px; }
+.auth-account-summary strong { font: 650 24px var(--serif); }
+.auth-account-summary small { color: var(--ink-mute); }
+.auth-account-actions { display: flex; gap: 9px; }
+.auth-account-actions a { color: #fff; background: var(--ink); border-color: var(--ink); }
+.auth-account-actions button { color: var(--ink-soft); background: transparent; }
+.ai-access-required { display: grid; gap: 8px; }
+.ai-access-required > b { color: var(--ink); font: 650 18px var(--serif); }
+.ai-access-required > p { color: var(--ink-soft); }
+.ai-access-actions { margin-top: 4px; }
+.ai-access-actions a { min-height: 42px; display: inline-flex; align-items: center; justify-content: center; padding: 0 16px; color: #fff; background: var(--ink); border-radius: 6px; text-decoration: none; font-size: 12px; font-weight: 650; }
+html[data-theme="classic"] .ai-access-actions a { color: #1a1710; background: var(--gold); }
+
 .terms-main { max-width: 900px; }
 .terms-header { padding-bottom: 32px; border-bottom: 1px solid var(--panel-line); }
 .terms-summary { margin: 28px 0 6px; padding: 20px; background: rgba(166,70,59,.055); border-left: 4px solid var(--gold); }
@@ -1202,6 +1248,11 @@ html[data-theme="classic"] .pricing-plan,
 html[data-theme="classic"] .billing-method,
 html[data-theme="classic"] .billing-email-field input,
 html[data-theme="classic"] .billing-recovery-form input { background: rgba(255,255,255,.04); }
+html[data-theme="classic"] .auth-form input,
+html[data-theme="classic"] .auth-phone-input b,
+html[data-theme="classic"] .auth-notice { background: rgba(255,255,255,.04); }
+html[data-theme="classic"] .auth-primary,
+html[data-theme="classic"] .auth-account-actions a { color: #1a1710; background: var(--gold); border-color: var(--gold); }
 html[data-theme="classic"] .pricing-plan.featured { background: rgba(107,192,160,.07); }
 html[data-theme="classic"] .billing-notice { background: rgba(255,255,255,.04); }
 html[data-theme="classic"] .billing-status-band button,
@@ -1231,6 +1282,11 @@ html[data-theme="classic"] .pricing-plan button:disabled { color: var(--ink-mute
 
 @media (max-width: 560px) {
   .commercial-main, .terms-main { padding: 104px 16px 56px; }
+  .auth-main { padding: 104px 16px 52px; }
+  .auth-header h1 { font-size: 34px; }
+  .auth-code-row { grid-template-columns: minmax(0,1fr) 116px; }
+  .auth-account-summary { align-items: flex-start; flex-direction: column; }
+  .auth-account-actions { width: 100%; display: grid; grid-template-columns: 1fr 1fr; }
   .commercial-header h1, .terms-header h1 { font-size: 34px; }
   .billing-status-band { align-items: flex-start; flex-direction: column; }
   .billing-status-band button { width: 100%; }
