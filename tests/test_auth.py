@@ -1,9 +1,10 @@
+import json
 import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
 
-from server.auth import AuthError, AuthService, normalise_phone, validate_password, verify_password
+from server.auth import AuthError, AuthService, SupabaseOtpProvider, normalise_phone, validate_password, verify_password
 
 
 class FakeSms:
@@ -14,6 +15,23 @@ class FakeSms:
 
     def send(self, phone, code):
         self.messages.append((phone, code))
+
+
+class FakeExternalOtp:
+    configured = True
+    external_verification = True
+
+    def __init__(self):
+        self.started = []
+        self.verified = []
+
+    def start(self, phone, purpose):
+        self.started.append((phone, purpose))
+
+    def verify(self, phone, code, purpose):
+        self.verified.append((phone, code, purpose))
+        if code != "654321":
+            raise AuthError(401, "OTP_INVALID", "验证码错误或已过期。")
 
 
 class AuthServiceTests(unittest.TestCase):
@@ -120,6 +138,38 @@ class AuthServiceTests(unittest.TestCase):
         self.assertTrue(verify_password("Password8", encoded))
         self.assertFalse(verify_password("Password9", encoded))
         self.assertTrue(result["ok"])
+
+    def test_external_supabase_otp_verification(self):
+        external = FakeExternalOtp()
+        service = AuthService(
+            self.database,
+            environ={"TIANJI_AUTH_SECRET": "external-test-secret-that-is-long-enough"},
+            sms_sender=external,
+            clock=lambda: self.now[0],
+        )
+        service.start_otp("17606669594", "register")
+        self.assertEqual(external.started, [("+8617606669594", "register")])
+        with self.assertRaises(AuthError):
+            service.register("17606669594", "111111", "Password8")
+        result = service.register("17606669594", "654321", "Password8")
+        self.assertTrue(result["ok"])
+        self.assertEqual(external.verified[-1], ("+8617606669594", "654321", "register"))
+
+    def test_supabase_provider_requests_otp_and_verifies_user(self):
+        calls = []
+
+        def transport(url, headers, payload):
+            calls.append((url, headers, payload))
+            if url.endswith("/verify"):
+                return 200, {"user": {"id": "test-user"}}
+            return 200, {}
+
+        provider = SupabaseOtpProvider("https://example.supabase.co", "anon-key", transport=transport)
+        provider.start("17606669594", "register")
+        provider.verify("17606669594", "123456", "register")
+        self.assertEqual(calls[0][2]["phone"], "+8617606669594")
+        self.assertEqual(calls[1][2]["token"], "123456")
+        self.assertNotIn("anon-key", json.dumps([call[2] for call in calls]))
 
 
 if __name__ == "__main__":

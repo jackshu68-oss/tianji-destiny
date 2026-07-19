@@ -168,6 +168,74 @@ class AliyunSmsSender:
         return True
 
 
+class SupabaseOtpProvider:
+    """Use an existing Supabase Auth phone flow and its configured SMS hook."""
+
+    external_verification = True
+
+    def __init__(self, url, anon_key, transport=None):
+        self.url = str(url or "").strip().rstrip("/")
+        self.anon_key = str(anon_key or "").strip()
+        self.transport = transport
+
+    @property
+    def configured(self):
+        return self.url.startswith("https://") and bool(self.anon_key)
+
+    def _request(self, path, payload):
+        if not self.configured:
+            raise AuthError(503, "SMS_NOT_CONFIGURED", "短信服务仍在配置中，请稍后再试。")
+        target = "{}{}".format(self.url, path)
+        headers = {
+            "apikey": self.anon_key,
+            "Authorization": "Bearer {}".format(self.anon_key),
+            "Content-Type": "application/json",
+        }
+        if self.transport:
+            return self.transport(target, headers, payload)
+        request = urllib.request.Request(
+            target,
+            data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+            headers=headers,
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=20) as response:
+                return int(response.status), json.loads(response.read().decode("utf-8") or "{}")
+        except urllib.error.HTTPError as error:
+            try:
+                body = json.loads(error.read().decode("utf-8") or "{}")
+            except (UnicodeDecodeError, ValueError):
+                body = {}
+            return int(error.code), body
+        except (urllib.error.URLError, TimeoutError, ValueError) as error:
+            raise AuthError(502, "SMS_DELIVERY_FAILED", "短信服务暂时不可用，请稍后再试。") from error
+
+    def start(self, phone, _purpose):
+        status, _result = self._request("/auth/v1/otp", {
+            "phone": normalise_phone(phone),
+            "create_user": True,
+            "data": {"source": "daofainsight"},
+        })
+        if status == 429:
+            raise AuthError(429, "OTP_RATE_LIMIT", "验证码发送次数过多，请稍后再试。")
+        if not 200 <= status < 300:
+            raise AuthError(502, "SMS_DELIVERY_FAILED", "短信验证码发送失败，请稍后再试。")
+        return True
+
+    def verify(self, phone, code, _purpose):
+        status, result = self._request("/auth/v1/verify", {
+            "phone": normalise_phone(phone),
+            "token": str(code or "").strip(),
+            "type": "sms",
+        })
+        if status == 429:
+            raise AuthError(429, "OTP_RATE_LIMIT", "验证码尝试次数过多，请稍后再试。")
+        if not 200 <= status < 300 or not isinstance(result, dict) or not result.get("user"):
+            raise AuthError(401, "OTP_INVALID", "验证码错误或已过期。")
+        return True
+
+
 class AuthService:
     def __init__(self, database_path, environ=None, sms_sender=None, clock=None):
         env = environ if environ is not None else os.environ
@@ -177,12 +245,21 @@ class AuthService:
         self.trial_seconds = max(3600, int(env.get("TIANJI_TRIAL_HOURS", "24")) * 3600)
         self.otp_seconds = max(120, int(env.get("TIANJI_OTP_SECONDS", "300")))
         self._clock = clock or time.time
-        self.sms = sms_sender or AliyunSmsSender(
-            env.get("ALIYUN_PNVS_ACCESS_KEY_ID"),
-            env.get("ALIYUN_PNVS_ACCESS_KEY_SECRET"),
-            env.get("ALIYUN_PNVS_SIGN_NAME"),
-            env.get("ALIYUN_PNVS_TEMPLATE_CODE"),
-        )
+        provider = str(env.get("TIANJI_SMS_PROVIDER", "aliyun")).strip().lower()
+        if sms_sender:
+            self.sms = sms_sender
+        elif provider == "supabase":
+            self.sms = SupabaseOtpProvider(
+                env.get("TIANJI_SUPABASE_URL"),
+                env.get("TIANJI_SUPABASE_ANON_KEY"),
+            )
+        else:
+            self.sms = AliyunSmsSender(
+                env.get("ALIYUN_PNVS_ACCESS_KEY_ID"),
+                env.get("ALIYUN_PNVS_ACCESS_KEY_SECRET"),
+                env.get("ALIYUN_PNVS_SIGN_NAME"),
+                env.get("ALIYUN_PNVS_TEMPLATE_CODE"),
+            )
 
     @property
     def sms_enabled(self):
@@ -285,8 +362,12 @@ class AuthService:
                     raise AuthError(429, "OTP_COOLDOWN", "请等待一分钟后再发送验证码。")
                 if now - int(limit["window_start"]) < 3600 and int(limit["count"]) >= 5:
                     raise AuthError(429, "OTP_RATE_LIMIT", "本小时验证码发送次数已达上限。")
-            code = "{:06d}".format(secrets.randbelow(1000000))
-            self.sms.send(phone, code)
+            if getattr(self.sms, "external_verification", False):
+                code = ""
+                self.sms.start(phone, purpose)
+            else:
+                code = "{:06d}".format(secrets.randbelow(1000000))
+                self.sms.send(phone, code)
             if not limit or now - int(limit["window_start"]) >= 3600:
                 connection.execute(
                     "INSERT OR REPLACE INTO auth_otp_limits(phone,window_start,count,last_sent) VALUES(?,?,1,?)",
@@ -298,7 +379,7 @@ class AuthService:
                 )
             connection.execute(
                 "INSERT OR REPLACE INTO auth_otps(phone,purpose,code_hash,expires,attempts,sent_at) VALUES(?,?,?,?,0,?)",
-                (phone, purpose, self._otp_hash(phone, purpose, code), now + self.otp_seconds, now),
+                (phone, purpose, self._otp_hash(phone, purpose, code) if code else "external", now + self.otp_seconds, now),
             )
             connection.commit()
         finally:
@@ -314,7 +395,17 @@ class AuthService:
         ).fetchone()
         if not record or int(record["expires"]) < now or int(record["attempts"]) >= 5:
             raise AuthError(401, "OTP_EXPIRED", "验证码错误或已过期。")
-        if not hmac.compare_digest(record["code_hash"], self._otp_hash(phone, purpose, code)):
+        if getattr(self.sms, "external_verification", False):
+            try:
+                self.sms.verify(phone, code, purpose)
+            except AuthError as error:
+                if error.code == "OTP_INVALID":
+                    connection.execute(
+                        "UPDATE auth_otps SET attempts=attempts+1 WHERE phone=? AND purpose=?", (phone, purpose),
+                    )
+                    connection.commit()
+                raise
+        elif not hmac.compare_digest(record["code_hash"], self._otp_hash(phone, purpose, code)):
             connection.execute(
                 "UPDATE auth_otps SET attempts=attempts+1 WHERE phone=? AND purpose=?", (phone, purpose),
             )
