@@ -81,6 +81,7 @@
       });
       lastMeihua = result;
       renderMeihua(result);
+      document.dispatchEvent(new CustomEvent('tianji:source-ready', { detail: { source: 'meihua' } }));
     } catch (error) {
       toast(error.message || '起卦失败，请检查输入');
     }
@@ -147,6 +148,7 @@
       if (!result || result.error) throw new Error(result && result.message ? result.message : '排局失败');
       lastQimen = result; lastQimenMeta = { question, purpose, date };
       renderQimen(result, lastQimenMeta);
+      document.dispatchEvent(new CustomEvent('tianji:source-ready', { detail: { source: 'qimen' } }));
     } catch (error) {
       console.error(error); toast(error.message || '排局失败，请检查时间');
     }
@@ -226,6 +228,34 @@
       + section('使用边界', `<p>奇门盘提供的是结构化观察框架。涉及健康、法律、投资或人身安全时，必须以专业意见和现实证据为准。</p>`)
       + source('qimen');
   }
+
+  function snapshot() {
+    const meihua = lastMeihua ? {
+      question: lastMeihua.question,
+      chart: `${lastMeihua.mainHexagram.name} → ${lastMeihua.changedHexagram.name}`,
+      nuclear: lastMeihua.nuclearHexagram.name,
+      movingLine: lastMeihua.movingLine,
+      bodyUse: `${lastMeihua.bodyTrigram.name}${lastMeihua.bodyTrigram.element} / ${lastMeihua.useTrigram.name}${lastMeihua.useTrigram.element} · ${lastMeihua.bodyUseRelation.relation}`,
+      outcome: lastMeihua.judgement.outcome,
+      summary: lastMeihua.judgement.summary,
+      stages: (lastMeihua.interactionReadings || []).map(item => `${item.stage}:${item.relation}:${item.summary}`).slice(0, 4)
+    } : null;
+    const overall = lastQimen && lastQimen.analysis ? lastQimen.analysis : {};
+    const qimen = lastQimen ? {
+      question: lastQimenMeta && lastQimenMeta.question,
+      purpose: lastQimenMeta && lastQimenMeta.purpose,
+      chart: lastQimen.juShu && lastQimen.juShu.fullName,
+      pillars: lastQimen.siZhu ? [lastQimen.siZhu.year, lastQimen.siZhu.month, lastQimen.siZhu.day, lastQimen.siZhu.time].join('、') : '',
+      chief: `${lastQimen.zhiFuXing || '—'} · ${lastQimen.zhiFuGong || '—'}宫`,
+      gate: `${lastQimen.zhiShiMen || '—'} · ${lastQimen.zhiShiGong || '—'}宫`,
+      overall: overall.overallAnalysis || overall.summary || overall.overallJiXiongText || '',
+      suggestions: (overall.suggestions || []).slice(0, 4),
+      formations: (lastQimen.geju || []).slice(0, 4).map(item => `${item.name}:${item.explain || ''}`)
+    } : null;
+    return { meihua, qimen };
+  }
+
+  window.TianjiDivination = { getSnapshot: snapshot };
 
   window.addEventListener('DOMContentLoaded', () => {
     if (window.MeihuaEngine) initMeihua();

@@ -100,6 +100,18 @@ test('塔罗与雷诺曼使用完整标准牌组并可无重复抽牌', () => {
   assert.ok(draw.every(item => item.reversed === false));
 });
 
+test('太阳星座正确处理星座交界日', () => {
+  const context = browserContext();
+  vm.runInContext(fs.readFileSync(new URL('../js/astrology.js', import.meta.url), 'utf8'), context);
+  const astrology = context.window.TianjiAstrology;
+  assert.equal(astrology.calculate({ year: 1990, month: 3, day: 20 }).id, 'pisces');
+  assert.equal(astrology.calculate({ year: 1990, month: 3, day: 21 }).id, 'aries');
+  assert.equal(astrology.calculate({ year: 1990, month: 12, day: 22 }).id, 'capricorn');
+  assert.equal(astrology.calculate({ year: 1990, month: 1, day: 19 }).id, 'capricorn');
+  assert.equal(astrology.calculate({ year: 1990, month: 1, day: 20 }).id, 'aquarius');
+  assert.equal(astrology.localize(astrology.calculate({ year: 1990, month: 6, day: 15 }), 'en').name, 'Gemini');
+});
+
 test('出生资料模块校验日期、城市与夏令时间边界', () => {
   const context = browserContext();
   vm.runInContext(fs.readFileSync(new URL('../js/profile.js', import.meta.url), 'utf8'), context);
@@ -214,6 +226,9 @@ test('页面包含新增排盘、现代摘要、隐私入口和本地脚本', ()
   assert.match(html, /id="life-timeline-list"/);
   assert.match(html, /id="rhythm-calendar-grid"/);
   assert.match(html, /id="ai-question-panel"/);
+  assert.match(html, /id="astrology-insight"/);
+  assert.match(html, /id="astrology-result"/);
+  assert.match(html, /id="integrated-report-panel"/);
   assert.match(html, /id="relationship-graph"/);
   assert.match(html, /id="sync-create"/);
   assert.match(html, /id="create-share-link"/);
@@ -229,17 +244,23 @@ test('页面包含新增排盘、现代摘要、隐私入口和本地脚本', ()
   assert.match(html, /js\/billing\.js/);
   assert.match(html, /js\/ai\.js/);
   assert.match(html, /js\/planner\.js/);
+  assert.match(html, /js\/astrology\.js/);
   assert.match(html, /js\/workspace\.js/);
+  assert.doesNotMatch(html, /class="workspace-mode"|class="mode-btn/);
   const ids = [...html.matchAll(/\sid="([^"]+)"/g)].map(match => match[1]);
   assert.deepEqual(ids.filter((id, index) => ids.indexOf(id) !== index), []);
   const aiSource = fs.readFileSync(new URL('../js/ai.js', import.meta.url), 'utf8');
   assert.match(aiSource, /\/api\/ai\/interpret/);
   assert.match(aiSource, /\/api\/ai\/result\//);
   assert.match(aiSource, /payload\.pending/);
+  assert.match(aiSource, /mountReport/);
+  assert.match(aiSource, /综合全盘分析报告/);
   assert.doesNotMatch(aiSource, /Bearer\s|DEEPSEEK_API_KEY|api\.deepseek\.com/);
   const workspaceSource = fs.readFileSync(new URL('../js/workspace.js', import.meta.url), 'utf8');
   assert.match(workspaceSource, /has-active-profile/);
   assert.match(workspaceSource, /setActiveProfileId/);
+  assert.match(workspaceSource, /buildIntegratedContext/);
+  assert.match(workspaceSource, /TianjiDivination/);
   const css = fs.readFileSync(new URL('../css/style.css', import.meta.url), 'utf8');
   assert.match(css, /html\[data-theme="classic"\]/);
   assert.match(css, /\.daily-home-overview/);

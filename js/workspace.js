@@ -9,9 +9,10 @@
     ui: 'tianji_workspace_ui_v1', sync: 'tianji_sync_meta_v1', shares: 'tianji_share_records_v1'
   };
   const state = {
-    chart: null, profile: null, analysis: null, ziwei: null,
+    chart: null, profile: null, analysis: null, ziwei: null, astrology: null,
     calendarDate: new Date(), dailyHomeDate: new Date(), selectedDate: null, editingProfileId: null
   };
+  let integratedReportControl = null;
 
   function t(key, variables) {
     return window.TianjiUI ? TianjiUI.t(key, variables) : key;
@@ -105,17 +106,6 @@
     if (shouldScroll && $('#insight-workspace')) $('#insight-workspace').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  function setMode(mode) {
-    const professional = mode === 'professional';
-    document.body.classList.toggle('professional-mode', professional);
-    $$('.mode-btn').forEach(button => button.classList.toggle('active', button.dataset.mode === mode));
-    const details = $('details.professional-details');
-    if (details) details.open = professional;
-    const ui = read(KEYS.ui, {});
-    ui.mode = mode;
-    write(KEYS.ui, ui);
-  }
-
   function renderDailyHome() {
     if (!state.chart) return;
     const date = state.dailyHomeDate || new Date();
@@ -205,6 +195,37 @@
           <div><dt>${isEnglish() ? 'Action' : '行动建议'}</dt><dd>${escapeHtml(topic.action)}</dd></div>
         </dl>
       </article>`).join('');
+  }
+
+  function renderAstrology() {
+    const target = $('#astrology-result');
+    if (!target || !state.profile || !window.TianjiAstrology) return;
+    try {
+      state.astrology = TianjiAstrology.calculate({ year: state.profile.y, month: state.profile.m, day: state.profile.d });
+      const sign = TianjiAstrology.localize(state.astrology, isEnglish() ? 'en' : 'zh');
+      const labels = isEnglish()
+        ? { element: 'Element', modality: 'Modality', ruler: 'Ruler', nature: 'Core pattern', work: 'Work and resources', relation: 'Relationships', growth: 'Growth edge', scope: 'This is a Sun-sign reading based on the Gregorian date. A full Western natal chart would also require planetary positions, houses and an accurate birthplace and time.' }
+        : { element: '元素', modality: '模式', ruler: '守护星', nature: '核心倾向', work: '工作与资源', relation: '关系风格', growth: '成长课题', scope: '本项只依据阳历日期计算太阳星座。完整西方本命盘还需行星位置、宫位以及准确的出生地与时间。' };
+      target.innerHTML = `
+        <div class="astrology-signature">
+          <div class="astrology-identity"><span aria-hidden="true">${escapeHtml(sign.symbol)}&#xfe0e;</span><div><small>SUN SIGN</small><h4>${escapeHtml(sign.name)}</h4><p>${escapeHtml(sign.keywords.join(' · '))}</p></div></div>
+          <dl class="astrology-meta">
+            <div><dt>${labels.element}</dt><dd>${escapeHtml(sign.element)}</dd></div>
+            <div><dt>${labels.modality}</dt><dd>${escapeHtml(sign.modality)}</dd></div>
+            <div><dt>${labels.ruler}</dt><dd>${escapeHtml(sign.ruler)}</dd></div>
+          </dl>
+        </div>
+        <div class="astrology-insights">
+          <article><span>${labels.nature}</span><p>${escapeHtml(sign.summary)}</p></article>
+          <article><span>${labels.work}</span><p>${escapeHtml(sign.work)}</p></article>
+          <article><span>${labels.relation}</span><p>${escapeHtml(sign.relation)}</p></article>
+          <article><span>${labels.growth}</span><p>${escapeHtml(sign.growth)}</p></article>
+        </div>
+        <p class="astrology-scope">${escapeHtml(labels.scope)}</p>`;
+    } catch (_error) {
+      state.astrology = null;
+      target.innerHTML = `<p class="empty-state">${isEnglish() ? 'A valid Gregorian birth date is required for the Sun-sign view.' : '需要有效的阳历出生日期才能计算太阳星座。'}</p>`;
+    }
   }
 
   function renderTimeline() {
@@ -456,9 +477,108 @@
     ].join('\n');
   }
 
+  function integratedSnapshots() {
+    const divination = window.TianjiDivination && typeof TianjiDivination.getSnapshot === 'function'
+      ? TianjiDivination.getSnapshot() : { meihua: null, qimen: null };
+    const oracle = window.TianjiOracle && typeof TianjiOracle.getSnapshot === 'function'
+      ? TianjiOracle.getSnapshot() : { tarot: null, lenormand: null };
+    const hehun = window.TianjiApp && typeof TianjiApp.getLastHehun === 'function' ? TianjiApp.getLastHehun() : null;
+    return { divination, oracle, hehun };
+  }
+
+  function integratedSources() {
+    const snapshots = integratedSnapshots();
+    const english = isEnglish();
+    return [
+      { id: 'bazi', label: english ? 'BaZi chart' : '八字命盘', ready: Boolean(state.chart) },
+      { id: 'ziwei', label: english ? 'Zi Wei chart' : '紫微斗数', ready: Array.isArray(state.ziwei) && state.ziwei.length > 0 && !state.chart.timeUnknown },
+      { id: 'almanac', label: english ? 'Daily almanac' : '万年历', ready: Boolean(state.chart) },
+      { id: 'astrology', label: english ? 'Sun sign' : '太阳星座', ready: Boolean(state.astrology) },
+      { id: 'hehun', label: english ? 'Compatibility' : '合婚关系', ready: Boolean(snapshots.hehun && snapshots.hehun.result) },
+      { id: 'meihua', label: english ? 'Meihua' : '梅花易数', ready: Boolean(snapshots.divination.meihua) },
+      { id: 'qimen', label: english ? 'Qimen' : '奇门遁甲', ready: Boolean(snapshots.divination.qimen) },
+      { id: 'tarot', label: english ? 'Tarot' : '塔罗牌', ready: Boolean(snapshots.oracle.tarot) },
+      { id: 'lenormand', label: english ? 'Lenormand' : '雷诺曼', ready: Boolean(snapshots.oracle.lenormand) }
+    ];
+  }
+
+  function compact(value, limit) {
+    const text = JSON.stringify(value, null, 0);
+    return text.length > limit ? `${text.slice(0, limit)}…` : text;
+  }
+
+  function buildIntegratedContext() {
+    if (!state.chart) return '';
+    const english = isEnglish();
+    const snapshots = integratedSnapshots();
+    const sources = integratedSources();
+    const active = TianjiPlanner.currentDaYun(state.chart);
+    const topics = TianjiPlanner.topicCards(state.chart);
+    const months = TianjiPlanner.monthWindows(state.chart, new Date(), 3);
+    const todayDate = new Date();
+    const today = TianjiEngine.dailyFortune(state.chart, Solar.fromYmd(todayDate.getFullYear(), todayDate.getMonth() + 1, todayDate.getDate()));
+    const dailyDecision = TianjiProfile.dailyDecision(today);
+    const validation = TianjiPlanner.crossValidate(state.chart, state.ziwei);
+    const astro = state.astrology && TianjiAstrology.localize(state.astrology, english ? 'en' : 'zh');
+    const sections = [
+      `【输出语言】${english ? 'English' : '简体中文'}`,
+      `【报告任务】${english ? 'Create one integrated, non-repetitive report. Identify converging themes first, keep conflicting frameworks and time scales distinct, map every judgment to a named source, and finish with practical actions for the next 30 days. Do not recalculate or invent any unavailable result.' : '生成一份统一、不重复的综合报告。先识别各来源的共同主题，再区分冲突与不同时间尺度；每项判断必须标明来源，最后给出未来 30 天的现实行动。不得重算或补造未生成的结果。'}`,
+      `【资料范围】${sources.filter(item => item.ready).map(item => item.label).join('、')}\n【未生成】${sources.filter(item => !item.ready).map(item => item.label).join('、') || (english ? 'None' : '无')}`,
+      `【八字命盘】${compact({
+        accuracy: state.chart.timeUnknown ? (english ? 'birth time unknown; three pillars only' : '时辰未知，只使用三柱') : (state.profile.timeAccuracy || '准确'),
+        dayMaster: `${state.chart.dayGan}${state.chart.dayWx}`,
+        pillars: state.chart.pillars.slice(0, state.chart.timeUnknown ? 3 : 4).map(item => item.ganZhi),
+        structure: state.analysis.level,
+        supportive: state.analysis.yong,
+        moderate: state.analysis.ji,
+        currentPhase: active ? { ganZhi: active.ganZhi, years: `${active.startYear}-${active.endYear}`, tenGod: active.god } : null,
+        lifeTopics: topics.map(item => ({ topic: item.label, conclusion: item.conclusion, evidence: item.evidence, action: item.action })),
+        nextThreeMonths: months.map(item => ({ month: `${item.year}-${item.month}`, ganZhi: item.ganZhi, tenGod: item.god, level: item.level, focus: item.best, watch: item.watch }))
+      }, 2500)}`,
+      `【今日万年历与短周期】${compact({ dayGanZhi: today.dayGanZhi, score: today.score, dimensions: today.dims, best: dailyDecision.best, avoid: dailyDecision.avoid, reminder: dailyDecision.reminder, yi: today.yi.slice(0, 6), ji: today.ji.slice(0, 6) }, 700)}`,
+      `【跨层校验】${compact(validation, 900)}`
+    ];
+
+    if (astro) sections.push(`【太阳星座】${compact({ sign: astro.name, element: astro.element, modality: astro.modality, ruler: astro.ruler, keywords: astro.keywords, core: astro.summary, work: astro.work, relationships: astro.relation, growth: astro.growth, limit: english ? 'Sun-sign view only, not a full Western natal chart' : '只是太阳星座视角，不是完整西方本命盘' }, 1000)}`);
+    if (Array.isArray(state.ziwei) && state.ziwei.length && !state.chart.timeUnknown) {
+      sections.push(`【紫微斗数】${compact(state.ziwei.map(cell => ({ palace: cell.duty, branch: cell.branch, stars: (cell.stars || []).filter(star => star.cls === 'main' || star.hua).map(star => `${star.name}${star.hua || ''}`).slice(0, 3) })), 1200)}`);
+    }
+    if (snapshots.hehun && snapshots.hehun.result) {
+      sections.push(`【合婚关系】${compact({ score: snapshots.hehun.result.score, verdict: snapshots.hehun.result.verdict, factors: snapshots.hehun.result.factors }, 900)}`);
+    }
+    if (snapshots.divination.meihua) {
+      const item = snapshots.divination.meihua;
+      sections.push(`【梅花易数·本次已生成结果】${compact({ chart: item.chart, nuclear: item.nuclear, movingLine: item.movingLine, bodyUse: item.bodyUse, outcome: item.outcome, summary: item.summary, stages: item.stages }, 700)}`);
+    }
+    if (snapshots.divination.qimen) {
+      const item = snapshots.divination.qimen;
+      sections.push(`【奇门遁甲·本次已生成结果】${compact({ purpose: item.purpose, chart: item.chart, pillars: item.pillars, chief: item.chief, gate: item.gate, overall: item.overall, suggestions: item.suggestions, formations: item.formations }, 800)}`);
+    }
+    if (snapshots.oracle.tarot) {
+      const item = snapshots.oracle.tarot;
+      sections.push(`【塔罗·本次已生成结果】${compact({ spread: item.spread, cards: item.cards, thread: item.thread }, 800)}`);
+    }
+    if (snapshots.oracle.lenormand) {
+      const item = snapshots.oracle.lenormand;
+      sections.push(`【雷诺曼·本次已生成结果】${compact({ spread: item.spread, cards: item.cards, thread: item.thread }, 700)}`);
+    }
+    sections.push(english
+      ? '【Boundary】These are independent cultural reflection frameworks. Divination and card readings are question-specific and must not override natal layers or real-world evidence. State uncertainty explicitly and never claim scientific causation.'
+      : '【使用边界】不同系统是独立的文化观察框架；问事占测与卡牌只对应本次问题，不能覆盖本命层或现实证据。必须明确不确定性，不得宣称科学因果。');
+    return sections.join('\n\n').slice(0, 12000);
+  }
+
   function mountAiQuestion() {
     if (!window.TianjiAI || !TianjiAI.mountQuestion) return;
     TianjiAI.mountQuestion($('#ai-question-panel'), { getContext: buildAiContext });
+  }
+
+  function mountIntegratedReport() {
+    if (!window.TianjiAI || !TianjiAI.mountReport) return;
+    integratedReportControl = TianjiAI.mountReport($('#integrated-report-panel'), {
+      getSources: integratedSources,
+      getContext: buildIntegratedContext
+    });
   }
 
   function storageSnapshot() {
@@ -650,8 +770,8 @@
     ensureFirstProfile();
     $('#insight-workspace').classList.remove('hidden');
     $('#mobile-workspace-nav').classList.remove('hidden');
-    renderDailyHome(); renderDashboard(); renderTopics(); renderTimeline(); renderCalendar(); renderProfiles();
-    renderRectification(); renderBacktests(); renderShareRecords(); mountAiQuestion();
+    renderDailyHome(); renderDashboard(); renderAstrology(); renderTopics(); renderTimeline(); renderCalendar(); renderProfiles();
+    renderRectification(); renderBacktests(); renderShareRecords(); mountIntegratedReport(); mountAiQuestion();
   }
 
   function todayIso() {
@@ -661,7 +781,6 @@
 
   function bindControls() {
     $$('.workspace-tab, .mobile-workspace-nav button').forEach(button => button.addEventListener('click', () => switchTab(button.dataset.wsTab, button.closest('.mobile-workspace-nav') != null)));
-    $$('.mode-btn').forEach(button => button.addEventListener('click', () => setMode(button.dataset.mode)));
     $('#calendar-prev').addEventListener('click', () => { state.calendarDate = new Date(state.calendarDate.getFullYear(), state.calendarDate.getMonth() - 1, 1); state.selectedDate = null; renderCalendar(); });
     $('#calendar-next').addEventListener('click', () => { state.calendarDate = new Date(state.calendarDate.getFullYear(), state.calendarDate.getMonth() + 1, 1); state.selectedDate = null; renderCalendar(); });
     $('#calendar-today').addEventListener('click', () => { state.calendarDate = new Date(); state.selectedDate = todayIso(); renderCalendar(); });
@@ -689,7 +808,7 @@
 
   document.addEventListener('tianji:chart-ready', onChartReady);
   document.addEventListener('tianji:chart-cleared', () => {
-    state.chart = null; state.profile = null;
+    state.chart = null; state.profile = null; state.astrology = null; integratedReportControl = null;
     document.body.classList.remove('has-active-profile');
     $('#daily-home').classList.add('hidden');
     $('#insight-workspace').classList.add('hidden');
@@ -701,13 +820,16 @@
     const target = $('#relationship-graph');
     if (!target) return;
     target.innerHTML = `<div class="relationship-summary"><div><span>关系优势</span><b>${escapeHtml(graph.strongest.label)}</b><p>${escapeHtml(graph.strongest.action)}</p></div><div><span>主要摩擦</span><b>${escapeHtml(graph.friction.label)}</b><p>${escapeHtml(graph.friction.action)}</p></div></div><div class="relationship-dimensions">${graph.dimensions.map(item => `<article><span>${escapeHtml(item.label)}</span><b>${item.score}</b><i><em style="width:${item.score}%"></em></i><strong>${escapeHtml(item.level)}</strong><p>${escapeHtml(item.basis)}</p><small>${escapeHtml(item.action)}</small></article>`).join('')}</div><p class="relationship-context">${escapeHtml(graph.context)}</p>`;
+    if (integratedReportControl) integratedReportControl.refreshSources();
+  });
+  document.addEventListener('tianji:source-ready', () => {
+    if (integratedReportControl) integratedReportControl.refreshSources();
   });
 
   window.addEventListener('DOMContentLoaded', () => {
     bindControls();
     const ui = read(KEYS.ui, {});
-    setMode(ui.mode || 'simple');
-    switchTab('today', false);
+    switchTab(ui.tab || 'today', false);
     const sync = read(KEYS.sync, null);
     if (sync && sync.code) $('#sync-code').value = sync.code;
     const existing = window.TianjiApp && TianjiApp.getChart ? TianjiApp.getChart() : null;

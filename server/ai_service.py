@@ -62,6 +62,10 @@ class ThreadingHTTPServer(ThreadingMixIn, HTTPServer):
 
 
 def module_for(title):
+    if "综合全盘" in title or "综合报告" in title or "全局报告" in title:
+        return "integrated"
+    if "星座" in title or "占星" in title:
+        return "astrology"
     if "合婚" in title or "姻缘" in title:
         return "hehun"
     if "大运" in title or "流年" in title:
@@ -128,7 +132,7 @@ def system_prompt(module):
 {rules}
 
 输出要求：
-1. 使用清晰、克制的简体中文，避免宿命论和确定性预言。
+1. 按用户资料中标明的输出语言作答；未标明时使用清晰、克制的简体中文，避免宿命论和确定性预言。
 2. 每条判断都要对应输入中的具体依据；没有依据就明确说资料不足。
 3. 给出可执行、可验证的现实建议，不制造恐惧。
 4. 涉及健康、法律、投资或人身安全时，不给专业结论。
@@ -151,7 +155,7 @@ def call_deepseek(title, context, module):
         ],
         "stream": False,
         "temperature": 0.25,
-        "max_tokens": 1200,
+        "max_tokens": 1800 if module == "integrated" else 1200,
         "thinking": {"type": "disabled"},
     }
     request = urllib.request.Request(

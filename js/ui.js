@@ -142,11 +142,15 @@
     '我的每日万年历': 'MY DAILY ALMANAC', '当前每日首页命盘': 'Active chart for your daily home', '切换命盘': 'Switch chart', '查看完整命盘': 'Full chart', '新增命盘': 'New chart', '回到今天': 'Today',
     '万年历': 'Chinese Almanac', '年柱': 'Year pillar', '月柱': 'Month pillar', '日柱': 'Day pillar', '生肖': 'Zodiac', '今日节奏': "Today's rhythm", '今日宜': 'Favourable', '今日忌': 'Avoid today',
     '个人工作台': 'PERSONAL WORKSPACE', '当前命盘': 'Current Chart', '先看今天与当前阶段，再按需要进入时间轴、日历和工具。': 'Start with today and your current phase, then open the timeline, calendar or tools.',
-    '阅读模式': 'Reading mode', '简洁': 'Simple', '专业': 'Professional', '今日': 'Today', '人生分析': 'Life Analysis', '时间轴': 'Timeline', '日历': 'Calendar', '决策工具': 'Decision Tools', '我的资料': 'My Data',
+    '今日': 'Today', '人生分析': 'Life Analysis', '时间轴': 'Timeline', '日历': 'Calendar', '决策工具': 'Decision Tools', '我的资料': 'My Data',
     '多层交叉整理': 'CROSS-CHECKED LAYERS', '一致、分歧与依据': 'Agreements, Differences and Evidence',
     '分别展示本命、十年阶段、紫微关键宫与短周期节奏，不把不同时间尺度混成一个结论。': 'Natal structure, ten-year phase, key Zi Wei palaces and short-term rhythm are kept separate instead of being forced into one conclusion.',
     '一致提示': 'Shared signals', '需要区分': 'Keep distinct', '按人生问题阅读': 'READ BY LIFE QUESTION', '结论、依据、现实表现与行动建议': 'Conclusion, Evidence, Reality and Action',
     '每一项都保留推导依据，避免只给一段无法校验的笼统描述。': 'Each item keeps its reasoning so the result can be checked rather than accepted as a vague statement.',
+    '星座视角': 'ASTROLOGY', '太阳星座 · 性格与行动风格': 'Sun Sign · Personality and Action Style',
+    '根据阳历出生日期计算太阳星座，作为全盘中一个独立的西方文化视角。': 'Calculated from the Gregorian birth date as an independent Western cultural lens within the wider report.',
+    '综合全盘分析': 'INTEGRATED CHART ANALYSIS', '把已生成的结果整合成一份报告': 'Bring Generated Results Into One Report',
+    '系统会汇总八字、紫微、万年历、星座以及你已完成的占测结果，由 DeepSeek 辨认共同主题、分歧与现实行动。': 'BaZi, Zi Wei, the almanac, astrology and completed readings are summarised for DeepSeek to identify shared themes, differences and practical actions.',
     'AI 命盘问答': 'AI CHART Q&A', '只根据你的命盘回答': 'Answers Grounded in Your Chart',
     '回答会引用日主、结构、大运和未来三个月窗口；资料不足时必须明确说明限制。': 'Answers cite your day master, structure, ten-year phase and next three months, and state limitations when evidence is insufficient.',
     '人生时间轴': 'LIFE TIMELINE', '十年阶段的主题与现实管理': 'Ten-Year Themes and Practical Management',
@@ -183,7 +187,7 @@
     '塔罗牌': 'Tarot', '静心抽牌 · 看见当下线索': 'Draw With Intention · See the Present Pattern', '选择牌阵': 'Choose a spread', '洗牌并抽取 ✦': 'Shuffle and Draw ✦',
     '吉卜赛雷诺曼': 'Lenormand', '三十六象 · 连线读牌': 'Thirty-Six Symbols · Read the Connections', '洗牌并展开 ✦': 'Shuffle and Reveal ✦',
     '关于 · 道法自然': 'ABOUT · DAOFA', '隐私政策': 'Privacy', '使用条款': 'Terms', '更新记录': 'Updates', '分析': 'Analysis', '我的': 'My Data', '关闭': 'Close', '详解': 'Details', '详解 · AI ›': 'Details · AI ›',
-    '依据': 'Evidence', '现实表现': 'In practice', '行动建议': 'Action', '财富': 'Wealth', '风险': 'Risk', '当前阶段': 'Current phase', '关系优势': 'Relationship strength', '主要摩擦': 'Main friction', '阅读模式': 'Reading mode', '个人工作台': 'Personal workspace', '手机工作台导航': 'Mobile workspace navigation'
+    '依据': 'Evidence', '现实表现': 'In practice', '行动建议': 'Action', '财富': 'Wealth', '风险': 'Risk', '当前阶段': 'Current phase', '关系优势': 'Relationship strength', '主要摩擦': 'Main friction', '个人工作台': 'Personal workspace', '手机工作台导航': 'Mobile workspace navigation'
   };
 
   const TERM_EN = {

@@ -34,6 +34,8 @@ class AiServiceTests(unittest.TestCase):
         self.assertEqual(SERVICE.module_for("流年运程 · 详解"), "dayun")
         self.assertEqual(SERVICE.module_for("塔罗牌 · 完整牌阵详解"), "tarot")
         self.assertEqual(SERVICE.module_for("雷诺曼 · 完整连线详解"), "lenormand")
+        self.assertEqual(SERVICE.module_for("太阳星座 · 详解"), "astrology")
+        self.assertEqual(SERVICE.module_for("综合全盘分析报告"), "integrated")
 
     def test_fenced_json_response_is_normalized(self):
         result = SERVICE.parse_model_json(
@@ -52,6 +54,12 @@ class AiServiceTests(unittest.TestCase):
         self.assertIn("绝不能重算", prompt)
         self.assertIn("只返回一个 JSON 对象", prompt)
         self.assertIn("直接回答用户问题", prompt)
+
+    def test_integrated_prompt_requires_sources_and_missing_data_boundaries(self):
+        prompt = SERVICE.system_prompt("integrated")
+        self.assertIn("已提供的资料来源", prompt)
+        self.assertIn("未生成的模块", prompt)
+        self.assertIn("未来 30 天行动", prompt)
 
     def test_anonymous_share_sanitizer_excludes_identity_and_birth_data(self):
         result = SERVICE.sanitize_share_payload({

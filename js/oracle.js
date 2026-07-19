@@ -250,6 +250,7 @@
     const spread = SPREADS.tarot[$('#tarot-spread').value] || SPREADS.tarot.timeline;
     lastTarot = { question, spread, draws:drawCards(TAROT_DECK, spread.positions.length, true), createdAt:Date.now() };
     renderReading($('#tarot-result'), lastTarot, 'tarot');
+    document.dispatchEvent(new CustomEvent('tianji:source-ready', { detail: { source: 'tarot' } }));
   }
 
   function runLenormand() {
@@ -258,7 +259,23 @@
     const spread = SPREADS.lenormand[$('#lenormand-spread').value] || SPREADS.lenormand.line3;
     lastLenormand = { question, spread, draws:drawCards(LENORMAND_DECK, spread.positions.length, false), createdAt:Date.now() };
     renderReading($('#lenormand-result'), lastLenormand, 'lenormand');
+    document.dispatchEvent(new CustomEvent('tianji:source-ready', { detail: { source: 'lenormand' } }));
   }
+
+  engine.getSnapshot = () => ({
+    tarot: lastTarot ? {
+      question: lastTarot.question,
+      spread: lastTarot.spread.name,
+      cards: lastTarot.draws.map((item, index) => `${lastTarot.spread.positions[index]}:${item.card.name}${item.reversed ? '逆位' : '正位'}:${item.reversed ? item.card.reversed : item.card.upright}`),
+      thread: tarotThread(lastTarot)
+    } : null,
+    lenormand: lastLenormand ? {
+      question: lastLenormand.question,
+      spread: lastLenormand.spread.name,
+      cards: lastLenormand.draws.map((item, index) => `${lastLenormand.spread.positions[index]}:${item.card.name}:${item.card.keyword}`),
+      thread: lenormandThread(lastLenormand)
+    } : null
+  });
 
   function init() {
     $('#btn-tarot').addEventListener('click', runTarot);
