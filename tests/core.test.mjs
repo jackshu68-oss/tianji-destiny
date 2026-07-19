@@ -246,6 +246,10 @@ test('页面包含新增排盘、现代摘要、隐私入口和本地脚本', ()
   assert.match(html, /js\/planner\.js/);
   assert.match(html, /js\/astrology\.js/);
   assert.match(html, /js\/workspace\.js/);
+  assert.match(html, /js\/report-share\.js/);
+  assert.match(html, /保存完整报告图片/);
+  assert.match(html, /微信分享完整报告/);
+  assert.match(html, /mailto:jackshu68@gmail\.com/);
   assert.doesNotMatch(html, /class="workspace-mode"|class="mode-btn/);
   const ids = [...html.matchAll(/\sid="([^"]+)"/g)].map(match => match[1]);
   assert.deepEqual(ids.filter((id, index) => ids.indexOf(id) !== index), []);
@@ -264,6 +268,8 @@ test('页面包含新增排盘、现代摘要、隐私入口和本地脚本', ()
   const css = fs.readFileSync(new URL('../css/style.css', import.meta.url), 'utf8');
   assert.match(css, /html\[data-theme="classic"\]/);
   assert.match(css, /\.daily-home-overview/);
+  assert.match(css, /\.report-share-actions/);
+  assert.match(css, /\.report-export-card/);
 });
 
 test('紫微十二宫支持键盘与点击打开宫位详情', () => {
@@ -288,11 +294,30 @@ test('SEO、匿名分享与私隐文件齐备', () => {
   const shared = fs.readFileSync(new URL('../share.html', import.meta.url), 'utf8');
   assert.match(shared, /noindex,nofollow/);
   assert.match(shared, /不包含姓名、出生日期/);
+  assert.match(shared, /html2canvas\.min\.js/);
+  assert.match(shared, /report-share\.js/);
   assert.match(fs.readFileSync(new URL('../robots.txt', import.meta.url), 'utf8'), /sitemap\.xml/i);
   assert.match(fs.readFileSync(new URL('../sitemap.xml', import.meta.url), 'utf8'), /<urlset/);
   const privacy = fs.readFileSync(new URL('../privacy.html', import.meta.url), 'utf8');
   assert.match(privacy, /AES-GCM/);
   assert.match(privacy, /180 天/);
+  assert.match(privacy, /报告图片与微信分享/);
+  assert.match(privacy, /不会为了生成图片把报告上传到服务器/);
+});
+
+test('报告分享组件覆盖全部结果并优先分享图片文件', () => {
+  const source = fs.readFileSync(new URL('../js/report-share.js', import.meta.url), 'utf8');
+  for (const id of ['astrology-result', 'rectify-result', 'comparison-result', 'backtest-result', 'zj-result', 'hh-result', 'mh-result', 'qm-result', 'tarot-result', 'lenormand-result', 'shared-result']) {
+    assert.match(source, new RegExp(`#${id}`));
+  }
+  assert.match(source, /\.ai-output\.ready/);
+  assert.match(source, /\.dm-body/);
+  assert.match(source, /html2canvas/);
+  assert.match(source, /navigator\.canShare/);
+  assert.match(source, /files:\s*\[file\]/);
+  assert.match(source, /MicroMessenger/);
+  assert.match(source, /jackshu68@gmail\.com/);
+  assert.doesNotMatch(source, /fetch\(|XMLHttpRequest/);
 });
 
 test('会员页简洁列出免费、30 天和 365 天方案并关闭网页外部支付', () => {

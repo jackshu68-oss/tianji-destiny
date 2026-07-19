@@ -20,7 +20,7 @@
   <link rel="icon" href="assets/daofa-mark.svg" type="image/svg+xml" />
   <link rel="manifest" href="manifest.webmanifest" />
   <!-- 字体使用系统字体栈（见 css/style.css），不依赖外部网络，大陆/离线均可秒开 -->
-  <link rel="stylesheet" href="css/style.css?v=20260718-22" />
+  <link rel="stylesheet" href="css/style.css?v=20260719-1" />
 </head>
 <body>
   <canvas id="stars"></canvas>
@@ -430,9 +430,10 @@
         <div class="share-wrap">
           <button class="tool-btn" id="btn-share">📤 分享</button>
           <div class="share-pop hidden" id="share-pop">
-            <button data-act="img">🖼 生成分享图</button>
-            <button data-act="link">🔗 复制链接</button>
-            <button data-act="wechat">💬 分享到微信</button>
+            <button data-act="report" data-zh="保存完整报告图片" data-en="Save full report image">↓ 保存完整报告图片</button>
+            <button data-act="img" data-zh="保存匿名摘要图片" data-en="Save private summary image">▣ 保存匿名摘要图片</button>
+            <button data-act="wechat" data-zh="微信分享完整报告" data-en="Share full report">↗ 微信分享完整报告</button>
+            <button data-act="link" data-zh="复制页面链接" data-en="Copy page link">⛓ 复制页面链接</button>
           </div>
         </div>
         <button class="tool-btn" id="btn-clear">清除存档</button>
@@ -780,7 +781,7 @@
         帮你在合适的时机，做合适的事。
       </p>
       <p class="copyright">© 道法自然 DAOFA · 传统文化 · 娱乐参考</p>
-      <div class="footer-links"><a href="privacy.html">隐私政策</a><a href="terms/">服务与订阅条款</a><a href="pricing/">会员中心</a><a href="privacy.html#updates">更新记录</a></div>
+      <div class="footer-links"><a href="privacy.html">隐私政策</a><a href="terms/">服务与订阅条款</a><a href="pricing/">会员中心</a><a href="mailto:jackshu68@gmail.com" data-zh="客服邮箱" data-en="Support email">客服邮箱</a><a href="privacy.html#updates">更新记录</a></div>
     </div>
   </footer>
 
@@ -819,7 +820,8 @@
   <script src="js/astrology.js?v=20260718-20"></script>
   <script src="js/ziwei.js?v=20260718-14"></script>
   <script src="js/html2canvas.min.js?v=20260718-14"></script>
-  <script src="js/app.js?v=20260718-14"></script>
+  <script src="js/report-share.js?v=20260719-1"></script>
+  <script src="js/app.js?v=20260719-1"></script>
   <script src="js/divination.js?v=20260718-20"></script>
   <script src="js/oracle.js?v=20260718-20"></script>
   <script src="js/auth.js?v=20260718-22"></script>

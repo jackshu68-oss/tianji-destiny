@@ -630,7 +630,8 @@
     pop.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
       const act = b.dataset.act;
       pop.classList.add('hidden');
-      if (act === 'img') shareImage();
+      if (act === 'report') shareFullReport(false);
+      else if (act === 'img') shareImage();
       else if (act === 'link') copyLink();
       else if (act === 'wechat') shareWechat();
     }));
@@ -642,14 +643,16 @@
       navigator.clipboard.writeText(url).then(() => toast('链接已复制，不含出生资料')).catch(() => toast('复制失败，请手动复制网址'));
     } else { toast('当前环境不支持自动复制，请手动复制网址'); }
   }
+  function shareFullReport(toWechat) {
+    if (!chart || !window.TianjiReportShare) return;
+    const title = isEnglish() ? 'Complete Personal Insight Report' : '完整命盘与个人洞察报告';
+    const method = toWechat ? TianjiReportShare.share : TianjiReportShare.save;
+    method($('#result'), { title });
+  }
   function shareWechat() {
-    const url = location.href;
-    if (navigator.share) {
-      navigator.share({ title: '道法自然 · 我的每日命理', text: '看看我的八字与紫微命盘', url }).catch(() => {});
-    } else {
-      shareImage();
-      setTimeout(() => toast('图片已生成，长按保存后可发到微信'), 900);
-    }
+    if (window.TianjiReportShare) { shareFullReport(true); return; }
+    shareImage();
+    setTimeout(() => toast('图片已生成，保存后可发到微信'), 900);
   }
   function toast(msg) {
     let t = $('#toast');
