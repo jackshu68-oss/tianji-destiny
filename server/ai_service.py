@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Small same-origin AI interpretation service for the Tianji static site."""
+"""Small same-origin interpretation service for the Tianji static site."""
 
 import hashlib
 import base64
@@ -7,6 +7,7 @@ import binascii
 import json
 import os
 import pathlib
+import re
 import secrets
 import sqlite3
 import threading
@@ -91,10 +92,26 @@ def module_for(title):
     return "bazi"
 
 
+def sanitize_public_text(value):
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    chinese = bool(re.search(r"[\u3400-\u9fff]", text))
+    provider = "分析服务" if chinese else "analysis service"
+    analysis = "分析" if chinese else "analysis"
+    service = "服务" if chinese else "service"
+    text = re.sub(r"deep\s*seek", provider, text, flags=re.IGNORECASE)
+    text = re.sub(r"(?<![A-Za-z])DTC(?![A-Za-z])", provider, text, flags=re.IGNORECASE)
+    text = re.sub(r"(?<![A-Za-z])AI(?![A-Za-z])", analysis, text, flags=re.IGNORECASE)
+    text = re.sub(r"(?<![A-Za-z])API(?![A-Za-z])", service, text, flags=re.IGNORECASE)
+    text = text.replace("接口", "服务")
+    return re.sub(r"[ \t]{2,}", " ", text).strip()
+
+
 def normalize_analysis(value):
     if not isinstance(value, dict):
         return {
-            "overview": str(value or "AI 暂未返回有效内容。"),
+            "overview": sanitize_public_text(value or "暂未返回有效解读内容。"),
             "evidence": [],
             "reality": [],
             "timing": [],
@@ -104,17 +121,18 @@ def normalize_analysis(value):
             "caveat": "传统术数解读仅供文化研究与娱乐参考。",
         }
     result = {
-        "overview": str(value.get("overview") or value.get("summary") or "").strip(),
+        "overview": sanitize_public_text(value.get("overview") or value.get("summary") or ""),
         "evidence": value.get("evidence") if isinstance(value.get("evidence"), list) else [],
         "reality": value.get("reality") if isinstance(value.get("reality"), list) else [],
         "timing": value.get("timing") if isinstance(value.get("timing"), list) else [],
         "risks": value.get("risks") if isinstance(value.get("risks"), list) else [],
         "stages": value.get("stages") if isinstance(value.get("stages"), list) else [],
         "actions": value.get("actions") if isinstance(value.get("actions"), list) else [],
-        "caveat": str(value.get("caveat") or "传统术数解读仅供文化研究与娱乐参考。").strip(),
+        "caveat": sanitize_public_text(value.get("caveat") or "传统术数解读仅供文化研究与娱乐参考。"),
     }
     for key in ("evidence", "reality", "timing", "risks", "stages", "actions"):
-        result[key] = [str(item).strip() for item in result[key] if str(item).strip()][:6]
+        cleaned = [sanitize_public_text(item) for item in result[key]]
+        result[key] = [item for item in cleaned if item][:6]
     return result
 
 
@@ -145,7 +163,8 @@ def system_prompt(module):
 3. 给出可执行、可验证的现实建议，不制造恐惧。
 4. 涉及健康、法律、投资或人身安全时，不给专业结论。
 5. 直接回答用户问题，不重复介绍网站，不输出通用心理鸡汤。
-6. 只返回一个 JSON 对象，不使用 Markdown，结构必须为：
+6. 面向用户的内容不得提及模型、服务商、技术连接方式或实现细节，也不得出现相关品牌名称。
+7. 只返回一个 JSON 对象，不使用 Markdown，结构必须为：
 {{"overview":"直接结论","evidence":["具体命盘依据"],"reality":["现实表现"],"timing":["当前时机"],"risks":["风险提示"],"actions":["可执行建议"],"caveat":"分析限制与使用边界"}}"""
 
 
@@ -215,9 +234,9 @@ def allow_request(client):
         recent = [stamp for stamp in IP_REQUESTS[client] if now - stamp < 3600]
         IP_REQUESTS[client] = recent
         if len(recent) >= PER_IP_HOUR:
-            return False, "本小时 AI 详解次数已用完，请稍后再试。"
+            return False, "本小时详细解读次数已用完，请稍后再试。"
         if GLOBAL_REQUESTS[day] >= GLOBAL_DAY:
-            return False, "今日 AI 详解额度已用完，请明天再试。"
+            return False, "今日详细解读额度已用完，请明天再试。"
         recent.append(now)
         GLOBAL_REQUESTS[day] += 1
     return True, ""
@@ -225,15 +244,15 @@ def allow_request(client):
 
 def public_error(code):
     if code == "AI_SERVICE_NOT_CONFIGURED":
-        return 503, {"ok": False, "code": code, "message": "AI 服务尚未完成配置。"}
+        return 503, {"ok": False, "code": code, "message": "解读服务尚未完成配置。"}
     if code in ("UPSTREAM_HTTP_401", "UPSTREAM_HTTP_402", "UPSTREAM_HTTP_403"):
-        return 503, {"ok": False, "code": code, "message": "AI 账户或余额暂时不可用，管理员正在检查。"}
+        return 503, {"ok": False, "code": code, "message": "解读服务暂时不可用，管理员正在检查。"}
     if code == "UPSTREAM_HTTP_429":
-        return 503, {"ok": False, "code": code, "message": "DeepSeek 当前繁忙，系统自动重试后仍未响应，请稍后再按一次。"}
+        return 503, {"ok": False, "code": code, "message": "解读服务当前繁忙，系统自动重试后仍未响应，请稍后再按一次。"}
     if code == "UPSTREAM_HTTP_400":
-        return 502, {"ok": False, "code": code, "message": "当前排盘内容未能完成 AI 解读，请换一个问题后重试。"}
+        return 502, {"ok": False, "code": code, "message": "当前排盘内容未能完成解读，请换一个问题后重试。"}
     if code == "INTERNAL_ERROR":
-        return 500, {"ok": False, "code": code, "message": "AI 任务处理出现异常，请重新生成。"}
+        return 500, {"ok": False, "code": code, "message": "解读任务处理出现异常，请重新生成。"}
     return 502, {"ok": False, "code": code, "message": "网络出现短暂波动，系统自动重试后仍未返回，请稍后再按一次。"}
 
 
@@ -336,8 +355,8 @@ def validate_encrypted_payload(value):
 
 def run_job(job_id, title, context, module, digest):
     try:
-        analysis, model, usage = call_deepseek(title, context, module)
-        result = {"ok": True, "analysis": analysis, "model": model, "usage": usage, "cached": False}
+        analysis, _model, usage = call_deepseek(title, context, module)
+        result = {"ok": True, "analysis": analysis, "usage": usage, "cached": False}
         with LOCK:
             CACHE[digest] = (time.time(), result)
             if len(CACHE) > 300:
@@ -348,7 +367,7 @@ def run_job(job_id, title, context, module, digest):
                 job.update({"status": "done", "updated": time.time(), "status_code": 200, "payload": result})
             if PENDING_BY_DIGEST.get(digest) == job_id:
                 PENDING_BY_DIGEST.pop(digest, None)
-        print("AI job completed: {} module={} tokens={}".format(job_id[:8], module, usage.get("total_tokens", 0)), flush=True)
+        print("Interpretation job completed: {} module={} tokens={}".format(job_id[:8], module, usage.get("total_tokens", 0)), flush=True)
     except Exception as error:
         code = str(error).split(":", 1)[0] if isinstance(error, RuntimeError) else "INTERNAL_ERROR"
         status, payload = public_error(code)
@@ -358,11 +377,11 @@ def run_job(job_id, title, context, module, digest):
                 job.update({"status": "error", "updated": time.time(), "status_code": status, "payload": payload})
             if PENDING_BY_DIGEST.get(digest) == job_id:
                 PENDING_BY_DIGEST.pop(digest, None)
-        print("AI job failed: {} module={} code={}".format(job_id[:8], module, code), flush=True)
+        print("Interpretation job failed: {} module={} code={}".format(job_id[:8], module, code), flush=True)
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "TianjiAI/1.1"
+    server_version = "TianjiService/1.2"
 
     def log_message(self, _format, *_args):
         return
@@ -828,12 +847,12 @@ class Handler(BaseHTTPRequestHandler):
             job = JOBS.get(job_id)
             snapshot = dict(job) if job else None
         if not snapshot:
-            self.send_json(404, {"ok": False, "code": "JOB_NOT_FOUND", "message": "AI 任务已过期，请重新生成。"})
+            self.send_json(404, {"ok": False, "code": "JOB_NOT_FOUND", "message": "解读任务已过期，请重新生成。"})
             return
         if snapshot["status"] == "pending":
             self.send_json(202, {"ok": True, "pending": True, "job_id": job_id, "poll_after_ms": 1600})
             return
-        self.send_json(snapshot.get("status_code", 500), snapshot.get("payload") or {"ok": False, "message": "AI 任务没有返回结果。"})
+        self.send_json(snapshot.get("status_code", 500), snapshot.get("payload") or {"ok": False, "message": "解读任务没有返回结果。"})
 
     def do_POST(self):
         path = self.path.split("?", 1)[0]
@@ -876,7 +895,7 @@ class Handler(BaseHTTPRequestHandler):
         title = str(body.get("title") or "").strip()[:120]
         context = str(body.get("context") or "").strip()[:MAX_CONTEXT_CHARS]
         if not title or len(context) < 20:
-            self.send_json(400, {"ok": False, "message": "请先完成排盘，再生成 AI 详解。"})
+            self.send_json(400, {"ok": False, "message": "请先完成排盘，再生成完整解读。"})
             return
         response_headers = []
         billing_entitlement = BILLING.status(self.bearer_token()).get("entitlement") or {}
@@ -927,7 +946,7 @@ class Handler(BaseHTTPRequestHandler):
         if billing_entitlement.get("active"):
             pro_allowed, pro_account_id = BILLING.consume_pro_usage(self.bearer_token())
             if pro_account_id and not pro_allowed:
-                self.send_json(429, {"ok": False, "message": "今日 Pro AI 详解额度已用完，请明天再试。"})
+                self.send_json(429, {"ok": False, "message": "今日会员详细解读额度已用完，请明天再试。"})
                 return
         elif access_tier == "trial":
             allowed, message = allow_request(self.client_id())
@@ -948,7 +967,7 @@ class Handler(BaseHTTPRequestHandler):
             worker = threading.Thread(target=run_job, args=(job_id, title, context, module, digest))
             worker.daemon = True
             worker.start()
-            print("AI job accepted: {} module={}".format(job_id[:8], module), flush=True)
+            print("Interpretation job accepted: {} module={}".format(job_id[:8], module), flush=True)
         self.send_json(202, {"ok": True, "pending": True, "job_id": job_id, "poll_after_ms": 1600, "deduplicated": duplicate, "access": access_tier}, response_headers)
 
 

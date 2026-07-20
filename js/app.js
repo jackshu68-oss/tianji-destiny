@@ -1095,7 +1095,7 @@
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'dm-trigger';
-      btn.textContent = '详解 · AI ›';
+      btn.textContent = '查看详解 ›';
       btn.addEventListener('click', (e) => { e.stopPropagation(); openDetail(sec.dataset.detail); });
       sec.appendChild(btn);
     });

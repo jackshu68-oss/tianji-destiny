@@ -367,7 +367,7 @@ test('会员页列出免费与会员方案并使用登录后人工付款核验',
   assert.match(terms, /有效期与退款/);
   assert.doesNotMatch(terms, /Stripe/);
   assert.match(privacy, /不会索取或保存支付密码、短信验证码、完整银行卡号或安全码/);
-  assert.match(privacy, /受保护接口/);
+  assert.match(privacy, /受保护方式/);
   assert.match(privacy, /365 天/);
   assert.match(billing, /\/api\/billing\/manual\/order/);
   assert.match(billing, /\/api\/billing\/manual\/orders/);
@@ -391,4 +391,16 @@ test('会员页列出免费与会员方案并使用登录后人工付款核验',
   assert.match(app, /TianjiAuth\.requireFullAccess/);
   assert.match(aiService, /DETAIL_LOGIN_REQUIRED/);
   assert.doesNotMatch(account, /3 天(?:完整|试用|体验)/);
+});
+
+test('面向用户的全站文案不显示模型、接口或相关技术字样', () => {
+  const files = [
+    '../index.html', '../privacy.html', '../privacy/index.html', '../terms/index.html',
+    '../guide/index.html', '../about/index.html', '../account/index.html',
+    '../pricing/index.html', '../support/index.html', '../share.html',
+    '../js/ai.js', '../js/auth.js', '../js/app.js', '../js/ui.js',
+    '../js/divination.js', '../js/oracle.js', '../js/report-share.js'
+  ];
+  const publicCopy = files.map(file => fs.readFileSync(new URL(file, import.meta.url), 'utf8')).join('\n');
+  assert.doesNotMatch(publicCopy, /DeepSeek|DTC|接口|(^|[^A-Za-z])AI([^A-Za-z]|$)/m);
 });

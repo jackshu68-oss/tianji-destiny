@@ -1,4 +1,4 @@
-/* Same-origin AI interpretation UI. The API key remains on the server. */
+/* Same-origin detailed interpretation UI. Service credentials remain on the server. */
 (function () {
   'use strict';
 
@@ -38,7 +38,7 @@
     const analysis = payload.analysis || {};
     const head = element('div', 'ai-result-head');
     head.appendChild(element('span', 'ai-live-dot'));
-    head.appendChild(element('b', '', copy('AI 深度解读', 'AI DEEP INTERPRETATION')));
+    head.appendChild(element('b', '', copy('完整解读', 'DETAILED INTERPRETATION')));
     head.appendChild(element('em', '', payload.cached ? copy('已使用缓存，不重复消耗额度', 'Cached result, no duplicate token use') : copy('本次新生成', 'Newly generated')));
     target.appendChild(head);
 
@@ -56,8 +56,7 @@
 
     if (analysis.caveat) target.appendChild(element('p', 'ai-caveat', analysis.caveat));
     const meta = element('div', 'ai-result-meta');
-    const tokens = payload.usage && payload.usage.total_tokens ? ` · ${payload.usage.total_tokens} tokens` : '';
-    meta.textContent = `${payload.model || 'DeepSeek'}${tokens}`;
+    meta.textContent = copy('解读完成', 'Interpretation complete');
     target.appendChild(meta);
   }
 
@@ -86,7 +85,7 @@
       throw requestError('服务器连接被中途打断，正在尝试重新连接。', true);
     }
     if (!response.ok || !payload.ok) {
-      throw requestError(payload.message || `AI 服务返回错误（${response.status}）`, response.status >= 500, payload.code, response.status);
+      throw requestError(payload.message || `解读服务返回错误（${response.status}）`, response.status >= 500, payload.code, response.status);
     }
     return payload;
   }
@@ -121,7 +120,7 @@
         delay = Math.min(3500, 1200 + transientFailures * 400);
       }
     }
-    throw requestError('AI 仍在后台处理，但本页等待时间已到。请稍后再按一次，系统会优先读取已完成的结果。', false);
+    throw requestError('解读仍在后台处理，但本页等待时间已到。请稍后再按一次，系统会优先读取已完成的结果。', false);
   }
 
   async function generateInterpretation(options, context, signal, output) {
@@ -151,10 +150,10 @@
       }
     }
 
-    if (!payload) throw lastError || requestError('AI 任务未能建立，请稍后重试。', false);
+    if (!payload) throw lastError || requestError('解读任务未能建立，请稍后重试。', false);
     if (!payload.pending) return payload;
 
-    output.textContent = 'AI 已接单，正在后台生成。即使手机网络短暂中断，服务器也会继续处理。';
+    output.textContent = '已开始生成完整解读。即使手机网络短暂中断，服务器也会继续处理。';
     return pollJob(payload.job_id, signal, output, payload.poll_after_ms);
   }
 
@@ -196,16 +195,16 @@
     const panel = element('div', 'ai-insight');
     const intro = element('div', 'ai-intro');
     const copy = element('div');
-    copy.appendChild(element('span', 'ai-label', 'DEEPSEEK · 本地知识增强'));
-    copy.appendChild(element('h4', '', '让 AI 继续拆解这份结果'));
-    copy.appendChild(element('p', '', '排盘数据不会由 AI 重算。它只依据上面的确定性结果，补充关系、阶段与现实行动建议。'));
+    copy.appendChild(element('span', 'ai-label', '专业知识库 · 综合研判'));
+    copy.appendChild(element('h4', '', '查看这份结果的完整解读'));
+    copy.appendChild(element('p', '', '排盘数据不会重新计算。完整解读只依据上面的确定性结果，补充关系、阶段与现实行动建议。'));
     intro.appendChild(copy);
 
-    const button = element('button', 'ai-generate', '生成 AI 智能详解');
+    const button = element('button', 'ai-generate', '生成完整解读');
     button.type = 'button';
     intro.appendChild(button);
     panel.appendChild(intro);
-    panel.appendChild(element('p', 'ai-privacy', '点击后，本次详解文本会发送至香港服务器的 DeepSeek 接口；不会读取或上传浏览器中的其他命盘。'));
+    panel.appendChild(element('p', 'ai-privacy', '点击后，仅会把本次解读所需文字发送至香港服务器处理；不会读取或上传浏览器中的其他命盘。'));
     const output = element('div', 'ai-output');
     output.setAttribute('aria-live', 'polite');
     panel.appendChild(output);
@@ -215,7 +214,7 @@
       button.disabled = true;
       button.textContent = '正在综合分析...';
       output.className = 'ai-output loading';
-      output.textContent = '正在提交 AI 详解任务。';
+      output.textContent = '正在提交完整解读任务。';
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 115000);
       try {
@@ -228,7 +227,7 @@
           output.className = 'ai-output error';
           output.textContent = error.name === 'AbortError'
             ? '本页等待时间已到，但服务器任务不会因此中断。请稍后再按一次读取结果。'
-            : (error.message || 'AI 服务暂时不可用，请稍后重试。');
+            : (error.message || '解读服务暂时不可用，请稍后重试。');
         }
         button.textContent = '重新尝试';
       } finally {
@@ -285,7 +284,7 @@
       }
       if (String(chartContext).length < 40) {
         output.className = 'ai-output error';
-        output.textContent = copy('请先生成命盘，再使用 AI 命盘问答。', 'Create a chart before using AI chart Q&A.');
+        output.textContent = copy('请先生成命盘，再使用命盘问答。', 'Create a chart before using chart Q&A.');
         return;
       }
       button.disabled = true;
@@ -295,7 +294,7 @@
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 115000);
       try {
-        const requestOptions = { title: `AI命盘问答 · ${question}` };
+        const requestOptions = { title: `命盘问答 · ${question}` };
         const context = `用户问题：${question}\n\n确定性命盘资料：\n${chartContext}`.slice(0, 12000);
         const payload = await generateInterpretation(requestOptions, context, controller.signal, output);
         output.className = 'ai-output ready';
@@ -304,7 +303,7 @@
       } catch (error) {
         if (!renderAccessPrompt(output, error)) {
           output.className = 'ai-output error';
-          output.textContent = error.name === 'AbortError' ? '等待时间已到，后台任务可能仍在处理。稍后再按一次会优先读取已完成结果。' : (error.message || 'AI 服务暂时不可用，请稍后重试。');
+          output.textContent = error.name === 'AbortError' ? '等待时间已到，后台任务可能仍在处理。稍后再按一次会优先读取已完成结果。' : (error.message || '解读服务暂时不可用，请稍后重试。');
         }
         button.textContent = copy('重新尝试', 'Try again');
       } finally {
@@ -328,7 +327,7 @@
 
     const intro = element('div', 'ai-intro ai-report-intro');
     const introCopy = element('div');
-    introCopy.appendChild(element('span', 'ai-label', 'DEEPSEEK · LOCAL KNOWLEDGE'));
+    introCopy.appendChild(element('span', 'ai-label', copy('专业知识库 · 综合研判', 'PROFESSIONAL KNOWLEDGE · SYNTHESIS')));
     introCopy.appendChild(element('h4', '', copy('生成综合全盘报告', 'Generate an integrated chart report')));
     introCopy.appendChild(element('p', '', copy('只保留一种清晰报告格式：先列共同主题和依据，再说分歧、时机、风险与未来 30 天行动。', 'One clear format: shared themes and evidence first, followed by differences, timing, risks and 30-day actions.')));
     intro.appendChild(introCopy);
@@ -336,7 +335,7 @@
     button.type = 'button';
     intro.appendChild(button);
     panel.appendChild(intro);
-    panel.appendChild(element('p', 'ai-privacy', copy('点击后，仅会把上方已生成结果的摘要发送至香港服务器的 DeepSeek 接口；不包含姓名、出生日期、城市、命盘库备注或其他浏览器资料。', 'After you click, only summaries of the generated results above are sent to the DeepSeek endpoint on the Hong Kong server. Names, birth dates, cities, chart-library notes and unrelated browser data are excluded.')));
+    panel.appendChild(element('p', 'ai-privacy', copy('点击后，仅会把上方已生成结果的摘要发送至香港服务器处理；不包含姓名、出生日期、城市、命盘库备注或其他浏览器资料。', 'After you click, only summaries of the generated results above are sent to the Hong Kong server for processing. Names, birth dates, cities, chart-library notes and unrelated browser data are excluded.')));
     const output = element('div', 'ai-output ai-report-output');
     output.setAttribute('aria-live', 'polite');
     panel.appendChild(output);
@@ -379,7 +378,7 @@
           output.className = 'ai-output ai-report-output error';
           output.textContent = error.name === 'AbortError'
             ? copy('本页等待时间已到，但服务器任务不会因此中断。稍后再按一次即可读取结果。', 'This page stopped waiting, but the server task continues. Press again shortly to retrieve the result.')
-            : (error.message || copy('AI 服务暂时不可用，请稍后重试。', 'AI is temporarily unavailable. Please try again shortly.'));
+            : (error.message || copy('解读服务暂时不可用，请稍后重试。', 'The interpretation service is temporarily unavailable. Please try again shortly.'));
         }
         button.textContent = copy('重新尝试', 'Try again');
       } finally {

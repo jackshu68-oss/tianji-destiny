@@ -150,8 +150,8 @@
     '星座视角': 'ASTROLOGY', '太阳星座 · 性格与行动风格': 'Sun Sign · Personality and Action Style',
     '根据阳历出生日期计算太阳星座，作为全盘中一个独立的西方文化视角。': 'Calculated from the Gregorian birth date as an independent Western cultural lens within the wider report.',
     '综合全盘分析': 'INTEGRATED CHART ANALYSIS', '把已生成的结果整合成一份报告': 'Bring Generated Results Into One Report',
-    '系统会汇总八字、紫微、万年历、星座以及你已完成的占测结果，由 DeepSeek 辨认共同主题、分歧与现实行动。': 'BaZi, Zi Wei, the almanac, astrology and completed readings are summarised for DeepSeek to identify shared themes, differences and practical actions.',
-    'AI 命盘问答': 'AI CHART Q&A', '只根据你的命盘回答': 'Answers Grounded in Your Chart',
+    '系统会汇总八字、紫微、万年历、星座以及你已完成的占测结果，梳理共同主题、分歧与现实行动。': 'BaZi, Zi Wei, the almanac, astrology and completed readings are brought together to identify shared themes, differences and practical actions.',
+    '命盘问答': 'CHART Q&A', '只根据你的命盘回答': 'Answers Grounded in Your Chart',
     '回答会引用日主、结构、大运和未来三个月窗口；资料不足时必须明确说明限制。': 'Answers cite your day master, structure, ten-year phase and next three months, and state limitations when evidence is insufficient.',
     '人生时间轴': 'LIFE TIMELINE', '十年阶段的主题与现实管理': 'Ten-Year Themes and Practical Management',
     '年度卡': 'YEAR CARDS', '近七年观察窗口': 'Seven-Year Observation Window', '流月窗口': 'MONTHLY WINDOWS', '未来六个月的推进与收束节奏': 'Momentum and consolidation over the next six months',
@@ -173,7 +173,7 @@
     '出生城市': 'Birth city', '输入城市，例如：佛山 / Toronto': 'Enter a city, e.g. Foshan / Toronto', '请选择搜索结果中的城市。': 'Choose a city from the suggestions.', '性别': 'Sex', '乾造 · 男': 'Male chart', '坤造 · 女': 'Female chart',
     '高级设置': 'Advanced settings', '出生时间校正': 'Birth-time correction', '标准时间': 'Civil time', '真太阳时': 'True solar time', '默认采用出生地当时的民用时间。': 'Civil time at the birthplace is used by default.',
     '生成我的命盘 ✦': 'Create My Chart ✦', '正在校正历法': 'Checking calendar data', '校正历法': 'Calendar check', '生成四柱': 'Build four pillars', '建立紫微十二宫': 'Build Zi Wei palaces', '分析五行与十神': 'Analyse elements and Ten Gods', '生成大运流年': 'Build timing cycles',
-    '资料只在当前浏览器计算并保存在本机。AI 功能只会在你主动点击时发送当前详解文本。': 'Calculations and saved profiles stay in this browser. Detailed text is sent to AI only when you explicitly request an AI interpretation.',
+    '资料只在当前浏览器计算并保存在本机。完整解读只会在你主动点击时处理当前文字内容。': 'Calculations and saved profiles stay in this browser. Detailed text is processed only when you explicitly request a complete interpretation.',
     '✓ 已保存到本机': '✓ Saved on this device', '↺ 重新排盘': '↺ New chart', '📅 去择吉': 'Date finder', '💞 去合婚': 'Compatibility', '📤 分享': 'Share', '清除存档': 'Clear saved chart',
     '30 秒看懂': '30-SECOND SUMMARY', '你是谁，你在哪，下一步看什么': 'Who You Are, Where You Are, What to Do Next', '先看结论，再按需要展开依据。': 'Read the conclusion first, then open the evidence when needed.',
     '展开专业细盘': 'Open Technical Chart', '四柱、十神、藏干、紫微十二宫与五行依据': 'Four pillars, Ten Gods, hidden stems, Zi Wei palaces and element evidence',
@@ -186,7 +186,7 @@
     '奇门遁甲': 'Qimen Dunjia', '时家转盘 · 九宫观局': 'Rotating Qimen · Nine-Palace View', '起局时间': 'Chart time', '问事类别': 'Question category', '综合': 'General', '事业': 'Career', '财运': 'Wealth', '感情': 'Relationships', '出行': 'Travel', '健康': 'Wellbeing', '生成奇门局 ✦': 'Create Qimen Chart ✦',
     '塔罗牌': 'Tarot', '静心抽牌 · 看见当下线索': 'Draw With Intention · See the Present Pattern', '选择牌阵': 'Choose a spread', '洗牌并抽取 ✦': 'Shuffle and Draw ✦',
     '吉卜赛雷诺曼': 'Lenormand', '三十六象 · 连线读牌': 'Thirty-Six Symbols · Read the Connections', '洗牌并展开 ✦': 'Shuffle and Reveal ✦',
-    '关于 · 道法自然': 'ABOUT · DAOFA', '隐私政策': 'Privacy', '使用条款': 'Terms', '更新记录': 'Updates', '分析': 'Analysis', '我的': 'My Data', '关闭': 'Close', '详解': 'Details', '详解 · AI ›': 'Details · AI ›',
+    '关于 · 道法自然': 'ABOUT · DAOFA', '隐私政策': 'Privacy', '使用条款': 'Terms', '更新记录': 'Updates', '分析': 'Analysis', '我的': 'My Data', '关闭': 'Close', '详解': 'Details', '查看详解 ›': 'View details ›',
     '依据': 'Evidence', '现实表现': 'In practice', '行动建议': 'Action', '财富': 'Wealth', '风险': 'Risk', '当前阶段': 'Current phase', '关系优势': 'Relationship strength', '主要摩擦': 'Main friction', '个人工作台': 'Personal workspace', '手机工作台导航': 'Mobile workspace navigation'
   };
 

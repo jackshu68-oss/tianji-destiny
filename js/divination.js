@@ -106,7 +106,7 @@
         <div class="body-use-item"><span>用卦 · 所问之事</span><b>${result.useTrigram.symbol} ${result.useTrigram.name}${result.useTrigram.element}</b><em>月令${result.seasonalState.use}</em></div>
       </div>
       <div class="phase-list">${result.interactionReadings.map(reading => `<div class="phase-item ${reading.favorable ? 'good' : 'bad'}"><span>${phaseNames[reading.stage]}</span><b>${esc(reading.relation)}</b><p>${esc(reading.summary)}</p></div>`).join('')}</div>
-      <button type="button" class="detail-action" data-mh-detail>查看完整依据与 AI 逐段详解</button>
+      <button type="button" class="detail-action" data-mh-detail>查看完整依据与逐段详解</button>
       ${source('meihua')}`;
     $('#mh-result').classList.remove('hidden');
     setTimeout(() => $('#mh-result').scrollIntoView({ behavior:'smooth', block:'start' }), 60);
@@ -191,7 +191,7 @@
       </div>
       <div class="qimen-board">${order.map(gong => palaceCard(pan, gong)).join('')}</div>
       <div class="rule-reading"><span>规则综合解读</span><p>${esc(overall.overallAnalysis || overall.summary || (overall.suggestions || []).slice(0,2).join(' ') || '请结合值符、值使及相关宫位查看。')}</p></div>
-      <button type="button" class="detail-action" data-qm-detail>查看全局格局、用神与 AI 详解</button>
+      <button type="button" class="detail-action" data-qm-detail>查看全局格局、用神与完整详解</button>
       ${source('qimen')}`;
     $('#qm-result').classList.remove('hidden');
     setTimeout(() => $('#qm-result').scrollIntoView({ behavior:'smooth', block:'start' }), 60);

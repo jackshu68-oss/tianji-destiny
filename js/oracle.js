@@ -207,7 +207,7 @@
       </div>
       <div class="oracle-spread oracle-count-${reading.draws.length}">${reading.draws.map((item, index) => oracleCard(item, reading.spread.positions[index], index, type)).join('')}</div>
       <div class="oracle-thread"><span>${tarot ? '牌阵主线' : '牌面连线'}</span><p>${esc(thread)}</p></div>
-      <button type="button" class="detail-action" data-oracle-detail>查看逐张依据与 AI 深度详解</button>
+      <button type="button" class="detail-action" data-oracle-detail>查看逐张依据与深度详解</button>
       ${source(type)}`;
     target.classList.remove('hidden');
     setTimeout(() => target.scrollIntoView({ behavior:'smooth', block:'start' }), 80);

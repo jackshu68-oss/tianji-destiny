@@ -57,7 +57,7 @@
     if (target.classList.contains('ai-output')) {
       const panelTitle = target.closest('.ai-insight') && target.closest('.ai-insight').querySelector('h4');
       if (panelTitle && panelTitle.textContent.trim()) return panelTitle.textContent.trim();
-      return phrase('AI 详细报告', 'AI Detailed Report');
+      return phrase('完整详细报告', 'Complete Detailed Report');
     }
     return phrase('个人洞察报告', 'Personal Insight Report');
   }

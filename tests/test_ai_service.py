@@ -14,6 +14,19 @@ SPEC.loader.exec_module(SERVICE)
 
 
 class AiServiceTests(unittest.TestCase):
+    def test_public_analysis_removes_provider_and_technical_terms(self):
+        analysis = SERVICE.normalize_analysis({
+            "overview": "DeepSeek AI 已通过 API 接口返回结果。",
+            "evidence": ["DTC 接口只处理当前资料。"],
+            "caveat": "AI interpretation is for reference only.",
+        })
+        rendered = json.dumps(analysis, ensure_ascii=False)
+        self.assertNotIn("DeepSeek", rendered)
+        self.assertNotIn("DTC", rendered)
+        self.assertNotIn("接口", rendered)
+        self.assertNotRegex(rendered, r"(^|[^A-Za-z])AI([^A-Za-z]|$)")
+        self.assertNotRegex(rendered, r"(^|[^A-Za-z])API([^A-Za-z]|$)")
+
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
         SERVICE.DATA_DIR = pathlib.Path(self.temp_dir.name)

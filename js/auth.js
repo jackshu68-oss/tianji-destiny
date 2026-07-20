@@ -125,8 +125,8 @@
     gate.querySelector('.auth-access-kicker').textContent = copy('1 天体验已结束', '1-DAY TRIAL ENDED');
     gate.querySelector('h2').textContent = copy('登录后继续使用', 'Sign in to continue');
     gate.querySelector('p').textContent = copy(
-      '注册后仍可长期使用基础查询；完整报告、AI 详解和综合分析需要会员。',
-      'Basic queries remain available after registration. Complete reports, AI interpretation and integrated analysis require membership.'
+      '注册后仍可长期使用基础查询；完整报告、详细解读和综合分析需要会员。',
+      'Basic queries remain available after registration. Complete reports, detailed interpretation and integrated analysis require membership.'
     );
     const login = gate.querySelector('[data-access-login]');
     login.textContent = copy('手机号登录', 'Phone sign-in');
@@ -161,7 +161,7 @@
       ? copy('详细报告需要会员', 'Detailed reports require membership')
       : copy('登录后查看详细报告', 'Sign in for detailed reports');
     gate.querySelector('p').textContent = signedIn
-      ? copy('当前账号仍可使用基础查询；AI 详解、专业细盘和完整报告仅向有效会员开放。', 'Your account can continue using basic queries. AI interpretations, professional details and full reports require active membership.')
+      ? copy('当前账号仍可使用基础查询；详细解读、专业细盘和完整报告仅向有效会员开放。', 'Your account can continue using basic queries. Detailed interpretations, professional details and full reports require active membership.')
       : copy('首日可免登录使用基础查询；详细内容需要使用手机号注册或登录。', 'Basic queries are available without sign-in on the first day. Sign in or register with a phone number for detailed content.');
     const primary = gate.querySelector('[data-access-login]');
     primary.textContent = signedIn ? copy('查看会员方案', 'View membership plans') : copy('手机号登录', 'Phone sign-in');
