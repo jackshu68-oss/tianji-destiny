@@ -3,6 +3,7 @@
   'use strict';
 
   let accountState = { authenticated: false, account: null, trial: null, sms_enabled: false };
+  let expiryTimer = 0;
 
   function isEnglish() {
     return root.TianjiUI && root.TianjiUI.getLanguage() === 'en';
@@ -37,8 +38,26 @@
   async function status() {
     const payload = await request('/api/auth/status');
     accountState = payload;
+    applyAccessState(payload);
     root.dispatchEvent(new CustomEvent('tianji:auth-changed', { detail: payload }));
     return payload;
+  }
+
+  async function startTrial() {
+    const payload = await request('/api/auth/trial/start', { method: 'POST', body: {} });
+    accountState = Object.assign({}, accountState, payload);
+    applyAccessState(accountState);
+    root.dispatchEvent(new CustomEvent('tianji:auth-changed', { detail: accountState }));
+    return accountState;
+  }
+
+  async function ensureTrialAccess() {
+    if (accountState.authenticated || (accountState.trial && accountState.trial.active)) return accountState;
+    try { return await startTrial(); }
+    catch (error) {
+      if (error.code === 'AUTH_REQUIRED') showExpiredGate();
+      throw error;
+    }
   }
 
   function startOtp(phone, purpose) {
@@ -79,6 +98,68 @@
   function setNotice(node, message, tone) {
     node.textContent = message || '';
     node.className = `auth-notice${tone ? ` ${tone}` : ''}`;
+  }
+
+  function accessGate() {
+    let gate = document.getElementById('auth-access-gate');
+    if (gate) return gate;
+    gate = document.createElement('section');
+    gate.id = 'auth-access-gate';
+    gate.className = 'auth-access-gate';
+    gate.setAttribute('role', 'dialog');
+    gate.setAttribute('aria-modal', 'true');
+    gate.innerHTML = '<div class="auth-access-gate-panel"><span class="auth-access-kicker"></span><h2></h2><p></p><div class="auth-access-actions"><a data-access-login></a><a data-access-register></a></div><small></small></div>';
+    document.body.appendChild(gate);
+    return gate;
+  }
+
+  function showExpiredGate() {
+    if (document.querySelector('[data-auth-page]')) return;
+    const gate = accessGate();
+    const next = encodeURIComponent(`${root.location.pathname}${root.location.search}${root.location.hash}`);
+    gate.querySelector('.auth-access-kicker').textContent = copy('1 天体验已结束', '1-DAY TRIAL ENDED');
+    gate.querySelector('h2').textContent = copy('登录后继续使用', 'Sign in to continue');
+    gate.querySelector('p').textContent = copy(
+      '注册后仍可长期使用基础查询；完整报告、AI 详解和综合分析需要会员。',
+      'Basic queries remain available after registration. Complete reports, AI interpretation and integrated analysis require membership.'
+    );
+    const login = gate.querySelector('[data-access-login]');
+    login.textContent = copy('手机号登录', 'Phone sign-in');
+    login.href = `/account/?mode=login&next=${next}`;
+    const register = gate.querySelector('[data-access-register]');
+    register.textContent = copy('注册账号', 'Create account');
+    register.href = `/account/?mode=register&next=${next}`;
+    gate.querySelector('small').textContent = copy(
+      '注册只在首次验证或找回密码时发送短信，以后使用手机号和密码登录。',
+      'SMS is only used for first verification or password recovery. Future sign-ins use your phone number and password.'
+    );
+    gate.hidden = false;
+    document.body.classList.add('auth-access-locked');
+  }
+
+  function hideExpiredGate() {
+    const gate = document.getElementById('auth-access-gate');
+    if (gate) gate.hidden = true;
+    document.body.classList.remove('auth-access-locked');
+  }
+
+  function applyAccessState(payload) {
+    if (typeof document === 'undefined' || document.querySelector('[data-auth-page]')) return;
+    root.clearTimeout(expiryTimer);
+    const trial = payload && payload.trial;
+    if (payload && payload.authenticated) {
+      hideExpiredGate();
+      return;
+    }
+    if (trial && trial.started && !trial.active) {
+      showExpiredGate();
+      return;
+    }
+    hideExpiredGate();
+    if (trial && trial.active && trial.expires) {
+      const delay = Math.max(1000, Math.min(2147480000, Number(trial.expires) * 1000 - Date.now() + 1000));
+      expiryTimer = root.setTimeout(() => status().catch(() => {}), delay);
+    }
   }
 
   function samePassword(form) {
@@ -206,9 +287,11 @@
       signedOut.hidden = payload.authenticated;
       if (payload.authenticated && payload.account) {
         accountPhone.textContent = payload.account.phone_hint || '';
-        accountPlan.textContent = payload.account.active
-          ? (payload.account.plan === 'yearly' ? copy('365 天会员', '365-day membership') : copy('30 天会员', '30-day membership'))
-          : copy('免费版', 'Free');
+        accountPlan.textContent = payload.account.is_owner
+          ? copy('站主 · 永久会员', 'Owner · permanent membership')
+          : (payload.account.active
+            ? (payload.account.plan === 'yearly' ? copy('365 天会员', '365-day membership') : copy('30 天会员', '30-day membership'))
+            : copy('免费版', 'Free'));
       }
     }).catch(error => setNotice(notice, error.message, 'error'));
 
@@ -218,9 +301,20 @@
     });
   }
 
-  root.TianjiAuth = { status, startOtp, register, login, resetPassword, logout, snapshot: () => accountState };
+  function initGlobalAccess() {
+    if (document.querySelector('[data-auth-page]')) return;
+    status().catch(() => {});
+    document.addEventListener('tianji:language-changed', () => applyAccessState(accountState));
+  }
+
+  root.TianjiAuth = {
+    status, startTrial, ensureTrialAccess, startOtp, register, login, resetPassword, logout,
+    snapshot: () => accountState,
+    showExpiredGate
+  };
   if (typeof document !== 'undefined') {
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initAccountPage);
-    else initAccountPage();
+    const init = () => { initAccountPage(); initGlobalAccess(); };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+    else init();
   }
 })(typeof window !== 'undefined' ? window : globalThis);

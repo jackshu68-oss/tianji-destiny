@@ -187,9 +187,8 @@
     }
     const city = selectedCity();
     if (!city) { showFormError('请选择搜索结果中的出生城市。'); $('#in-city').focus(); return; }
-    const loader = computeLoader();
+    let loader = null;
     try {
-      await loader.step(0);
       const original = { y, m, d, h: timeAccuracy === 'unknown' ? 12 : h, mi: timeAccuracy === 'unknown' ? 0 : mi };
       let calNote = '';
       if (calMode === 'lunar') {
@@ -205,6 +204,15 @@
       if (!localTime.valid) { showFormError('这个当地时间处于夏令时跳过时段，请调整出生时间或选择“大约”。'); return; }
       if (localTime.ambiguous && timeAccuracy === 'exact') { showFormError('这个当地时间在夏令时结束时重复出现，请选择“大约”并在结果中保留此限制。'); return; }
       const corrected = TianjiProfile.applyTimeCorrection(localInput, city, timeAccuracy === 'unknown' ? 'standard' : timeMode);
+      if (window.TianjiAuth && TianjiAuth.ensureTrialAccess) {
+        try { await TianjiAuth.ensureTrialAccess(); }
+        catch (error) {
+          showFormError(error.message || '免费体验已结束，请先注册或登录。');
+          return;
+        }
+      }
+      loader = computeLoader();
+      await loader.step(0);
       await loader.step(1);
       chart = TianjiEngine.buildChart(corrected.y, corrected.m, corrected.d, corrected.h, corrected.mi, gender, { timeUnknown: timeAccuracy === 'unknown' });
       chart.calendarNote = calNote;
@@ -230,7 +238,7 @@
       console.error(error);
       showFormError(calMode === 'lunar' ? `农历日期或排盘数据无效：${error.message || '请检查日期与闰月。'}` : '计算出错，请检查日期、时间与出生城市。');
     } finally {
-      loader.finish();
+      if (loader) loader.finish();
     }
   }
 

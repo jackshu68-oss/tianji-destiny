@@ -20,6 +20,10 @@ PHONE_PATTERN = re.compile(r"^1[3-9]\d{9}$")
 PASSWORD_LETTER = re.compile(r"[A-Za-z]")
 PASSWORD_DIGIT = re.compile(r"\d")
 ACTIVE_PLANS = {"monthly", "yearly"}
+PLAN_DAYS = {"monthly": 30, "yearly": 365}
+PLAN_PRICES_CNY = {"monthly": 39, "yearly": 299}
+PAYMENT_PROVIDERS = {"wechat", "alipay"}
+DEFAULT_OWNER_PHONE = "+8617606669594"
 
 
 class AuthError(Exception):
@@ -243,7 +247,20 @@ class AuthService:
         self.secret = str(env.get("TIANJI_AUTH_SECRET", "")).strip() or secrets.token_urlsafe(48)
         self.session_seconds = max(3600, int(env.get("TIANJI_AUTH_SESSION_DAYS", "30")) * 86400)
         self.trial_seconds = max(3600, int(env.get("TIANJI_TRIAL_HOURS", "24")) * 3600)
+        self.trial_marker_seconds = max(
+            self.trial_seconds,
+            int(env.get("TIANJI_TRIAL_MARKER_DAYS", "365")) * 86400,
+        )
         self.otp_seconds = max(120, int(env.get("TIANJI_OTP_SECONDS", "300")))
+        self.plan_prices_cny = {}
+        for plan, env_name in (("monthly", "TIANJI_PRICE_30D_CNY"), ("yearly", "TIANJI_PRICE_365D_CNY")):
+            raw_price = str(env.get(env_name, PLAN_PRICES_CNY[plan])).strip()
+            match = re.search(r"\d+", raw_price)
+            self.plan_prices_cny[plan] = max(1, int(match.group(0))) if match else PLAN_PRICES_CNY[plan]
+        try:
+            self.owner_phone = normalise_phone(env.get("TIANJI_OWNER_PHONE", DEFAULT_OWNER_PHONE))
+        except AuthError:
+            self.owner_phone = DEFAULT_OWNER_PHONE
         self._clock = clock or time.time
         provider = str(env.get("TIANJI_SMS_PROVIDER", "aliyun")).strip().lower()
         if sms_sender:
@@ -321,6 +338,34 @@ class AuthService:
                 expires INTEGER NOT NULL,
                 last_seen INTEGER NOT NULL
             )"""
+        )
+        connection.execute(
+            """CREATE TABLE IF NOT EXISTS membership_orders (
+                id TEXT PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                plan TEXT NOT NULL,
+                provider TEXT NOT NULL,
+                amount_cny INTEGER NOT NULL,
+                payment_reference TEXT NOT NULL,
+                payer_name TEXT NOT NULL DEFAULT '',
+                status TEXT NOT NULL DEFAULT 'pending',
+                created INTEGER NOT NULL,
+                updated INTEGER NOT NULL,
+                reviewed_by INTEGER,
+                reviewed_at INTEGER NOT NULL DEFAULT 0,
+                review_note TEXT NOT NULL DEFAULT '',
+                FOREIGN KEY(user_id) REFERENCES auth_users(id) ON DELETE CASCADE,
+                FOREIGN KEY(reviewed_by) REFERENCES auth_users(id) ON DELETE SET NULL
+            )"""
+        )
+        connection.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS membership_order_reference_idx ON membership_orders(provider,payment_reference)"
+        )
+        connection.execute(
+            "CREATE INDEX IF NOT EXISTS membership_order_user_idx ON membership_orders(user_id,created DESC)"
+        )
+        connection.execute(
+            "CREATE INDEX IF NOT EXISTS membership_order_status_idx ON membership_orders(status,created ASC)"
         )
         connection.commit()
         return connection
@@ -524,15 +569,18 @@ class AuthService:
         if not user:
             return None
         now = int(self._clock())
-        plan = str(user["plan"] or "free")
-        expires = int(user["plan_expires"] or 0)
-        active = plan in ACTIVE_PLANS and (expires == 0 or expires > now)
+        owner = str(user["phone"] or "") == self.owner_phone
+        plan = "owner" if owner else str(user["plan"] or "free")
+        expires = 0 if owner else int(user["plan_expires"] or 0)
+        active = owner or (plan in ACTIVE_PLANS and expires > now)
         return {
             "id": int(user["id"]),
             "phone_hint": self._phone_hint(user["phone"]),
             "plan": plan if active else "free",
             "active": active,
             "plan_expires": expires if active else 0,
+            "role": "owner" if owner else ("member" if active else "free"),
+            "is_owner": owner,
         }
 
     def _trial(self, trial_token):
@@ -573,6 +621,39 @@ class AuthService:
             "sms_enabled": self.sms_enabled,
         }
 
+    def start_trial(self, session_token, trial_token):
+        user = self._session_user(session_token)
+        account = self._public_account(user)
+        if account:
+            return {"ok": True, "authenticated": True, "account": account, "trial_token": ""}
+        trial = self._trial(trial_token)
+        if trial:
+            return {
+                "ok": True,
+                "authenticated": False,
+                "trial": {"active": True, "expires": int(trial["expires"]), "started": True},
+                "trial_token": "",
+            }
+        if str(trial_token or "").strip():
+            raise AuthError(401, "AUTH_REQUIRED", "免费体验已结束，请使用手机号注册或登录。")
+        now = int(self._clock())
+        token = secrets.token_urlsafe(36)
+        connection = self._connection()
+        try:
+            connection.execute(
+                "INSERT INTO auth_trials(token_hash,created,expires,last_seen) VALUES(?,?,?,?)",
+                (self._token_hash(token), now, now + self.trial_seconds, now),
+            )
+            connection.commit()
+        finally:
+            connection.close()
+        return {
+            "ok": True,
+            "authenticated": False,
+            "trial": {"active": True, "expires": now + self.trial_seconds, "started": True},
+            "trial_token": token,
+        }
+
     def authorise_ai(self, session_token, trial_token):
         user = self._session_user(session_token)
         account = self._public_account(user)
@@ -591,21 +672,154 @@ class AuthService:
             }
         if str(trial_token or "").strip():
             raise AuthError(401, "AUTH_REQUIRED", "免费体验已结束，请使用手机号注册或登录。")
-        now = int(self._clock())
-        token = secrets.token_urlsafe(36)
-        connection = self._connection()
-        try:
-            connection.execute(
-                "INSERT INTO auth_trials(token_hash,created,expires,last_seen) VALUES(?,?,?,?)",
-                (self._token_hash(token), now, now + self.trial_seconds, now),
-            )
-            connection.commit()
-        finally:
-            connection.close()
+        started = self.start_trial(session_token, trial_token)
+        token = started["trial_token"]
+        expires = int(started["trial"]["expires"])
         return {
             "allowed": True,
             "tier": "trial",
             "account": None,
             "trial_token": token,
-            "trial_expires": now + self.trial_seconds,
+            "trial_expires": expires,
         }
+
+    def _require_user(self, session_token):
+        user = self._session_user(session_token)
+        if not user:
+            raise AuthError(401, "AUTH_REQUIRED", "请先使用手机号登录。")
+        return user
+
+    def _require_owner(self, session_token):
+        user = self._require_user(session_token)
+        if str(user["phone"] or "") != self.owner_phone:
+            raise AuthError(403, "OWNER_REQUIRED", "只有站主可以审核会员申请。")
+        return user
+
+    @staticmethod
+    def _public_order(row):
+        if not row:
+            return None
+        return {
+            "id": str(row["id"]),
+            "plan": str(row["plan"]),
+            "provider": str(row["provider"]),
+            "amount_cny": int(row["amount_cny"]),
+            "payment_reference": str(row["payment_reference"]),
+            "payer_name": str(row["payer_name"] or ""),
+            "status": str(row["status"]),
+            "created": int(row["created"]),
+            "updated": int(row["updated"]),
+            "reviewed_at": int(row["reviewed_at"] or 0),
+            "review_note": str(row["review_note"] or ""),
+        }
+
+    def create_membership_order(self, session_token, raw_plan, raw_provider, raw_reference, raw_payer_name=""):
+        user = self._require_user(session_token)
+        account = self._public_account(user)
+        if account.get("is_owner"):
+            raise AuthError(409, "OWNER_ALREADY_ACTIVE", "站主账号已经永久拥有全部权限，无需付款。")
+        plan = str(raw_plan or "").strip().lower()
+        provider = str(raw_provider or "").strip().lower()
+        reference = re.sub(r"\s+", "", str(raw_reference or "").strip())
+        payer_name = str(raw_payer_name or "").strip()[:40]
+        if plan not in PLAN_DAYS:
+            raise AuthError(400, "INVALID_PLAN", "请选择有效的会员方案。")
+        if provider not in PAYMENT_PROVIDERS:
+            raise AuthError(400, "INVALID_PAYMENT_PROVIDER", "请选择微信或支付宝。")
+        if not re.fullmatch(r"[A-Za-z0-9_-]{6,64}", reference):
+            raise AuthError(400, "INVALID_PAYMENT_REFERENCE", "请输入付款详情中的交易单号。")
+        now = int(self._clock())
+        order_id = "DF{}{}".format(time.strftime("%y%m%d", time.gmtime(now)), secrets.token_hex(4).upper())
+        connection = self._connection()
+        try:
+            connection.execute("BEGIN IMMEDIATE")
+            duplicate = connection.execute(
+                "SELECT id FROM membership_orders WHERE provider=? AND payment_reference=?",
+                (provider, reference),
+            ).fetchone()
+            if duplicate:
+                raise AuthError(409, "PAYMENT_ALREADY_SUBMITTED", "这个交易单号已经提交过。")
+            connection.execute(
+                """INSERT INTO membership_orders(
+                    id,user_id,plan,provider,amount_cny,payment_reference,payer_name,status,created,updated
+                ) VALUES(?,?,?,?,?,?,?,'pending',?,?)""",
+                (order_id, int(user["id"]), plan, provider, self.plan_prices_cny[plan], reference, payer_name, now, now),
+            )
+            row = connection.execute("SELECT * FROM membership_orders WHERE id=?", (order_id,)).fetchone()
+            connection.commit()
+        except sqlite3.IntegrityError:
+            connection.rollback()
+            raise AuthError(409, "PAYMENT_ALREADY_SUBMITTED", "这个交易单号已经提交过。")
+        except Exception:
+            connection.rollback()
+            raise
+        finally:
+            connection.close()
+        return {"ok": True, "order": self._public_order(row)}
+
+    def list_membership_orders(self, session_token):
+        user = self._require_user(session_token)
+        owner = str(user["phone"] or "") == self.owner_phone
+        connection = self._connection()
+        try:
+            if owner:
+                rows = connection.execute(
+                    """SELECT o.*, u.phone FROM membership_orders o
+                       JOIN auth_users u ON u.id=o.user_id
+                       ORDER BY CASE o.status WHEN 'pending' THEN 0 ELSE 1 END, o.created DESC LIMIT 100"""
+                ).fetchall()
+            else:
+                rows = connection.execute(
+                    "SELECT * FROM membership_orders WHERE user_id=? ORDER BY created DESC LIMIT 20",
+                    (int(user["id"]),),
+                ).fetchall()
+        finally:
+            connection.close()
+        orders = []
+        for row in rows:
+            item = self._public_order(row)
+            if owner:
+                item["phone_hint"] = self._phone_hint(row["phone"])
+            orders.append(item)
+        return {"ok": True, "owner": owner, "orders": orders}
+
+    def review_membership_order(self, session_token, raw_order_id, approve, raw_note=""):
+        owner = self._require_owner(session_token)
+        order_id = str(raw_order_id or "").strip().upper()
+        note = str(raw_note or "").strip()[:160]
+        if not re.fullmatch(r"DF\d{6}[A-F0-9]{8}", order_id):
+            raise AuthError(400, "INVALID_ORDER", "会员申请编号无效。")
+        now = int(self._clock())
+        connection = self._connection()
+        try:
+            connection.execute("BEGIN IMMEDIATE")
+            order = connection.execute("SELECT * FROM membership_orders WHERE id=?", (order_id,)).fetchone()
+            if not order:
+                raise AuthError(404, "ORDER_NOT_FOUND", "没有找到这项会员申请。")
+            if str(order["status"]) != "pending":
+                raise AuthError(409, "ORDER_ALREADY_REVIEWED", "这项会员申请已经处理。")
+            status = "approved" if approve else "rejected"
+            if approve:
+                target = connection.execute("SELECT * FROM auth_users WHERE id=?", (int(order["user_id"]),)).fetchone()
+                if not target:
+                    raise AuthError(404, "ACCOUNT_NOT_FOUND", "申请账号已经不存在。")
+                current_expires = int(target["plan_expires"] or 0)
+                base = max(now, current_expires if str(target["plan"] or "") in ACTIVE_PLANS else 0)
+                expires = base + PLAN_DAYS[str(order["plan"])] * 86400
+                connection.execute(
+                    "UPDATE auth_users SET plan=?,plan_expires=?,updated=? WHERE id=?",
+                    (str(order["plan"]), expires, now, int(order["user_id"])),
+                )
+            connection.execute(
+                """UPDATE membership_orders SET status=?,updated=?,reviewed_by=?,reviewed_at=?,review_note=?
+                   WHERE id=?""",
+                (status, now, int(owner["id"]), now, note, order_id),
+            )
+            reviewed = connection.execute("SELECT * FROM membership_orders WHERE id=?", (order_id,)).fetchone()
+            connection.commit()
+        except Exception:
+            connection.rollback()
+            raise
+        finally:
+            connection.close()
+        return {"ok": True, "order": self._public_order(reviewed)}

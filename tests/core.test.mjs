@@ -320,13 +320,14 @@ test('报告分享组件覆盖全部结果并优先分享图片文件', () => {
   assert.doesNotMatch(source, /fetch\(|XMLHttpRequest/);
 });
 
-test('会员页简洁列出免费、30 天和 365 天方案并关闭网页外部支付', () => {
+test('会员页列出免费与会员方案并使用登录后人工付款核验', () => {
   const pricing = fs.readFileSync(new URL('../pricing/index.html', import.meta.url), 'utf8');
   const account = fs.readFileSync(new URL('../account/index.html', import.meta.url), 'utf8');
   const auth = fs.readFileSync(new URL('../js/auth.js', import.meta.url), 'utf8');
   const terms = fs.readFileSync(new URL('../terms/index.html', import.meta.url), 'utf8');
   const privacy = fs.readFileSync(new URL('../privacy.html', import.meta.url), 'utf8');
   const billing = fs.readFileSync(new URL('../js/billing.js', import.meta.url), 'utf8');
+  const aiService = fs.readFileSync(new URL('../server/ai_service.py', import.meta.url), 'utf8');
   const caddy = fs.readFileSync(new URL('../deploy/Caddyfile.snippet', import.meta.url), 'utf8');
 
   assert.doesNotMatch(pricing, /id="billing-email"/);
@@ -337,27 +338,33 @@ test('会员页简洁列出免费、30 天和 365 天方案并关闭网页外部
   assert.match(pricing, /data-plan-checkout="yearly" disabled/);
   assert.match(pricing, /¥39/);
   assert.match(pricing, /¥299/);
-  assert.doesNotMatch(pricing, /value="alipay"/);
-  assert.doesNotMatch(pricing, /value="wechat_pay"/);
+  assert.match(pricing, /id="manual-payment"/);
+  assert.match(pricing, /id="manual-order-form"/);
+  assert.match(pricing, /data-payment-provider="wechat"/);
+  assert.match(pricing, /data-payment-provider="alipay"/);
+  assert.match(pricing, /id="owner-billing-panel"/);
   assert.match(pricing, /基础查询功能/);
   assert.match(pricing, /不含详细解读/);
   assert.match(pricing, /不限次数使用/);
   assert.match(pricing, /优先调用/);
   assert.match(pricing, /更详细的讲解/);
-  assert.match(billing, /购买通道准备中/);
+  assert.match(billing, /人工核验通道已开放/);
   assert.doesNotMatch(pricing, /先免费使用，需要更多 AI 时再升级/);
   assert.match(pricing, /data-en=/);
   assert.doesNotMatch(pricing, /CA\$|Stripe/);
-  assert.match(terms, /Apple App 内购买/);
+  assert.match(terms, /人工核验/);
   assert.match(terms, /有效期与退款/);
   assert.doesNotMatch(terms, /Stripe/);
-  assert.match(privacy, /不会取得或保存完整银行卡号、支付密码或安全码/);
-  assert.match(privacy, /Apple 签名交易编号/);
-  assert.match(billing, /\/api\/billing\/checkout/);
-  assert.match(billing, /\/api\/billing\/claim/);
-  assert.match(billing, /\/api\/billing\/portal/);
-  assert.match(billing, /\/api\/billing\/recovery\/verify/);
+  assert.match(privacy, /不会索取或保存支付密码、短信验证码、完整银行卡号或安全码/);
+  assert.match(privacy, /受保护接口/);
+  assert.match(privacy, /365 天/);
+  assert.match(billing, /\/api\/billing\/manual\/order/);
+  assert.match(billing, /\/api\/billing\/manual\/orders/);
+  assert.match(aiService, /\/api\/billing\/manual\/approve/);
+  assert.match(billing, /\/api\/billing\/manual\/qr\/upload/);
   assert.doesNotMatch(billing, /STRIPE_SECRET_KEY|sk_live_|whsec_/);
+  assert.doesNotMatch(pricing, /<img[^>]+src=/i);
+  assert.doesNotMatch(billing, /data:image\/(?:jpeg|png);base64/i);
   assert.match(caddy, /daofainsight\.com/);
   assert.match(caddy, /handle \/api\/billing\/\*/);
   assert.match(caddy, /handle \/api\/auth\/\*/);

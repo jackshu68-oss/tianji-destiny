@@ -2,6 +2,8 @@
 """Small same-origin AI interpretation service for the Tianji static site."""
 
 import hashlib
+import base64
+import binascii
 import json
 import os
 import pathlib
@@ -42,6 +44,7 @@ ALLOWED_HOSTS = {
 MAX_BODY_BYTES = 48 * 1024
 MAX_CONTEXT_CHARS = 12000
 MAX_STORAGE_BODY = 420 * 1024
+MAX_QR_UPLOAD_BODY = 900 * 1024
 CACHE_TTL = 12 * 60 * 60
 JOB_TTL = 15 * 60
 PER_IP_HOUR = int(os.environ.get("TIANJI_AI_PER_IP_HOUR", "20"))
@@ -56,6 +59,7 @@ GLOBAL_REQUESTS = defaultdict(int)
 STORAGE_REQUESTS = defaultdict(list)
 DATA_DIR = pathlib.Path(os.environ.get("TIANJI_DATA_DIR", "/tmp/tianji-ai-data"))
 DATABASE_PATH = DATA_DIR / "private_store.sqlite3"
+PAYMENT_QR_DIR = DATA_DIR / "payment_qr"
 BILLING = BillingService(DATABASE_PATH)
 AUTH = AuthService(DATABASE_PATH)
 CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
@@ -379,6 +383,33 @@ class Handler(BaseHTTPRequestHandler):
             # Mobile browsers may close a response early; background jobs must continue.
             pass
 
+    def send_binary(self, status, body, content_type):
+        self.send_response(status)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "private, no-store")
+        self.send_header("Content-Disposition", "inline")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("X-Robots-Tag", "noindex, nofollow")
+        self.end_headers()
+        try:
+            self.wfile.write(body)
+        except (BrokenPipeError, ConnectionResetError):
+            pass
+
+    @staticmethod
+    def payment_qr_path(provider):
+        name = str(provider or "").strip().lower()
+        return PAYMENT_QR_DIR / "{}.img".format(name) if name in ("wechat", "alipay") else None
+
+    @staticmethod
+    def payment_qr_type(data):
+        if data.startswith(b"\xff\xd8\xff"):
+            return "image/jpeg"
+        if data.startswith(b"\x89PNG\r\n\x1a\n"):
+            return "image/png"
+        return ""
+
     def valid_host(self):
         host = self.headers.get("Host", "").split(":", 1)[0].lower()
         return host in ALLOWED_HOSTS
@@ -457,6 +488,14 @@ class Handler(BaseHTTPRequestHandler):
             headers = []
             if path == "/api/auth/otp/start":
                 result = AUTH.start_otp(body.get("phone"), body.get("purpose"))
+            elif path == "/api/auth/trial/start":
+                result = AUTH.start_trial(self.session_token(), self.trial_token())
+                token = result.pop("trial_token", "")
+                if token:
+                    headers.append((
+                        "Set-Cookie",
+                        self.cookie_header("tianji_trial", token, AUTH.trial_marker_seconds),
+                    ))
             elif path == "/api/auth/register":
                 result = AUTH.register(body.get("phone"), body.get("code"), body.get("password"))
                 token = result.pop("session_token")
@@ -483,36 +522,67 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json(500, {"ok": False, "code": "AUTH_INTERNAL_ERROR", "message": "账户服务暂时不可用，请稍后再试。"})
 
     def handle_billing_get(self, path):
-        if path == "/api/billing/config":
-            self.send_json(200, BILLING.public_config())
-            return
-        if path == "/api/billing/status":
-            result = BILLING.status(self.bearer_token())
-            auth = AUTH.status(self.session_token(), self.trial_token())
-            result["auth"] = auth
-            if not result["entitlement"].get("active"):
-                account = auth.get("account") or {}
-                trial = auth.get("trial") or {}
-                if account.get("active"):
-                    result["entitlement"] = {
-                        "authenticated": True,
-                        "active": True,
-                        "plan": account.get("plan"),
-                        "status": "active",
-                        "current_period_end": account.get("plan_expires", 0),
-                        "phone_hint": account.get("phone_hint", ""),
-                    }
-                elif trial.get("active"):
-                    result["entitlement"].update({
-                        "plan": "trial", "status": "trialing", "trial_expires": trial.get("expires", 0),
-                    })
-                elif auth.get("authenticated"):
-                    result["entitlement"].update({
-                        "authenticated": True, "phone_hint": account.get("phone_hint", ""),
-                    })
-            self.send_json(200, result)
-            return
-        self.send_json(404, {"ok": False, "error": "NOT_FOUND"})
+        try:
+            if path == "/api/billing/config":
+                result = BILLING.public_config()
+                result["manual_review"] = True
+                result["manual_payment_methods"] = [
+                    provider for provider in ("wechat", "alipay")
+                    if self.payment_qr_path(provider).is_file()
+                ]
+                self.send_json(200, result)
+                return
+            if path.startswith("/api/billing/manual/qr/"):
+                AUTH._require_user(self.session_token())
+                provider = path.rsplit("/", 1)[-1]
+                qr_path = self.payment_qr_path(provider)
+                if not qr_path or not qr_path.is_file():
+                    self.send_json(404, {"ok": False, "code": "QR_NOT_CONFIGURED", "message": "这个收款渠道暂未配置。"})
+                    return
+                data = qr_path.read_bytes()
+                content_type = self.payment_qr_type(data)
+                if not content_type:
+                    self.send_json(500, {"ok": False, "code": "QR_INVALID", "message": "收款码文件无效。"})
+                    return
+                self.send_binary(200, data, content_type)
+                return
+            if path == "/api/billing/manual/orders":
+                self.send_json(200, AUTH.list_membership_orders(self.session_token()))
+                return
+            if path == "/api/billing/status":
+                result = BILLING.status(self.bearer_token())
+                auth = AUTH.status(self.session_token(), self.trial_token())
+                result["auth"] = auth
+                if not result["entitlement"].get("active"):
+                    account = auth.get("account") or {}
+                    trial = auth.get("trial") or {}
+                    if account.get("active"):
+                        result["entitlement"] = {
+                            "authenticated": True,
+                            "active": True,
+                            "plan": account.get("plan"),
+                            "status": "active",
+                            "current_period_end": account.get("plan_expires", 0),
+                            "phone_hint": account.get("phone_hint", ""),
+                            "role": account.get("role", "member"),
+                            "is_owner": bool(account.get("is_owner")),
+                        }
+                    elif trial.get("active"):
+                        result["entitlement"].update({
+                            "plan": "trial", "status": "trialing", "trial_expires": trial.get("expires", 0),
+                        })
+                    elif auth.get("authenticated"):
+                        result["entitlement"].update({
+                            "authenticated": True,
+                            "phone_hint": account.get("phone_hint", ""),
+                            "role": account.get("role", "free"),
+                            "is_owner": bool(account.get("is_owner")),
+                        })
+                self.send_json(200, result)
+                return
+            self.send_json(404, {"ok": False, "error": "NOT_FOUND"})
+        except AuthError as error:
+            self.send_auth_error(error)
 
     def handle_billing_post(self, path):
         try:
@@ -524,13 +594,45 @@ class Handler(BaseHTTPRequestHandler):
             if not allow_storage_request(self.client_id()):
                 self.send_json(429, {"ok": False, "message": "本小时账户操作过多，请稍后再试。"})
                 return
-            body = self.read_json_body(16 * 1024)
+            body = self.read_json_body(MAX_QR_UPLOAD_BODY if path == "/api/billing/manual/qr/upload" else 16 * 1024)
             if body is None:
                 return
             if not isinstance(body, dict):
                 raise BillingError(400, "INVALID_BODY", "提交格式无效。")
             if path == "/api/billing/checkout":
                 result = BILLING.create_checkout(body.get("plan"), body.get("email"), body.get("method"))
+            elif path == "/api/billing/manual/qr/upload":
+                AUTH._require_owner(self.session_token())
+                provider = str(body.get("provider") or "").strip().lower()
+                qr_path = self.payment_qr_path(provider)
+                encoded = str(body.get("image_base64") or "")
+                if not qr_path or len(encoded) > 850000:
+                    raise AuthError(400, "INVALID_QR_UPLOAD", "收款码文件无效或过大。")
+                try:
+                    data = base64.b64decode(encoded, validate=True)
+                except (binascii.Error, ValueError):
+                    raise AuthError(400, "INVALID_QR_UPLOAD", "收款码文件无法读取。")
+                if not 1024 <= len(data) <= 600 * 1024 or not self.payment_qr_type(data):
+                    raise AuthError(400, "INVALID_QR_UPLOAD", "只支持不超过 600KB 的 JPEG 或 PNG 收款码。")
+                PAYMENT_QR_DIR.mkdir(parents=True, exist_ok=True)
+                temporary = qr_path.with_suffix(".tmp")
+                temporary.write_bytes(data)
+                os.chmod(temporary, 0o600)
+                os.replace(temporary, qr_path)
+                result = {"ok": True, "provider": provider}
+            elif path == "/api/billing/manual/order":
+                result = AUTH.create_membership_order(
+                    self.session_token(), body.get("plan"), body.get("provider"),
+                    body.get("payment_reference"), body.get("payer_name"),
+                )
+            elif path == "/api/billing/manual/approve":
+                result = AUTH.review_membership_order(
+                    self.session_token(), body.get("order_id"), True, body.get("note"),
+                )
+            elif path == "/api/billing/manual/reject":
+                result = AUTH.review_membership_order(
+                    self.session_token(), body.get("order_id"), False, body.get("note"),
+                )
             elif path == "/api/billing/claim":
                 result = BILLING.claim_checkout(body.get("session_id"), body.get("claim"))
             elif path == "/api/billing/portal":
@@ -545,6 +647,8 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json(200, result)
         except BillingError as error:
             self.send_billing_error(error)
+        except AuthError as error:
+            self.send_auth_error(error)
         except Exception as error:
             print("Billing request failed: {} {}".format(path, type(error).__name__), flush=True)
             self.send_json(500, {"ok": False, "code": "BILLING_INTERNAL_ERROR", "message": "账户服务暂时不可用，请稍后再试。"})
@@ -783,7 +887,7 @@ class Handler(BaseHTTPRequestHandler):
             if access.get("trial_token"):
                 response_headers.append((
                     "Set-Cookie",
-                    self.cookie_header("tianji_trial", access["trial_token"], AUTH.trial_seconds),
+                    self.cookie_header("tianji_trial", access["trial_token"], AUTH.trial_marker_seconds),
                 ))
         module = module_for(title)
         digest = hashlib.sha256(f"{MODEL}\0{module}\0{title}\0{context}".encode("utf-8")).hexdigest()

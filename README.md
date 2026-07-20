@@ -18,7 +18,7 @@
 - DeepSeek 智能详解：服务端密钥、限流、缓存与模块化本地知识增强
 - 匿名限时分享：隐藏姓名、出生日期、城市与完整命盘，支持撤销
 - 双模式存储：默认本机保存；可选 PBKDF2 + AES-GCM 端到端加密同步
-- iOS 会员预备页：30/365 天不自动续费方案，仅预留 Apple App 内购买；网页支付关闭，不会收款
+- 网页会员：手机号账户绑定、30/365 天非自动续费方案、受保护商户收款码与人工到账核验；未配置合规收款码时保持关闭
 
 ## 本地运行
 
@@ -32,7 +32,7 @@ python3 -m http.server 8765 --bind 127.0.0.1
 
 ```bash
 node --test tests/core.test.mjs
-python3 -m unittest tests.test_ai_service tests.test_billing
+python3 -m unittest discover -s tests -p 'test_*.py'
 ```
 
 测试包含梅花经典基准、报数边界、奇门基准盘、出生资料边界、工作台规划层、关系图谱、决策工具、SEO 路由，以及匿名分享和加密同步服务端边界。
@@ -43,7 +43,7 @@ python3 -m unittest tests.test_ai_service tests.test_billing
 DEEPSEEK_API_KEY=... python3 server/ai_service.py
 ```
 
-服务默认只监听 `127.0.0.1:8788`，由同域反向代理转发 `/api/ai/*`、`/api/share/*`、`/api/sync/*` 与 `/api/billing/*`。密钥必须放在服务器环境变量或权限为 `600` 的环境文件里，不能写进网页。匿名分享、同步密文及会员状态使用 SQLite 保存；生产环境由 systemd 的 `StateDirectory=tianji-ai` 提供持久目录。商业配置模板见 [deploy/tianji-ai.env.example](deploy/tianji-ai.env.example)，上线步骤见 [docs/commercial-launch.md](docs/commercial-launch.md)。
+服务默认只监听 `127.0.0.1:8788`，由同域反向代理转发 `/api/ai/*`、`/api/share/*`、`/api/sync/*` 与 `/api/billing/*`。密钥必须放在服务器环境变量或权限为 `600` 的环境文件里，不能写进网页。匿名分享、同步密文、账户、人工核验订单及会员状态使用 SQLite 保存；收款码由站主登录后上传至受保护的服务器状态目录，不进入公开仓库。生产环境由 systemd 的 `StateDirectory=tianji-ai` 提供持久目录。商业配置模板见 [deploy/tianji-ai.env.example](deploy/tianji-ai.env.example)，上线步骤见 [docs/commercial-launch.md](docs/commercial-launch.md)。
 
 ## 私隐边界
 

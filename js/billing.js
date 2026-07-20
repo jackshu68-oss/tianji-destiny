@@ -5,6 +5,8 @@
   const TOKEN_KEY = 'tianji_billing_token_v1';
   const state = {
     config: null,
+    auth: { authenticated: false, account: null, trial: null },
+    orders: [],
     entitlement: { authenticated: false, active: false, plan: 'free', status: 'inactive' }
   };
 
@@ -17,10 +19,28 @@
       trialDetail: '本次免登录体验已开始。',
       pro: '会员已生效',
       proDetail: '方案：{plan} · 账户：{identity}',
+      owner: '站主 · 永久会员',
+      ownerDetail: '站主账号已永久开放全部功能，不会产生会员费用。',
       monthly: '月付',
       yearly: '年付',
       ready: '会员购买通道已开放。',
       disabled: '购买通道准备中。',
+      signInFirst: '请先登录手机号账户，再选择会员方案。',
+      manualReady: '人工核验通道已开放。付款后提交交易单号，核对到账后开通。',
+      qrPending: '收款码尚未配置，暂时不能提交付款。',
+      planSelected: '已选择：{plan} · ¥{amount}',
+      providerRequired: '请选择微信支付或支付宝。',
+      referenceRequired: '请输入付款详情中的交易单号。',
+      confirmationRequired: '请确认已经核对收款人和金额。',
+      submittingOrder: '正在提交付款核验申请…',
+      orderSubmitted: '申请已提交。站主核对到账后会开通会员。',
+      pending: '待核对',
+      approved: '已开通',
+      rejected: '未通过',
+      uploadSuccess: '收款码已安全上传到服务器。',
+      reviewing: '正在处理会员申请…',
+      reviewApproved: '会员申请已批准并写入有效期。',
+      reviewRejected: '会员申请已标记为未通过。',
       buyMonthly: '开通 30 天会员',
       buyYearly: '开通 365 天会员',
       merchantPending: '暂未开放',
@@ -49,10 +69,28 @@
       trialDetail: 'Your no-sign-in trial has started.',
       pro: 'Membership active',
       proDetail: 'Plan: {plan} · Account: {identity}',
+      owner: 'Owner · permanent membership',
+      ownerDetail: 'The owner account has permanent full access and is never charged.',
       monthly: 'Monthly',
       yearly: 'Annual',
       ready: 'Membership purchasing is available.',
       disabled: 'Purchasing is coming soon.',
+      signInFirst: 'Sign in with your phone account before choosing a membership.',
+      manualReady: 'Manual verification is open. Submit the transaction reference after payment; access starts after receipt verification.',
+      qrPending: 'Payment codes are not configured yet.',
+      planSelected: 'Selected: {plan} · ¥{amount}',
+      providerRequired: 'Choose WeChat Pay or Alipay.',
+      referenceRequired: 'Enter the transaction reference from the payment details.',
+      confirmationRequired: 'Confirm that you checked the recipient and amount.',
+      submittingOrder: 'Submitting your payment for verification…',
+      orderSubmitted: 'Request submitted. Membership starts after the owner verifies receipt.',
+      pending: 'Pending review',
+      approved: 'Activated',
+      rejected: 'Not approved',
+      uploadSuccess: 'The payment code was uploaded securely to the server.',
+      reviewing: 'Reviewing membership request…',
+      reviewApproved: 'Membership approved and its expiry has been saved.',
+      reviewRejected: 'The request was marked as not approved.',
       buyMonthly: 'Activate 30-day membership',
       buyYearly: 'Activate 365-day membership',
       merchantPending: 'Coming soon',
@@ -83,6 +121,10 @@
     let value = (COPY[language()] || COPY.zh)[key] || key;
     Object.keys(values || {}).forEach(name => { value = value.replace(`{${name}}`, values[name]); });
     return value;
+  }
+
+  function bilingual(zh, en) {
+    return language() === 'en' ? en : zh;
   }
 
   function readToken() {
@@ -133,8 +175,46 @@
     ]);
     state.config = results[0];
     state.entitlement = results[1].entitlement || state.entitlement;
+    state.auth = results[1].auth || state.auth;
     root.dispatchEvent(new CustomEvent('tianji:billing-changed', { detail: snapshot() }));
     return snapshot();
+  }
+
+  async function createManualOrder(plan, provider, paymentReference, payerName) {
+    const payload = await request('/api/billing/manual/order', {
+      method: 'POST', auth: false,
+      body: { plan, provider, payment_reference: paymentReference, payer_name: payerName }
+    });
+    return payload.order;
+  }
+
+  async function loadManualOrders() {
+    const payload = await request('/api/billing/manual/orders', { auth: false });
+    state.orders = payload.orders || [];
+    return payload;
+  }
+
+  async function reviewManualOrder(orderId, approve, note) {
+    return request(`/api/billing/manual/${approve ? 'approve' : 'reject'}`, {
+      method: 'POST', auth: false, body: { order_id: orderId, note: note || '' }
+    });
+  }
+
+  async function uploadPaymentQr(provider, file) {
+    if (!file || !/^image\/(?:jpeg|png)$/.test(file.type) || file.size > 600 * 1024) {
+      const error = new Error(bilingual('只支持不超过 600KB 的 JPEG 或 PNG 图片。', 'Use a JPEG or PNG image no larger than 600KB.'));
+      error.code = 'INVALID_QR_UPLOAD';
+      throw error;
+    }
+    const imageBase64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || '').split(',', 2)[1] || '');
+      reader.onerror = () => reject(new Error(bilingual('无法读取图片。', 'The image could not be read.')));
+      reader.readAsDataURL(file);
+    });
+    return request('/api/billing/manual/qr/upload', {
+      method: 'POST', auth: false, body: { provider, image_base64: imageBase64 }
+    });
   }
 
   async function startCheckout(plan, email, paymentMethod) {
@@ -172,6 +252,7 @@
   function snapshot() {
     return {
       config: state.config,
+      auth: state.auth,
       entitlement: Object.assign({}, state.entitlement),
       enabled: Boolean(state.config && state.config.enabled),
       isPro: Boolean(state.entitlement && state.entitlement.active)
@@ -207,6 +288,7 @@
   }
 
   function planDisplay(plan) {
+    if (plan === 'owner') return copy('owner');
     return plan === 'yearly' ? copy('currentYearly') : copy('currentMonthly');
   }
 
@@ -215,6 +297,7 @@
     if (!rootNode) return;
     const config = state.config || { enabled: false, recovery_enabled: false, plans: [] };
     const entitlement = state.entitlement || {};
+    const auth = state.auth || {};
     const statusTitle = document.getElementById('billing-status-title');
     const statusDetail = document.getElementById('billing-status-detail');
     const statusBand = document.getElementById('billing-status-band');
@@ -228,7 +311,12 @@
     if (monthlyPrice) monthlyPrice.textContent = (plans.get('monthly') || {}).price || '¥39';
     if (yearlyPrice) yearlyPrice.textContent = (plans.get('yearly') || {}).price || '¥299';
 
-    if (entitlement.active) {
+    if (entitlement.is_owner || entitlement.plan === 'owner') {
+      statusTitle.textContent = copy('owner');
+      statusDetail.textContent = copy('ownerDetail');
+      statusBand.classList.add('is-pro');
+      manageButton.hidden = true;
+    } else if (entitlement.active) {
       statusTitle.textContent = copy('pro');
       statusDetail.textContent = copy('proDetail', { plan: planDisplay(entitlement.plan), identity: entitlement.phone_hint || entitlement.email_hint || '—' });
       statusBand.classList.add('is-pro');
@@ -245,16 +333,32 @@
       manageButton.hidden = true;
     }
 
-    merchantState.textContent = config.enabled ? copy('ready') : copy('disabled');
-    merchantState.classList.toggle('is-ready', Boolean(config.enabled));
+    const methods = Array.isArray(config.manual_payment_methods) ? config.manual_payment_methods : [];
+    const manualReady = Boolean(auth.authenticated && methods.length);
+    merchantState.textContent = entitlement.is_owner
+      ? copy('ownerDetail')
+      : (!auth.authenticated ? copy('signInFirst') : (manualReady ? copy('manualReady') : copy('qrPending')));
+    merchantState.classList.toggle('is-ready', manualReady || Boolean(entitlement.is_owner));
     document.querySelectorAll('[data-plan-checkout]').forEach(button => {
       const plan = button.dataset.planCheckout;
-      button.disabled = !config.enabled;
-      button.textContent = config.enabled
-        ? copy(plan === 'yearly' ? 'buyYearly' : 'buyMonthly')
-        : copy('merchantPending');
+      button.disabled = Boolean(entitlement.is_owner) || !manualReady;
+      button.textContent = copy(plan === 'yearly' ? 'buyYearly' : 'buyMonthly');
     });
     if (recoveryPanel) recoveryPanel.hidden = !config.recovery_enabled;
+
+    const loginRequired = document.getElementById('manual-login-required');
+    const workspace = document.getElementById('manual-payment-workspace');
+    const ownerPanel = document.getElementById('owner-billing-panel');
+    if (loginRequired) loginRequired.hidden = Boolean(auth.authenticated);
+    if (workspace) workspace.hidden = !auth.authenticated || Boolean(entitlement.is_owner);
+    if (ownerPanel) ownerPanel.hidden = !Boolean(entitlement.is_owner);
+    document.querySelectorAll('[data-payment-provider]').forEach(button => {
+      const available = methods.includes(button.dataset.paymentProvider);
+      button.hidden = !available;
+      const image = button.querySelector('[data-payment-qr]');
+      if (image && available && auth.authenticated) image.src = `/api/billing/manual/qr/${button.dataset.paymentProvider}?v=${Date.now()}`;
+      else if (image) image.removeAttribute('src');
+    });
   }
 
   async function handleCheckoutReturn(notice) {
@@ -278,20 +382,98 @@
     }
   }
 
+  function makeNode(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
+
+  function orderStatus(status) {
+    return copy(status === 'approved' ? 'approved' : (status === 'rejected' ? 'rejected' : 'pending'));
+  }
+
+  function orderPlan(order) {
+    return `${planDisplay(order.plan)} · ¥${order.amount_cny} · ${order.provider === 'wechat' ? bilingual('微信支付', 'WeChat Pay') : bilingual('支付宝', 'Alipay')}`;
+  }
+
+  function renderOrderList(container, orders, ownerMode, notice) {
+    if (!container) return;
+    container.replaceChildren();
+    if (!orders.length) {
+      container.appendChild(makeNode('p', 'manual-orders-empty', bilingual('暂时没有开通申请。', 'No activation requests yet.')));
+      return;
+    }
+    orders.forEach(order => {
+      const row = makeNode('article', `manual-order-row is-${order.status}`);
+      const info = makeNode('div', 'manual-order-info');
+      const heading = makeNode('div', 'manual-order-heading');
+      heading.appendChild(makeNode('strong', '', order.id));
+      heading.appendChild(makeNode('span', 'manual-order-status', orderStatus(order.status)));
+      info.appendChild(heading);
+      info.appendChild(makeNode('p', '', orderPlan(order)));
+      info.appendChild(makeNode('small', '', `${ownerMode && order.phone_hint ? `${order.phone_hint} · ` : ''}${bilingual('交易单号', 'Reference')}: ${order.payment_reference}${order.payer_name ? ` · ${order.payer_name}` : ''}`));
+      info.appendChild(makeNode('time', '', new Date(order.created * 1000).toLocaleString(isEnglish() ? 'en-CA' : 'zh-CN')));
+      row.appendChild(info);
+      if (ownerMode && order.status === 'pending') {
+        const actions = makeNode('div', 'manual-review-actions');
+        const approve = makeNode('button', 'approve', bilingual('确认到账并开通', 'Approve and activate'));
+        approve.type = 'button';
+        const reject = makeNode('button', 'reject', bilingual('标记未通过', 'Reject'));
+        reject.type = 'button';
+        const review = async accepted => {
+          approve.disabled = true;
+          reject.disabled = true;
+          setCopiedNotice(notice, 'reviewing', 'loading');
+          try {
+            await reviewManualOrder(order.id, accepted, '站主人工核验');
+            setCopiedNotice(notice, accepted ? 'reviewApproved' : 'reviewRejected', 'success');
+            await refresh();
+            await refreshOrderLists(notice);
+            renderPricing();
+          } catch (error) {
+            displayError(notice, error);
+            approve.disabled = false;
+            reject.disabled = false;
+          }
+        };
+        approve.addEventListener('click', () => review(true));
+        reject.addEventListener('click', () => review(false));
+        actions.append(approve, reject);
+        row.appendChild(actions);
+      }
+      container.appendChild(row);
+    });
+  }
+
+  async function refreshOrderLists(notice) {
+    if (!state.auth || !state.auth.authenticated) return;
+    try {
+      const payload = await loadManualOrders();
+      renderOrderList(document.getElementById('manual-order-list'), payload.owner ? [] : payload.orders, false, notice);
+      renderOrderList(document.getElementById('owner-order-list'), payload.owner ? payload.orders : [], true, notice);
+    } catch (error) {
+      displayError(notice, error);
+    }
+  }
+
   function initPricing() {
     const rootNode = document.querySelector('[data-billing-root]');
     if (!rootNode) return;
     const notice = document.getElementById('billing-notice');
-    const emailInput = document.getElementById('billing-email');
-    const consentInput = document.getElementById('billing-consent');
+    const manualForm = document.getElementById('manual-order-form');
+    const selectedPlanNode = document.getElementById('manual-selected-plan');
+    let selectedPlan = '';
+    let selectedProvider = '';
     const recoveryEmail = document.getElementById('billing-recovery-email');
     const recoveryCode = document.getElementById('billing-recovery-code');
     const recoveryVerify = document.getElementById('billing-recovery-verify');
 
     setCopiedNotice(notice, 'loading', 'loading');
-    refresh().then(() => {
+    refresh().then(async () => {
       renderPricing();
       setNotice(notice, '', '');
+      await refreshOrderLists(notice);
       return handleCheckoutReturn(notice);
     }).catch(error => {
       displayError(notice, error);
@@ -299,28 +481,99 @@
     });
 
     document.querySelectorAll('[data-plan-checkout]').forEach(button => {
-      button.addEventListener('click', async () => {
-        if (!state.config || !state.config.enabled || !emailInput || !consentInput) {
-          setCopiedNotice(notice, 'disabled', 'warning');
+      button.addEventListener('click', () => {
+        if (!state.auth || !state.auth.authenticated) {
+          setCopiedNotice(notice, 'signInFirst', 'warning');
           return;
         }
-        const email = emailInput.value.trim();
-        if (!email || !email.includes('@')) {
-          setCopiedNotice(notice, 'emailRequired', 'error');
-          emailInput.focus();
+        const methods = state.config && Array.isArray(state.config.manual_payment_methods) ? state.config.manual_payment_methods : [];
+        if (!methods.length) {
+          setCopiedNotice(notice, 'qrPending', 'warning');
           return;
         }
-        if (!consentInput.checked) {
-          setCopiedNotice(notice, 'consentRequired', 'error');
-          consentInput.focus();
-          return;
-        }
-        button.disabled = true;
-        setCopiedNotice(notice, 'redirecting', 'loading');
-        try { await startCheckout(button.dataset.planCheckout, email, 'apple_iap'); }
-        catch (error) {
-          displayError(notice, error);
+        selectedPlan = button.dataset.planCheckout;
+        manualForm.elements.plan.value = selectedPlan;
+        selectedPlanNode.textContent = copy('planSelected', {
+          plan: planDisplay(selectedPlan),
+          amount: selectedPlan === 'yearly' ? '299' : '39'
+        });
+        document.getElementById('manual-payment').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        manualForm.querySelector('button[type="submit"]').disabled = !selectedProvider;
+      });
+    });
+
+    document.querySelectorAll('[data-payment-provider]').forEach(button => {
+      button.addEventListener('click', () => {
+        selectedProvider = button.dataset.paymentProvider;
+        manualForm.elements.provider.value = selectedProvider;
+        document.querySelectorAll('[data-payment-provider]').forEach(item => {
+          const active = item === button;
+          item.classList.toggle('active', active);
+          item.setAttribute('aria-pressed', String(active));
+        });
+        manualForm.querySelector('button[type="submit"]').disabled = !selectedPlan;
+      });
+    });
+
+    if (manualForm) manualForm.addEventListener('submit', async event => {
+      event.preventDefault();
+      if (!selectedPlan) {
+        setNotice(notice, bilingual('请先选择 30 天或 365 天方案。', 'Choose the 30-day or 365-day plan first.'), 'error');
+        return;
+      }
+      if (!selectedProvider) {
+        setCopiedNotice(notice, 'providerRequired', 'error');
+        return;
+      }
+      const reference = manualForm.elements['payment-reference'].value.trim();
+      if (reference.length < 6) {
+        setCopiedNotice(notice, 'referenceRequired', 'error');
+        manualForm.elements['payment-reference'].focus();
+        return;
+      }
+      if (!manualForm.elements.confirm.checked) {
+        setCopiedNotice(notice, 'confirmationRequired', 'error');
+        manualForm.elements.confirm.focus();
+        return;
+      }
+      const submit = manualForm.querySelector('button[type="submit"]');
+      submit.disabled = true;
+      setCopiedNotice(notice, 'submittingOrder', 'loading');
+      try {
+        await createManualOrder(selectedPlan, selectedProvider, reference, manualForm.elements['payer-name'].value.trim());
+        manualForm.reset();
+        selectedPlan = '';
+        selectedProvider = '';
+        selectedPlanNode.textContent = bilingual('请先在上方选择方案', 'Choose a plan above');
+        document.querySelectorAll('[data-payment-provider]').forEach(item => {
+          item.classList.remove('active');
+          item.setAttribute('aria-pressed', 'false');
+        });
+        setCopiedNotice(notice, 'orderSubmitted', 'success');
+        await refreshOrderLists(notice);
+      } catch (error) {
+        displayError(notice, error);
+      } finally {
+        submit.disabled = true;
+      }
+    });
+
+    document.querySelectorAll('[data-owner-qr]').forEach(input => {
+      input.addEventListener('change', async () => {
+        const file = input.files && input.files[0];
+        if (!file) return;
+        input.disabled = true;
+        setNotice(notice, bilingual('正在安全上传收款码…', 'Uploading the payment code securely…'), 'loading');
+        try {
+          await uploadPaymentQr(input.dataset.ownerQr, file);
+          setCopiedNotice(notice, 'uploadSuccess', 'success');
+          await refresh();
           renderPricing();
+        } catch (error) {
+          displayError(notice, error);
+        } finally {
+          input.value = '';
+          input.disabled = false;
         }
       });
     });
@@ -354,6 +607,11 @@
 
     document.addEventListener('tianji:language-changed', () => {
       renderPricing();
+      if (state.auth && state.auth.authenticated) {
+        const owner = Boolean(state.entitlement && state.entitlement.is_owner);
+        renderOrderList(document.getElementById('manual-order-list'), owner ? [] : state.orders, false, notice);
+        renderOrderList(document.getElementById('owner-order-list'), owner ? state.orders : [], true, notice);
+      }
       if (notice.dataset.copyKey) setCopiedNotice(notice, notice.dataset.copyKey, notice.dataset.noticeTone);
     });
   }
@@ -367,6 +625,10 @@
     openPortal,
     startRecovery,
     verifyRecovery,
+    createManualOrder,
+    loadManualOrders,
+    reviewManualOrder,
+    uploadPaymentQr,
     clearLocalMembership: () => { writeToken(''); state.entitlement = { authenticated: false, active: false, plan: 'free', status: 'inactive' }; }
   };
 

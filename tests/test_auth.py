@@ -45,7 +45,9 @@ class AuthServiceTests(unittest.TestCase):
             environ={
                 "TIANJI_AUTH_SECRET": "test-secret-that-is-long-enough",
                 "TIANJI_TRIAL_HOURS": "24",
+                "TIANJI_TRIAL_MARKER_DAYS": "365",
                 "TIANJI_AUTH_SESSION_DAYS": "30",
+                "TIANJI_OWNER_PHONE": "13800138000",
             },
             sms_sender=self.sms,
             clock=lambda: self.now[0],
@@ -111,6 +113,12 @@ class AuthServiceTests(unittest.TestCase):
         self.assertTrue(self.service.status("", trial_token)["trial"]["active"])
         self.assertEqual(self.service.authorise_ai("", trial_token)["tier"], "trial")
         self.now[0] += 24 * 3600 + 1
+        expired = self.service.status("", trial_token)["trial"]
+        self.assertTrue(expired["started"])
+        self.assertFalse(expired["active"])
+        with self.assertRaises(AuthError) as context:
+            self.service.start_trial("", trial_token)
+        self.assertEqual(context.exception.code, "AUTH_REQUIRED")
         with self.assertRaises(AuthError) as context:
             self.service.authorise_ai("", trial_token)
         self.assertEqual(context.exception.code, "AUTH_REQUIRED")
@@ -128,6 +136,64 @@ class AuthServiceTests(unittest.TestCase):
         connection.commit()
         connection.close()
         self.assertEqual(self.service.authorise_ai(session, "")["tier"], "pro")
+
+    def test_owner_has_permanent_access_without_membership_charge(self):
+        owner = self.register(phone="13800138000")
+        account = owner["account"]
+        self.assertTrue(account["active"])
+        self.assertTrue(account["is_owner"])
+        self.assertEqual(account["plan"], "owner")
+        self.assertEqual(account["plan_expires"], 0)
+        self.assertEqual(self.service.authorise_ai(owner["session_token"], "")["tier"], "pro")
+        with self.assertRaises(AuthError) as context:
+            self.service.create_membership_order(
+                owner["session_token"], "monthly", "wechat", "202607200001", "站主",
+            )
+        self.assertEqual(context.exception.code, "OWNER_ALREADY_ACTIVE")
+
+    def test_manual_membership_order_requires_owner_review(self):
+        member = self.register()
+        order = self.service.create_membership_order(
+            member["session_token"], "monthly", "wechat", "202607200001", "测试付款人",
+        )["order"]
+        self.assertEqual(order["amount_cny"], 39)
+        self.assertEqual(order["status"], "pending")
+        own_orders = self.service.list_membership_orders(member["session_token"])
+        self.assertFalse(own_orders["owner"])
+        self.assertEqual([item["id"] for item in own_orders["orders"]], [order["id"]])
+        with self.assertRaises(AuthError) as context:
+            self.service.create_membership_order(
+                member["session_token"], "yearly", "wechat", "202607200001", "测试付款人",
+            )
+        self.assertEqual(context.exception.code, "PAYMENT_ALREADY_SUBMITTED")
+        with self.assertRaises(AuthError) as context:
+            self.service.review_membership_order(member["session_token"], order["id"], True)
+        self.assertEqual(context.exception.code, "OWNER_REQUIRED")
+
+        owner = self.register(phone="13800138000")
+        owner_orders = self.service.list_membership_orders(owner["session_token"])
+        self.assertTrue(owner_orders["owner"])
+        self.assertEqual(owner_orders["orders"][0]["phone_hint"], "176****9594")
+        reviewed = self.service.review_membership_order(
+            owner["session_token"], order["id"], True, "已核对到账",
+        )["order"]
+        self.assertEqual(reviewed["status"], "approved")
+        account = self.service.status(member["session_token"], "")["account"]
+        self.assertTrue(account["active"])
+        self.assertEqual(account["plan"], "monthly")
+        self.assertEqual(account["plan_expires"], self.now[0] + 30 * 86400)
+        self.assertEqual(self.service.authorise_ai(member["session_token"], "")["tier"], "pro")
+        with self.assertRaises(AuthError) as context:
+            self.service.review_membership_order(owner["session_token"], order["id"], False)
+        self.assertEqual(context.exception.code, "ORDER_ALREADY_REVIEWED")
+
+        renewal = self.service.create_membership_order(
+            member["session_token"], "yearly", "alipay", "202607200002", "测试付款人",
+        )["order"]
+        self.service.review_membership_order(owner["session_token"], renewal["id"], True)
+        renewed = self.service.status(member["session_token"], "")["account"]
+        self.assertEqual(renewed["plan"], "yearly")
+        self.assertEqual(renewed["plan_expires"], self.now[0] + (30 + 365) * 86400)
 
     def test_password_hash_is_not_plaintext(self):
         result = self.register(password="Password8")

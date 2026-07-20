@@ -14,7 +14,7 @@
     } catch (_error) { document.documentElement.dataset.theme = 'modern'; }
   </script>
   <link rel="icon" href="../assets/daofa-mark.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="../css/style.css?v=20260718-22" />
+  <link rel="stylesheet" href="../css/style.css?v=20260720-1" />
 </head>
 <body class="commercial-page" data-billing-root>
   <canvas id="stars"></canvas>
@@ -84,7 +84,7 @@
             <li data-zh="优先调用" data-en="Priority access">优先调用</li>
             <li data-zh="更详细的讲解" data-en="More detailed explanations">更详细的讲解</li>
           </ul>
-          <button type="button" data-plan-checkout="monthly" disabled data-zh="暂未开放" data-en="Coming soon">暂未开放</button>
+          <button type="button" data-plan-checkout="monthly" disabled data-zh="选择 30 天会员" data-en="Choose 30 days">选择 30 天会员</button>
         </article>
 
         <article class="pricing-plan is-pro featured">
@@ -98,11 +98,81 @@
             <li data-zh="优先调用" data-en="Priority access">优先调用</li>
             <li data-zh="更详细的讲解" data-en="More detailed explanations">更详细的讲解</li>
           </ul>
-          <button type="button" data-plan-checkout="yearly" disabled data-zh="暂未开放" data-en="Coming soon">暂未开放</button>
+          <button type="button" data-plan-checkout="yearly" disabled data-zh="选择 365 天会员" data-en="Choose 365 days">选择 365 天会员</button>
         </article>
       </div>
 
       <p class="billing-legal-links"><a href="../terms/" data-zh="服务条款" data-en="Terms">服务条款</a><a href="../privacy.html" data-zh="隐私政策" data-en="Privacy">隐私政策</a></p>
+    </section>
+
+    <section class="manual-payment" id="manual-payment" aria-labelledby="manual-payment-title">
+      <div class="manual-payment-head">
+        <p class="eyebrow" data-zh="内测人工开通" data-en="PRIVATE BETA REVIEW">内测人工开通</p>
+        <h2 id="manual-payment-title" data-zh="登录、扫码并提交交易单号" data-en="Sign in, scan and submit the transaction reference">登录、扫码并提交交易单号</h2>
+        <p data-zh="付款不会自动开通。站主核对实际到账和交易单号后，服务器才会写入会员期限。" data-en="Payment does not activate access automatically. Membership is granted only after the owner verifies the received amount and transaction reference.">付款不会自动开通。站主核对实际到账和交易单号后，服务器才会写入会员期限。</p>
+      </div>
+
+      <div class="manual-login-required" id="manual-login-required" hidden>
+        <strong data-zh="请先登录手机号账户" data-en="Sign in with your phone account first">请先登录手机号账户</strong>
+        <p data-zh="会员会绑定到当前手机号，付款前必须先登录。" data-en="Membership is tied to your current phone account, so sign-in is required before payment.">会员会绑定到当前手机号，付款前必须先登录。</p>
+        <a href="../account/?next=%2Fpricing%2F" data-zh="登录或注册" data-en="Sign in or register">登录或注册</a>
+      </div>
+
+      <div id="manual-payment-workspace" hidden>
+        <div class="manual-selection" aria-live="polite">
+          <span data-zh="已选方案" data-en="SELECTED PLAN">已选方案</span>
+          <strong id="manual-selected-plan" data-zh="请先在上方选择方案" data-en="Choose a plan above">请先在上方选择方案</strong>
+        </div>
+
+        <div class="payment-qr-grid" id="payment-qr-grid">
+          <button type="button" class="payment-qr-option is-wechat" data-payment-provider="wechat" aria-pressed="false">
+            <span data-zh="微信支付" data-en="WeChat Pay">微信支付</span>
+            <span class="payment-qr-frame"><img alt="微信支付收款码" data-payment-qr="wechat" /></span>
+            <small data-zh="手机可长按保存后，在微信扫一扫中从相册识别" data-en="On mobile, save the image and scan it from your WeChat album">手机可长按保存后，在微信扫一扫中从相册识别</small>
+          </button>
+          <button type="button" class="payment-qr-option is-alipay" data-payment-provider="alipay" aria-pressed="false">
+            <span data-zh="支付宝" data-en="Alipay">支付宝</span>
+            <span class="payment-qr-frame"><img alt="支付宝收款码" data-payment-qr="alipay" /></span>
+            <small data-zh="手机可长按保存后，在支付宝扫一扫中从相册识别" data-en="On mobile, save the image and scan it from your Alipay album">手机可长按保存后，在支付宝扫一扫中从相册识别</small>
+          </button>
+        </div>
+
+        <form class="manual-order-form" id="manual-order-form" novalidate>
+          <input type="hidden" name="plan" />
+          <input type="hidden" name="provider" />
+          <label>
+            <span data-zh="付款交易单号" data-en="Payment transaction reference">付款交易单号</span>
+            <input name="payment-reference" type="text" inputmode="text" minlength="6" maxlength="64" autocomplete="off" required placeholder="从微信或支付宝账单详情复制" />
+          </label>
+          <label>
+            <span data-zh="付款人昵称（可选）" data-en="Payer nickname (optional)">付款人昵称（可选）</span>
+            <input name="payer-name" type="text" maxlength="40" autocomplete="off" placeholder="用于帮助核对到账" />
+          </label>
+          <label class="manual-order-confirm">
+            <input name="confirm" type="checkbox" required />
+            <span data-zh="我已核对收款人和金额，并理解会员只会在人工核验后开通。" data-en="I checked the recipient and amount and understand that access starts only after manual verification.">我已核对收款人和金额，并理解会员只会在人工核验后开通。</span>
+          </label>
+          <button type="submit" id="manual-order-submit" disabled data-zh="提交付款核验" data-en="Submit for verification">提交付款核验</button>
+        </form>
+
+        <section class="manual-order-history" aria-labelledby="manual-order-history-title">
+          <h3 id="manual-order-history-title" data-zh="我的开通申请" data-en="My activation requests">我的开通申请</h3>
+          <div id="manual-order-list"></div>
+        </section>
+      </div>
+    </section>
+
+    <section class="owner-billing-panel" id="owner-billing-panel" hidden aria-labelledby="owner-billing-title">
+      <div>
+        <p class="eyebrow" data-zh="站主控制台" data-en="OWNER CONSOLE">站主控制台</p>
+        <h2 id="owner-billing-title" data-zh="收款码与会员审核" data-en="Payment codes and membership review">收款码与会员审核</h2>
+        <p data-zh="上传文件只保存在服务器受保护目录，不进入公开网站代码仓库。" data-en="Uploads stay in the server's protected data directory and are not committed to the public website repository.">上传文件只保存在服务器受保护目录，不进入公开网站代码仓库。</p>
+      </div>
+      <div class="owner-qr-upload">
+        <label><span data-zh="微信收款码" data-en="WeChat payment code">微信收款码</span><input type="file" accept="image/jpeg,image/png" data-owner-qr="wechat" /></label>
+        <label><span data-zh="支付宝收款码" data-en="Alipay payment code">支付宝收款码</span><input type="file" accept="image/jpeg,image/png" data-owner-qr="alipay" /></label>
+      </div>
+      <div class="owner-order-list" id="owner-order-list"></div>
     </section>
 
     <section class="commercial-boundary">
@@ -117,8 +187,8 @@
   </footer>
 
   <script src="../js/ui.js?v=20260718-17"></script>
-  <script src="../js/auth.js?v=20260718-22"></script>
-  <script src="../js/billing.js?v=20260718-22"></script>
+  <script src="../js/auth.js?v=20260720-1"></script>
+  <script src="../js/billing.js?v=20260720-1"></script>
   <script src="../js/ambient.js?v=20260718-14"></script>
 </body>
 </html>
