@@ -249,7 +249,7 @@ test('页面包含新增排盘、现代摘要、隐私入口和本地脚本', ()
   assert.match(html, /js\/report-share\.js/);
   assert.match(html, /保存完整报告图片/);
   assert.match(html, /微信分享完整报告/);
-  assert.match(html, /mailto:jackshu68@gmail\.com/);
+  assert.match(html, /href="support\/"/);
   assert.doesNotMatch(html, /class="workspace-mode"|class="mode-btn/);
   const ids = [...html.matchAll(/\sid="([^"]+)"/g)].map(match => match[1]);
   assert.deepEqual(ids.filter((id, index) => ids.indexOf(id) !== index), []);
@@ -285,10 +285,10 @@ test('紫微十二宫支持键盘与点击打开宫位详情', () => {
 });
 
 test('SEO、匿名分享与私隐文件齐备', () => {
-  const routes = ['about', 'auspicious-date', 'bazi', 'compatibility', 'daily', 'guide', 'privacy', 'ziwei'];
+  const routes = ['about', 'auspicious-date', 'bazi', 'compatibility', 'daily', 'guide', 'privacy', 'support', 'ziwei'];
   for (const route of routes) {
     const html = fs.readFileSync(new URL(`../${route}/index.html`, import.meta.url), 'utf8');
-    assert.match(html, /<title>.+<\/title>/);
+    assert.match(html, /<title[^>]*>.+<\/title>/);
     assert.match(html, /canonical|refresh/);
   }
   const shared = fs.readFileSync(new URL('../share.html', import.meta.url), 'utf8');
@@ -298,6 +298,11 @@ test('SEO、匿名分享与私隐文件齐备', () => {
   assert.match(shared, /report-share\.js/);
   assert.match(fs.readFileSync(new URL('../robots.txt', import.meta.url), 'utf8'), /sitemap\.xml/i);
   assert.match(fs.readFileSync(new URL('../sitemap.xml', import.meta.url), 'utf8'), /<urlset/);
+  const support = fs.readFileSync(new URL('../support/index.html', import.meta.url), 'utf8');
+  assert.match(support, /jackshu68@gmail\.com/);
+  assert.match(support, /JACKSHU16888/);
+  assert.match(support, /付款截图/);
+  assert.match(support, /js\/support\.js/);
   const privacy = fs.readFileSync(new URL('../privacy.html', import.meta.url), 'utf8');
   assert.match(privacy, /AES-GCM/);
   assert.match(privacy, /180 天/);
@@ -317,6 +322,7 @@ test('报告分享组件覆盖全部结果并优先分享图片文件', () => {
   assert.match(source, /files:\s*\[file\]/);
   assert.match(source, /MicroMessenger/);
   assert.match(source, /jackshu68@gmail\.com/);
+  assert.match(source, /\/support\//);
   assert.doesNotMatch(source, /fetch\(|XMLHttpRequest/);
 });
 
@@ -343,6 +349,10 @@ test('会员页列出免费与会员方案并使用登录后人工付款核验',
   assert.match(pricing, /data-payment-provider="wechat"/);
   assert.match(pricing, /data-payment-provider="alipay"/);
   assert.match(pricing, /id="owner-billing-panel"/);
+  assert.match(pricing, /id="owner-grant-form"/);
+  assert.match(pricing, /data-copy-support-wechat/);
+  assert.match(pricing, /JACKSHU16888/);
+  assert.match(pricing, /付款截图/);
   assert.match(pricing, /基础查询功能/);
   assert.match(pricing, /不含详细解读/);
   assert.match(pricing, /不限次数使用/);
@@ -360,7 +370,9 @@ test('会员页列出免费与会员方案并使用登录后人工付款核验',
   assert.match(privacy, /365 天/);
   assert.match(billing, /\/api\/billing\/manual\/order/);
   assert.match(billing, /\/api\/billing\/manual\/orders/);
+  assert.match(billing, /\/api\/billing\/manual\/grant/);
   assert.match(aiService, /\/api\/billing\/manual\/approve/);
+  assert.match(aiService, /\/api\/billing\/manual\/grant/);
   assert.match(billing, /\/api\/billing\/manual\/qr\/upload/);
   assert.doesNotMatch(billing, /STRIPE_SECRET_KEY|sk_live_|whsec_/);
   assert.doesNotMatch(pricing, /<img[^>]+src=/i);

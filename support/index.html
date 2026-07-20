@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title data-zh="客服联系｜道法自然" data-en="Support | DAOFA">客服联系｜道法自然</title>
+  <meta name="description" data-content-zh="通过客服邮箱或微信提交道法自然会员付款截图，并由人工核验开通。" data-content-en="Send a DAOFA membership payment screenshot by support email or WeChat for manual activation." content="通过客服邮箱或微信提交道法自然会员付款截图，并由人工核验开通。" />
+  <meta name="theme-color" content="#f4f0e7" />
+  <link rel="canonical" href="https://daofainsight.com/support/" />
+  <script>
+    try {
+      document.documentElement.dataset.theme = localStorage.getItem('tianji_theme_v1') === 'classic' ? 'classic' : 'modern';
+      document.documentElement.lang = localStorage.getItem('tianji_language_v1') === 'en' ? 'en-CA' : 'zh-CN';
+    } catch (_error) { document.documentElement.dataset.theme = 'modern'; }
+  </script>
+  <link rel="icon" href="../assets/daofa-mark.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="../css/style.css?v=20260720-2" />
+</head>
+<body class="commercial-page support-page">
+  <canvas id="stars"></canvas>
+  <nav class="nav">
+    <div class="nav-inner">
+      <a class="brand brand-link" href="../">道法自然<span class="brand-en">DAOFA</span></a>
+      <div class="nav-actions">
+        <a class="commercial-home-link" href="../pricing/" data-zh="会员中心" data-en="Membership">会员中心</a>
+        <a class="commercial-home-link" href="../account/" data-zh="登录" data-en="Sign in">登录</a>
+        <div class="preference-controls" aria-label="界面偏好">
+          <button id="language-toggle" class="preference-toggle language-toggle" type="button" aria-label="Switch to English" title="Switch to English">EN</button>
+          <button id="theme-toggle" class="preference-toggle theme-toggle" type="button" aria-label="切换到经典黑金风格" title="切换到经典黑金风格">◐</button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="commercial-main support-main">
+    <header class="commercial-header">
+      <p class="eyebrow" data-zh="人工客服" data-en="SUPPORT">人工客服</p>
+      <h1 data-zh="付款截图与会员开通" data-en="Payment proof and activation">付款截图与会员开通</h1>
+      <p data-zh="付款不会自动开通。客服核对实际到账和账号资料后，会人工写入会员期限。" data-en="Payment does not activate access automatically. Support verifies receipt and account details before granting access manually.">付款不会自动开通。客服核对实际到账和账号资料后，会人工写入会员期限。</p>
+    </header>
+
+    <section class="support-process" aria-labelledby="support-process-title">
+      <div>
+        <p class="eyebrow" data-zh="办理步骤" data-en="PROCESS">办理步骤</p>
+        <h2 id="support-process-title" data-zh="发送这四项资料" data-en="Send these four items">发送这四项资料</h2>
+      </div>
+      <ol>
+        <li><b>01</b><span data-zh="清楚的付款截图" data-en="A clear payment screenshot">清楚的付款截图</span></li>
+        <li><b>02</b><span data-zh="注册手机号后四位" data-en="Last four digits of the registered phone">注册手机号后四位</span></li>
+        <li><b>03</b><span data-zh="30 天或 365 天方案" data-en="30-day or 365-day plan">30 天或 365 天方案</span></li>
+        <li><b>04</b><span data-zh="付款交易单号" data-en="Payment transaction reference">付款交易单号</span></li>
+      </ol>
+    </section>
+
+    <section class="support-channels" aria-labelledby="support-channels-title">
+      <div class="support-channel-heading">
+        <p class="eyebrow" data-zh="联系方式" data-en="CONTACT">联系方式</p>
+        <h2 id="support-channels-title" data-zh="任选邮箱或微信" data-en="Choose email or WeChat">任选邮箱或微信</h2>
+      </div>
+      <article class="support-channel">
+        <span data-zh="客服邮箱" data-en="SUPPORT EMAIL">客服邮箱</span>
+        <strong>jackshu68@gmail.com</strong>
+        <p data-zh="打开邮件后，请手动添加付款截图附件。" data-en="After opening your email app, attach the payment screenshot manually.">打开邮件后，请手动添加付款截图附件。</p>
+        <a class="support-primary-action" href="mailto:jackshu68@gmail.com" data-support-email data-zh="发送付款资料" data-en="Send payment details">发送付款资料</a>
+      </article>
+      <article class="support-channel is-wechat">
+        <span data-zh="客服微信" data-en="SUPPORT WECHAT">客服微信</span>
+        <strong>JACKSHU16888</strong>
+        <p data-zh="在微信添加朋友中粘贴微信号，再发送付款截图和账号资料。" data-en="Paste this ID in Add Contacts, then send the screenshot and account details.">在微信添加朋友中粘贴微信号，再发送付款截图和账号资料。</p>
+        <button class="support-primary-action" type="button" data-copy-support-wechat data-zh="复制微信号" data-en="Copy WeChat ID">复制微信号</button>
+      </article>
+    </section>
+
+    <section class="support-safety">
+      <h2 data-zh="不要发送敏感凭证" data-en="Never send sensitive credentials">不要发送敏感凭证</h2>
+      <p data-zh="客服不会索取登录密码、短信验证码、支付密码、银行卡号或身份证。付款截图只通过你选择的邮箱或微信发送，不会由本网站自动上传。" data-en="Support never asks for login passwords, SMS codes, payment passwords, card numbers or identity documents. Your screenshot is sent only through the email or WeChat app you choose and is not automatically uploaded by this website.">客服不会索取登录密码、短信验证码、支付密码、银行卡号或身份证。付款截图只通过你选择的邮箱或微信发送，不会由本网站自动上传。</p>
+    </section>
+  </main>
+
+  <footer class="commercial-footer">
+    <span>© 道法自然 DAOFA</span>
+    <a href="../terms/" data-zh="服务与会员条款" data-en="Service & Membership Terms">服务与会员条款</a>
+  </footer>
+
+  <script src="../js/ui.js?v=20260718-17"></script>
+  <script src="../js/support.js?v=20260720-2"></script>
+  <script src="../js/ambient.js?v=20260718-14"></script>
+</body>
+</html>

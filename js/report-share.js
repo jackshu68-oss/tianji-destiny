@@ -385,8 +385,8 @@
     if (document.querySelector('.support-mail-button')) return;
     const link = document.createElement('a');
     link.className = 'support-mail-button';
-    link.href = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('道法自然客服咨询')}`;
-    link.title = phrase(`客服邮箱：${SUPPORT_EMAIL}`, `Support email: ${SUPPORT_EMAIL}`);
+    link.href = new URL('/support/', root.location.origin).href;
+    link.title = phrase('客服联系', 'Support');
     link.setAttribute('aria-label', link.title);
     link.innerHTML = `<span aria-hidden="true">@</span><b>${phrase('客服', 'Support')}</b>`;
     document.body.appendChild(link);
@@ -405,7 +405,7 @@
     document.querySelectorAll('.report-share-actions').forEach(updateActionCopy);
     const support = document.querySelector('.support-mail-button');
     if (support) {
-      support.title = phrase(`客服邮箱：${SUPPORT_EMAIL}`, `Support email: ${SUPPORT_EMAIL}`);
+      support.title = phrase('客服联系', 'Support');
       support.setAttribute('aria-label', support.title);
       setText(support.querySelector('b'), phrase('客服', 'Support'));
     }
@@ -419,7 +419,7 @@
     document.addEventListener('tianji:language-changed', () => { refreshCopy(); scheduleScan(); });
   }
 
-  root.TianjiReportShare = { attach, save: saveImage, share: shareImage, supportEmail: SUPPORT_EMAIL };
+  root.TianjiReportShare = { attach, save: saveImage, share: shareImage, supportEmail: SUPPORT_EMAIL, supportPage: '/support/' };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
 })(window);

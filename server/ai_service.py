@@ -633,6 +633,10 @@ class Handler(BaseHTTPRequestHandler):
                 result = AUTH.review_membership_order(
                     self.session_token(), body.get("order_id"), False, body.get("note"),
                 )
+            elif path == "/api/billing/manual/grant":
+                result = AUTH.grant_membership(
+                    self.session_token(), body.get("phone"), body.get("plan"), body.get("note"),
+                )
             elif path == "/api/billing/claim":
                 result = BILLING.claim_checkout(body.get("session_id"), body.get("claim"))
             elif path == "/api/billing/portal":

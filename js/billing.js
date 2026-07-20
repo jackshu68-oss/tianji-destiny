@@ -7,6 +7,7 @@
     config: null,
     auth: { authenticated: false, account: null, trial: null },
     orders: [],
+    grants: [],
     entitlement: { authenticated: false, active: false, plan: 'free', status: 'inactive' }
   };
 
@@ -26,8 +27,8 @@
       ready: '会员购买通道已开放。',
       disabled: '购买通道准备中。',
       signInFirst: '请先登录手机号账户，再选择会员方案。',
-      manualReady: '人工核验通道已开放。付款后提交交易单号，核对到账后开通。',
-      qrPending: '收款码尚未配置，暂时不能提交付款。',
+      manualReady: '人工核验通道已开放。付款后发送截图并提交交易单号，核对到账后开通。',
+      qrPending: '网站收款码尚未配置，请联系人工客服获取当前付款方式。',
       planSelected: '已选择：{plan} · ¥{amount}',
       providerRequired: '请选择微信支付或支付宝。',
       referenceRequired: '请输入付款详情中的交易单号。',
@@ -41,6 +42,8 @@
       reviewing: '正在处理会员申请…',
       reviewApproved: '会员申请已批准并写入有效期。',
       reviewRejected: '会员申请已标记为未通过。',
+      granting: '正在按手机号开通会员…',
+      grantSuccess: '会员已开通并写入账号有效期。',
       buyMonthly: '开通 30 天会员',
       buyYearly: '开通 365 天会员',
       merchantPending: '暂未开放',
@@ -76,8 +79,8 @@
       ready: 'Membership purchasing is available.',
       disabled: 'Purchasing is coming soon.',
       signInFirst: 'Sign in with your phone account before choosing a membership.',
-      manualReady: 'Manual verification is open. Submit the transaction reference after payment; access starts after receipt verification.',
-      qrPending: 'Payment codes are not configured yet.',
+      manualReady: 'Manual verification is open. Send the screenshot and submit the transaction reference after payment; access starts after receipt verification.',
+      qrPending: 'Website payment codes are not configured. Contact support for the current payment method.',
       planSelected: 'Selected: {plan} · ¥{amount}',
       providerRequired: 'Choose WeChat Pay or Alipay.',
       referenceRequired: 'Enter the transaction reference from the payment details.',
@@ -91,6 +94,8 @@
       reviewing: 'Reviewing membership request…',
       reviewApproved: 'Membership approved and its expiry has been saved.',
       reviewRejected: 'The request was marked as not approved.',
+      granting: 'Granting membership to the phone account…',
+      grantSuccess: 'Membership was granted and saved to the account.',
       buyMonthly: 'Activate 30-day membership',
       buyYearly: 'Activate 365-day membership',
       merchantPending: 'Coming soon',
@@ -191,12 +196,19 @@
   async function loadManualOrders() {
     const payload = await request('/api/billing/manual/orders', { auth: false });
     state.orders = payload.orders || [];
+    state.grants = payload.grants || [];
     return payload;
   }
 
   async function reviewManualOrder(orderId, approve, note) {
     return request(`/api/billing/manual/${approve ? 'approve' : 'reject'}`, {
       method: 'POST', auth: false, body: { order_id: orderId, note: note || '' }
+    });
+  }
+
+  async function grantMembership(phone, plan, note) {
+    return request('/api/billing/manual/grant', {
+      method: 'POST', auth: false, body: { phone, plan, note: note || '' }
     });
   }
 
@@ -446,12 +458,35 @@
     });
   }
 
+  function renderGrantList(container, grants) {
+    if (!container) return;
+    container.replaceChildren();
+    if (!grants.length) {
+      container.appendChild(makeNode('p', 'manual-orders-empty', bilingual('暂时没有直接开通记录。', 'No direct grants yet.')));
+      return;
+    }
+    grants.forEach(grant => {
+      const row = makeNode('article', 'manual-order-row is-approved');
+      const info = makeNode('div', 'manual-order-info');
+      const heading = makeNode('div', 'manual-order-heading');
+      heading.appendChild(makeNode('strong', '', grant.phone_hint || grant.id));
+      heading.appendChild(makeNode('span', 'manual-order-status', bilingual('已开通', 'Activated')));
+      info.appendChild(heading);
+      info.appendChild(makeNode('p', '', `${planDisplay(grant.plan)} · ${bilingual('到期', 'Expires')} ${new Date(grant.new_expires * 1000).toLocaleDateString(isEnglish() ? 'en-CA' : 'zh-CN')}`));
+      if (grant.note) info.appendChild(makeNode('small', '', grant.note));
+      info.appendChild(makeNode('time', '', new Date(grant.created * 1000).toLocaleString(isEnglish() ? 'en-CA' : 'zh-CN')));
+      row.appendChild(info);
+      container.appendChild(row);
+    });
+  }
+
   async function refreshOrderLists(notice) {
     if (!state.auth || !state.auth.authenticated) return;
     try {
       const payload = await loadManualOrders();
       renderOrderList(document.getElementById('manual-order-list'), payload.owner ? [] : payload.orders, false, notice);
       renderOrderList(document.getElementById('owner-order-list'), payload.owner ? payload.orders : [], true, notice);
+      renderGrantList(document.getElementById('owner-grant-list'), payload.owner ? payload.grants || [] : []);
     } catch (error) {
       displayError(notice, error);
     }
@@ -463,6 +498,7 @@
     const notice = document.getElementById('billing-notice');
     const manualForm = document.getElementById('manual-order-form');
     const selectedPlanNode = document.getElementById('manual-selected-plan');
+    const ownerGrantForm = document.getElementById('owner-grant-form');
     let selectedPlan = '';
     let selectedProvider = '';
     const recoveryEmail = document.getElementById('billing-recovery-email');
@@ -578,6 +614,30 @@
       });
     });
 
+    if (ownerGrantForm) ownerGrantForm.addEventListener('submit', async event => {
+      event.preventDefault();
+      const phone = ownerGrantForm.elements.phone.value.trim();
+      const plan = ownerGrantForm.elements.plan.value;
+      if (!/^\+?(?:86)?[\d\s-]{11,18}$/.test(phone)) {
+        setNotice(notice, bilingual('请输入客户注册时使用的完整手机号码。', 'Enter the full phone number used for registration.'), 'error');
+        ownerGrantForm.elements.phone.focus();
+        return;
+      }
+      const submit = ownerGrantForm.querySelector('button[type="submit"]');
+      submit.disabled = true;
+      setCopiedNotice(notice, 'granting', 'loading');
+      try {
+        await grantMembership(phone, plan, ownerGrantForm.elements.note.value.trim());
+        ownerGrantForm.reset();
+        setCopiedNotice(notice, 'grantSuccess', 'success');
+        await refreshOrderLists(notice);
+      } catch (error) {
+        displayError(notice, error);
+      } finally {
+        submit.disabled = false;
+      }
+    });
+
     const manageButton = document.getElementById('billing-manage');
     if (manageButton) manageButton.addEventListener('click', async () => {
       setCopiedNotice(notice, 'managing', 'loading');
@@ -611,6 +671,7 @@
         const owner = Boolean(state.entitlement && state.entitlement.is_owner);
         renderOrderList(document.getElementById('manual-order-list'), owner ? [] : state.orders, false, notice);
         renderOrderList(document.getElementById('owner-order-list'), owner ? state.orders : [], true, notice);
+        renderGrantList(document.getElementById('owner-grant-list'), owner ? state.grants : []);
       }
       if (notice.dataset.copyKey) setCopiedNotice(notice, notice.dataset.copyKey, notice.dataset.noticeTone);
     });
@@ -628,6 +689,7 @@
     createManualOrder,
     loadManualOrders,
     reviewManualOrder,
+    grantMembership,
     uploadPaymentQr,
     clearLocalMembership: () => { writeToken(''); state.entitlement = { authenticated: false, active: false, plan: 'free', status: 'inactive' }; }
   };

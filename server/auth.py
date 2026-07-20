@@ -367,6 +367,25 @@ class AuthService:
         connection.execute(
             "CREATE INDEX IF NOT EXISTS membership_order_status_idx ON membership_orders(status,created ASC)"
         )
+        connection.execute(
+            """CREATE TABLE IF NOT EXISTS membership_grants (
+                id TEXT PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                plan TEXT NOT NULL,
+                days INTEGER NOT NULL,
+                source TEXT NOT NULL DEFAULT 'support',
+                note TEXT NOT NULL DEFAULT '',
+                previous_expires INTEGER NOT NULL DEFAULT 0,
+                new_expires INTEGER NOT NULL,
+                created INTEGER NOT NULL,
+                granted_by INTEGER NOT NULL,
+                FOREIGN KEY(user_id) REFERENCES auth_users(id) ON DELETE CASCADE,
+                FOREIGN KEY(granted_by) REFERENCES auth_users(id) ON DELETE RESTRICT
+            )"""
+        )
+        connection.execute(
+            "CREATE INDEX IF NOT EXISTS membership_grant_user_idx ON membership_grants(user_id,created DESC)"
+        )
         connection.commit()
         return connection
 
@@ -713,6 +732,23 @@ class AuthService:
             "review_note": str(row["review_note"] or ""),
         }
 
+    def _public_grant(self, row, include_phone=False):
+        if not row:
+            return None
+        grant = {
+            "id": str(row["id"]),
+            "plan": str(row["plan"]),
+            "days": int(row["days"]),
+            "source": str(row["source"] or "support"),
+            "note": str(row["note"] or ""),
+            "previous_expires": int(row["previous_expires"] or 0),
+            "new_expires": int(row["new_expires"] or 0),
+            "created": int(row["created"]),
+        }
+        if include_phone and "phone" in row.keys():
+            grant["phone_hint"] = self._phone_hint(row["phone"])
+        return grant
+
     def create_membership_order(self, session_token, raw_plan, raw_provider, raw_reference, raw_payer_name=""):
         user = self._require_user(session_token)
         account = self._public_account(user)
@@ -768,11 +804,17 @@ class AuthService:
                        JOIN auth_users u ON u.id=o.user_id
                        ORDER BY CASE o.status WHEN 'pending' THEN 0 ELSE 1 END, o.created DESC LIMIT 100"""
                 ).fetchall()
+                grant_rows = connection.execute(
+                    """SELECT g.*, u.phone FROM membership_grants g
+                       JOIN auth_users u ON u.id=g.user_id
+                       ORDER BY g.created DESC, g.rowid DESC LIMIT 50"""
+                ).fetchall()
             else:
                 rows = connection.execute(
                     "SELECT * FROM membership_orders WHERE user_id=? ORDER BY created DESC LIMIT 20",
                     (int(user["id"]),),
                 ).fetchall()
+                grant_rows = []
         finally:
             connection.close()
         orders = []
@@ -781,7 +823,60 @@ class AuthService:
             if owner:
                 item["phone_hint"] = self._phone_hint(row["phone"])
             orders.append(item)
-        return {"ok": True, "owner": owner, "orders": orders}
+        grants = [self._public_grant(row, include_phone=True) for row in grant_rows]
+        return {"ok": True, "owner": owner, "orders": orders, "grants": grants}
+
+    def grant_membership(self, session_token, raw_phone, raw_plan, raw_note=""):
+        owner = self._require_owner(session_token)
+        phone = normalise_phone(raw_phone)
+        plan = str(raw_plan or "").strip().lower()
+        note = str(raw_note or "").strip()[:160]
+        if plan not in PLAN_DAYS:
+            raise AuthError(400, "INVALID_PLAN", "请选择 30 天或 365 天会员。")
+        if phone == self.owner_phone:
+            raise AuthError(409, "OWNER_ALREADY_ACTIVE", "站主账号已经永久拥有全部权限。")
+        now = int(self._clock())
+        grant_id = "DFG{}{}".format(time.strftime("%y%m%d", time.gmtime(now)), secrets.token_hex(4).upper())
+        connection = self._connection()
+        try:
+            connection.execute("BEGIN IMMEDIATE")
+            target = connection.execute("SELECT * FROM auth_users WHERE phone=?", (phone,)).fetchone()
+            if not target:
+                raise AuthError(404, "ACCOUNT_NOT_FOUND", "没有找到这个手机号对应的已注册账号。")
+            previous_expires = int(target["plan_expires"] or 0)
+            base = max(now, previous_expires if str(target["plan"] or "") in ACTIVE_PLANS else 0)
+            days = PLAN_DAYS[plan]
+            new_expires = base + days * 86400
+            connection.execute(
+                "UPDATE auth_users SET plan=?,plan_expires=?,updated=? WHERE id=?",
+                (plan, new_expires, now, int(target["id"])),
+            )
+            connection.execute(
+                """INSERT INTO membership_grants(
+                    id,user_id,plan,days,source,note,previous_expires,new_expires,created,granted_by
+                ) VALUES(?,?,?,?,?,?,?,?,?,?)""",
+                (
+                    grant_id, int(target["id"]), plan, days, "support", note,
+                    previous_expires, new_expires, now, int(owner["id"]),
+                ),
+            )
+            updated = connection.execute("SELECT * FROM auth_users WHERE id=?", (int(target["id"]),)).fetchone()
+            grant_row = connection.execute(
+                """SELECT g.*, u.phone FROM membership_grants g
+                   JOIN auth_users u ON u.id=g.user_id WHERE g.id=?""",
+                (grant_id,),
+            ).fetchone()
+            connection.commit()
+        except Exception:
+            connection.rollback()
+            raise
+        finally:
+            connection.close()
+        return {
+            "ok": True,
+            "account": self._public_account(updated),
+            "grant": self._public_grant(grant_row, include_phone=True),
+        }
 
     def review_membership_order(self, session_token, raw_order_id, approve, raw_note=""):
         owner = self._require_owner(session_token)

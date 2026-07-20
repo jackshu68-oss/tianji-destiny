@@ -218,6 +218,37 @@ class AuthHttpTests(unittest.TestCase):
         self.assertTrue(payload["account"]["active"])
         self.assertEqual(payload["account"]["plan"], "monthly")
 
+    def test_owner_can_directly_grant_membership_by_phone(self):
+        _member, member_cookie = self.register("17606669594")
+        _owner, owner_cookie = self.register("13800138000")
+
+        status, payload, _headers = self.request(
+            "POST", "/api/billing/manual/grant",
+            {"phone": "17606669594", "plan": "monthly", "note": "客服截图已核对"},
+            cookie=member_cookie,
+        )
+        self.assertEqual(status, 403)
+        self.assertEqual(payload["code"], "OWNER_REQUIRED")
+
+        status, payload, _headers = self.request(
+            "POST", "/api/billing/manual/grant",
+            {"phone": "176-0666-9594", "plan": "yearly", "note": "客服截图已核对"},
+            cookie=owner_cookie,
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(payload["account"]["plan"], "yearly")
+        self.assertEqual(payload["grant"]["phone_hint"], "176****9594")
+
+        status, payload, _headers = self.request("GET", "/api/auth/status", cookie=member_cookie)
+        self.assertEqual(status, 200)
+        self.assertTrue(payload["account"]["active"])
+        self.assertEqual(payload["account"]["plan_expires"], self.now[0] + 365 * 86400)
+
+        status, payload, _headers = self.request("GET", "/api/billing/manual/orders", cookie=owner_cookie)
+        self.assertEqual(status, 200)
+        self.assertEqual(len(payload["grants"]), 1)
+        self.assertEqual(payload["grants"][0]["note"], "客服截图已核对")
+
 
 if __name__ == "__main__":
     unittest.main()

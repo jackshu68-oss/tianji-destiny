@@ -1184,6 +1184,7 @@ body {
 .commercial-boundary { max-width: 790px; padding-top: 40px; }
 .commercial-boundary p { margin-top: 10px; color: var(--ink-soft); }
 .manual-payment, .owner-billing-panel { padding: 46px 0; border-top: 1px solid var(--panel-line); }
+.manual-payment { scroll-margin-top: 76px; }
 .manual-payment-head, .owner-billing-panel > div:first-child { max-width: 760px; }
 .manual-payment-head h2, .owner-billing-panel h2 { margin-top: 7px; font: 650 28px/1.35 var(--serif); }
 .manual-payment-head > p:last-child, .owner-billing-panel > div:first-child > p:last-child { margin-top: 10px; color: var(--ink-soft); font-size: 13px; line-height: 1.75; }
@@ -1192,6 +1193,18 @@ body {
 .manual-login-required strong { font: 650 18px var(--serif); }
 .manual-login-required p { margin-top: 6px; color: var(--ink-soft); font-size: 12px; }
 .manual-login-required a { min-height: 42px; display: inline-flex; align-items: center; margin-top: 16px; padding: 0 18px; color: #fff; background: var(--ink); border-radius: 6px; text-decoration: none; font-size: 12px; }
+.payment-proof-contact { display: grid; grid-template-columns: minmax(0,1.05fr) minmax(320px,.95fr); gap: 38px; margin-top: 30px; padding: 28px 0; border-top: 1px solid var(--panel-line); border-bottom: 1px solid var(--panel-line); }
+.payment-proof-contact h3 { margin-top: 6px; font: 650 22px/1.4 var(--serif); }
+.payment-proof-contact ol { margin: 17px 0 0 20px; color: var(--ink-soft); font-size: 12px; line-height: 1.75; }
+.payment-proof-contact li + li { margin-top: 8px; }
+.support-contact-methods { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+.support-contact-method { min-width: 0; min-height: 154px; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; padding: 18px; color: var(--ink); background: rgba(255,255,255,.45); border: 1px solid var(--panel-line); border-radius: 8px; text-decoration: none; }
+.support-contact-method > span, .support-channel > span { color: var(--gold-soft); font-size: 9px; letter-spacing: 1.5px; }
+.support-contact-method strong { width: 100%; margin-top: 10px; overflow-wrap: anywhere; font-size: 13px; }
+.support-contact-method small { margin-top: 8px; color: var(--ink-mute); font-size: 9px; line-height: 1.55; }
+.support-contact-method button { min-height: 34px; margin-top: 12px; padding: 0 11px; color: #fff; background: var(--jade); border: 1px solid var(--jade); border-radius: 5px; cursor: pointer; font: 650 10px var(--sans); }
+.support-contact-method.is-wechat { border-top: 3px solid #07a956; }
+.support-page-link { grid-column: 1 / -1; justify-self: end; color: var(--gold); font-size: 11px; text-decoration: none; }
 .manual-selection { display: flex; align-items: baseline; justify-content: space-between; gap: 18px; margin-top: 28px; padding: 16px 0; border-bottom: 1px solid var(--panel-line); }
 .manual-selection span { color: var(--gold-soft); font-size: 10px; letter-spacing: 2px; }
 .manual-selection strong { font-size: 14px; }
@@ -1228,12 +1241,42 @@ body {
 .owner-billing-panel { display: grid; grid-template-columns: minmax(0,.8fr) minmax(0,1.2fr); gap: 42px; }
 .owner-qr-upload { display: grid; gap: 14px; }
 .owner-qr-upload input[type="file"] { height: auto; padding: 12px; }
+.owner-direct-grant { grid-column: 1 / -1; padding: 30px 0 8px; border-top: 1px solid var(--panel-line); }
+.owner-direct-grant > h3 { font: 650 21px/1.4 var(--serif); }
+.owner-direct-grant > p { max-width: 760px; margin-top: 7px; color: var(--ink-soft); font-size: 12px; line-height: 1.7; }
+.owner-direct-grant form { display: grid; grid-template-columns: minmax(220px,1.2fr) minmax(160px,.7fr) minmax(220px,1fr) auto; align-items: end; gap: 12px; margin-top: 20px; }
+.owner-direct-grant form label { min-width: 0; display: grid; gap: 7px; color: var(--ink-soft); font-size: 11px; }
+.owner-direct-grant input, .owner-direct-grant select { width: 100%; min-width: 0; min-height: 46px; padding: 0 12px; color: var(--ink); background: rgba(255,255,255,.54); border: 1px solid var(--panel-line); border-radius: 6px; outline: 0; font: 13px var(--sans); }
+.owner-direct-grant input:focus, .owner-direct-grant select:focus { border-color: var(--gold-soft); box-shadow: 0 0 0 3px rgba(166,70,59,.08); }
+.owner-direct-grant form > button { min-height: 46px; padding: 0 17px; color: #fff; background: var(--jade); border: 1px solid var(--jade); border-radius: 6px; cursor: pointer; font: 650 12px var(--sans); white-space: nowrap; }
+.owner-direct-grant form > button:disabled { cursor: wait; opacity: .58; }
+.owner-grant-history-title { margin-top: 30px; }
+.owner-grant-list { display: grid; gap: 10px; margin-top: 12px; }
 .owner-order-list { grid-column: 1 / -1; }
 .manual-review-actions { display: flex; gap: 8px; }
 .manual-review-actions button { min-height: 40px; padding: 0 13px; border: 1px solid var(--panel-line); border-radius: 6px; background: transparent; color: var(--ink); cursor: pointer; font-size: 11px; }
 .manual-review-actions .approve { color: #fff; background: var(--jade); border-color: var(--jade); }
 .manual-review-actions .reject { color: var(--red); border-color: rgba(166,70,59,.35); }
 .commercial-footer { position: relative; z-index: 1; display: flex; justify-content: space-between; gap: 20px; max-width: 1120px; margin: 0 auto; padding: 24px; color: var(--ink-mute); border-top: 1px solid var(--panel-line); font-size: 12px; }
+
+/* 客服与人工会员开通 */
+.support-main { width: min(960px,100%); }
+.support-process { display: grid; grid-template-columns: minmax(0,.7fr) minmax(0,1.3fr); gap: 42px; padding: 34px 0; border-top: 1px solid var(--panel-line); border-bottom: 1px solid var(--panel-line); }
+.support-process h2, .support-channel-heading h2, .support-safety h2 { margin-top: 6px; font: 650 25px/1.4 var(--serif); }
+.support-process ol { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 1px; list-style: none; background: var(--panel-line); }
+.support-process li { min-height: 104px; display: grid; align-content: center; gap: 8px; padding: 17px; background: rgba(255,255,255,.52); }
+.support-process li b { color: var(--gold-soft); font-size: 10px; letter-spacing: 1.5px; }
+.support-process li span { color: var(--ink-soft); font-size: 12px; line-height: 1.6; }
+.support-channels { display: grid; grid-template-columns: .72fr 1fr 1fr; gap: 14px; padding: 42px 0; }
+.support-channel-heading { padding-right: 22px; }
+.support-channel { min-width: 0; min-height: 245px; display: flex; flex-direction: column; align-items: flex-start; padding: 25px; background: rgba(255,255,255,.5); border: 1px solid var(--panel-line); border-radius: 8px; }
+.support-channel.is-wechat { border-top: 3px solid #07a956; }
+.support-channel strong { max-width: 100%; margin-top: 16px; color: var(--ink); overflow-wrap: anywhere; font: 650 18px/1.35 var(--sans); }
+.support-channel p { margin-top: 12px; color: var(--ink-soft); font-size: 12px; line-height: 1.7; }
+.support-primary-action { min-height: 43px; display: inline-flex; align-items: center; justify-content: center; margin-top: auto; padding: 0 16px; color: #fff; background: var(--ink); border: 1px solid var(--ink); border-radius: 6px; cursor: pointer; text-decoration: none; font: 650 12px var(--sans); }
+.support-channel.is-wechat .support-primary-action { background: var(--jade); border-color: var(--jade); }
+.support-safety { padding: 30px 0; border-top: 1px solid var(--panel-line); }
+.support-safety p { max-width: 760px; margin-top: 10px; color: var(--ink-soft); font-size: 13px; line-height: 1.8; }
 
 /* 手机账户 */
 .auth-main { position: relative; z-index: 1; width: min(620px,100%); min-height: calc(100vh - 90px); margin: 0 auto; padding: 128px 24px 72px; }
@@ -1308,7 +1351,12 @@ html[data-theme="classic"] .billing-notice { background: rgba(255,255,255,.04); 
 html[data-theme="classic"] .manual-login-required,
 html[data-theme="classic"] .payment-qr-option,
 html[data-theme="classic"] .manual-order-form input[type="text"],
-html[data-theme="classic"] .owner-qr-upload input[type="file"] { background: rgba(255,255,255,.04); }
+html[data-theme="classic"] .owner-qr-upload input[type="file"],
+html[data-theme="classic"] .support-contact-method,
+html[data-theme="classic"] .support-process li,
+html[data-theme="classic"] .support-channel,
+html[data-theme="classic"] .owner-direct-grant input,
+html[data-theme="classic"] .owner-direct-grant select { background: rgba(255,255,255,.04); }
 html[data-theme="classic"] .billing-status-band button,
 html[data-theme="classic"] .billing-recovery button,
 html[data-theme="classic"] .pricing-plan button { color: #1a1710; background: var(--gold); border-color: var(--gold); }
@@ -1320,7 +1368,13 @@ html[data-theme="classic"] .pricing-plan button:disabled { color: var(--ink-mute
   .pricing-purchase-head { grid-template-columns: 1fr; gap: 22px; }
   .billing-email-field { max-width: 520px; }
   .pricing-grid { grid-template-columns: 1fr; }
-  .payment-qr-grid, .manual-order-form, .owner-billing-panel { grid-template-columns: 1fr; }
+  .payment-qr-grid, .manual-order-form, .owner-billing-panel, .payment-proof-contact { grid-template-columns: 1fr; }
+  .payment-proof-contact { gap: 24px; }
+  .owner-direct-grant form { grid-template-columns: 1fr 1fr; }
+  .owner-direct-grant form > button { width: 100%; }
+  .support-process { grid-template-columns: 1fr; gap: 24px; }
+  .support-channels { grid-template-columns: 1fr 1fr; }
+  .support-channel-heading { grid-column: 1 / -1; }
   .owner-order-list { grid-column: 1; }
   .billing-methods { grid-template-columns: 1fr; }
   .pricing-plan { min-height: 0; }
@@ -1344,11 +1398,16 @@ html[data-theme="classic"] .pricing-plan button:disabled { color: var(--ink-mute
   .auth-account-summary { align-items: flex-start; flex-direction: column; }
   .auth-account-actions { width: 100%; display: grid; grid-template-columns: 1fr 1fr; }
   .commercial-header h1, .terms-header h1 { font-size: 34px; }
+  .commercial-page .commercial-home-link:not(:last-of-type) { display: none; }
   .billing-status-band { align-items: flex-start; flex-direction: column; }
   .billing-status-band button { width: 100%; }
   .pricing-purchase { padding-top: 40px; }
   .pricing-plan { padding: 21px 18px; }
   .manual-selection, .manual-order-row { align-items: flex-start; flex-direction: column; }
+  .support-contact-methods, .owner-direct-grant form, .support-process ol, .support-channels { grid-template-columns: 1fr; }
+  .support-page-link { justify-self: start; }
+  .support-channel-heading { grid-column: 1; }
+  .support-channel { min-height: 220px; }
   .payment-qr-frame { min-height: 220px; }
   .manual-review-actions { width: 100%; }
   .manual-review-actions button { flex: 1; }

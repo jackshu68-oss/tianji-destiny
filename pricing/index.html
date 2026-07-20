@@ -14,7 +14,7 @@
     } catch (_error) { document.documentElement.dataset.theme = 'modern'; }
   </script>
   <link rel="icon" href="../assets/daofa-mark.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="../css/style.css?v=20260720-1" />
+  <link rel="stylesheet" href="../css/style.css?v=20260720-2" />
 </head>
 <body class="commercial-page" data-billing-root>
   <canvas id="stars"></canvas>
@@ -23,6 +23,7 @@
       <a class="brand brand-link" href="../">道法自然<span class="brand-en">DAOFA</span></a>
       <div class="nav-actions">
         <a class="commercial-home-link" href="../" data-zh="返回主页" data-en="Home">返回主页</a>
+        <a class="commercial-home-link" href="../support/" data-zh="联系客服" data-en="Support">联系客服</a>
         <a class="commercial-home-link" href="../account/" data-zh="登录" data-en="Sign in">登录</a>
         <div class="preference-controls" aria-label="界面偏好">
           <button id="language-toggle" class="preference-toggle language-toggle" type="button" aria-label="Switch to English" title="Switch to English">EN</button>
@@ -108,8 +109,8 @@
     <section class="manual-payment" id="manual-payment" aria-labelledby="manual-payment-title">
       <div class="manual-payment-head">
         <p class="eyebrow" data-zh="内测人工开通" data-en="PRIVATE BETA REVIEW">内测人工开通</p>
-        <h2 id="manual-payment-title" data-zh="登录、扫码并提交交易单号" data-en="Sign in, scan and submit the transaction reference">登录、扫码并提交交易单号</h2>
-        <p data-zh="付款不会自动开通。站主核对实际到账和交易单号后，服务器才会写入会员期限。" data-en="Payment does not activate access automatically. Membership is granted only after the owner verifies the received amount and transaction reference.">付款不会自动开通。站主核对实际到账和交易单号后，服务器才会写入会员期限。</p>
+        <h2 id="manual-payment-title" data-zh="登录、付款并发送付款截图" data-en="Sign in, pay and send your payment screenshot">登录、付款并发送付款截图</h2>
+        <p data-zh="目前采用人工开通。付款后请把截图、注册手机号后四位和所选方案发送给客服；核对到账后才会写入会员期限。" data-en="Membership is currently activated manually. After payment, send support the screenshot, the last four digits of your registered phone and the selected plan. Access starts only after receipt is verified.">目前采用人工开通。付款后请把截图、注册手机号后四位和所选方案发送给客服；核对到账后才会写入会员期限。</p>
       </div>
 
       <div class="manual-login-required" id="manual-login-required" hidden>
@@ -117,6 +118,31 @@
         <p data-zh="会员会绑定到当前手机号，付款前必须先登录。" data-en="Membership is tied to your current phone account, so sign-in is required before payment.">会员会绑定到当前手机号，付款前必须先登录。</p>
         <a href="../account/?next=%2Fpricing%2F" data-zh="登录或注册" data-en="Sign in or register">登录或注册</a>
       </div>
+
+      <section class="payment-proof-contact" aria-labelledby="payment-proof-title">
+        <div>
+          <p class="eyebrow" data-zh="付款凭证" data-en="PAYMENT PROOF">付款凭证</p>
+          <h3 id="payment-proof-title" data-zh="付款后任选一种方式联系客服" data-en="Contact support in either way after payment">付款后任选一种方式联系客服</h3>
+          <ol>
+            <li data-zh="截图须清楚显示付款金额、时间和交易单号。" data-en="The screenshot should clearly show the amount, time and transaction reference.">截图须清楚显示付款金额、时间和交易单号。</li>
+            <li data-zh="同时注明注册手机号后四位，以及 30 天或 365 天方案。" data-en="Also include the last four digits of your registered phone and the 30-day or 365-day plan.">同时注明注册手机号后四位，以及 30 天或 365 天方案。</li>
+            <li data-zh="客服核对到账后人工开通；请勿发送密码、短信验证码或身份证。" data-en="Support activates access after verification. Never send passwords, SMS codes or identity documents.">客服核对到账后人工开通；请勿发送密码、短信验证码或身份证。</li>
+          </ol>
+        </div>
+        <div class="support-contact-methods">
+          <a class="support-contact-method" href="mailto:jackshu68@gmail.com?subject=%E9%81%93%E6%B3%95%E8%87%AA%E7%84%B6%E4%BC%9A%E5%91%98%E5%BC%80%E9%80%9A%E7%94%B3%E8%AF%B7&amp;body=%E8%AF%B7%E9%99%84%E4%B8%8A%E4%BB%98%E6%AC%BE%E6%88%AA%E5%9B%BE%EF%BC%8C%E5%B9%B6%E5%A1%AB%E5%86%99%EF%BC%9A%0A1.%20%E6%B3%A8%E5%86%8C%E6%89%8B%E6%9C%BA%E5%90%8E%E5%9B%9B%E4%BD%8D%EF%BC%9A%0A2.%20%E4%BC%9A%E5%91%98%E6%96%B9%E6%A1%88%EF%BC%9A%0A3.%20%E4%BA%A4%E6%98%93%E5%8D%95%E5%8F%B7%EF%BC%9A" data-support-email>
+            <span data-zh="客服邮箱" data-en="SUPPORT EMAIL">客服邮箱</span>
+            <strong>jackshu68@gmail.com</strong>
+            <small data-zh="打开邮件后请手动添加付款截图附件" data-en="Open email and attach the payment screenshot">打开邮件后请手动添加付款截图附件</small>
+          </a>
+          <div class="support-contact-method is-wechat">
+            <span data-zh="客服微信" data-en="SUPPORT WECHAT">客服微信</span>
+            <strong>JACKSHU16888</strong>
+            <button type="button" data-copy-support-wechat data-zh="复制微信号" data-en="Copy WeChat ID">复制微信号</button>
+          </div>
+        </div>
+        <a class="support-page-link" href="../support/" data-zh="打开完整客服联系页" data-en="Open the full support page">打开完整客服联系页</a>
+      </section>
 
       <div id="manual-payment-workspace" hidden>
         <div class="manual-selection" aria-live="polite">
@@ -165,13 +191,25 @@
     <section class="owner-billing-panel" id="owner-billing-panel" hidden aria-labelledby="owner-billing-title">
       <div>
         <p class="eyebrow" data-zh="站主控制台" data-en="OWNER CONSOLE">站主控制台</p>
-        <h2 id="owner-billing-title" data-zh="收款码与会员审核" data-en="Payment codes and membership review">收款码与会员审核</h2>
+        <h2 id="owner-billing-title" data-zh="付款与会员开通" data-en="Payment and membership activation">付款与会员开通</h2>
         <p data-zh="上传文件只保存在服务器受保护目录，不进入公开网站代码仓库。" data-en="Uploads stay in the server's protected data directory and are not committed to the public website repository.">上传文件只保存在服务器受保护目录，不进入公开网站代码仓库。</p>
       </div>
       <div class="owner-qr-upload">
         <label><span data-zh="微信收款码" data-en="WeChat payment code">微信收款码</span><input type="file" accept="image/jpeg,image/png" data-owner-qr="wechat" /></label>
         <label><span data-zh="支付宝收款码" data-en="Alipay payment code">支付宝收款码</span><input type="file" accept="image/jpeg,image/png" data-owner-qr="alipay" /></label>
       </div>
+      <section class="owner-direct-grant" aria-labelledby="owner-direct-grant-title">
+        <h3 id="owner-direct-grant-title" data-zh="按手机号直接开通" data-en="Grant access by phone">按手机号直接开通</h3>
+        <p data-zh="只在你已经通过邮箱或微信核对付款截图后使用。会员期限会绑定到该手机号账号。" data-en="Use only after you have verified the payment screenshot by email or WeChat. Access is tied to that phone account.">只在你已经通过邮箱或微信核对付款截图后使用。会员期限会绑定到该手机号账号。</p>
+        <form id="owner-grant-form" novalidate>
+          <label><span data-zh="客户注册手机号" data-en="Customer phone">客户注册手机号</span><input name="phone" type="tel" inputmode="tel" autocomplete="off" placeholder="例如：17606669594" required /></label>
+          <label><span data-zh="开通方案" data-en="Membership plan">开通方案</span><select name="plan" required><option value="monthly" data-zh="30 天会员" data-en="30-day membership">30 天会员</option><option value="yearly" data-zh="365 天会员" data-en="365-day membership">365 天会员</option></select></label>
+          <label class="owner-grant-note"><span data-zh="核验备注（可选）" data-en="Verification note (optional)">核验备注（可选）</span><input name="note" type="text" maxlength="160" autocomplete="off" placeholder="例如：微信截图已核对" /></label>
+          <button type="submit" data-zh="确认并开通会员" data-en="Confirm and grant access">确认并开通会员</button>
+        </form>
+        <h3 class="owner-grant-history-title" data-zh="最近直接开通记录" data-en="Recent direct grants">最近直接开通记录</h3>
+        <div id="owner-grant-list" class="owner-grant-list"></div>
+      </section>
       <div class="owner-order-list" id="owner-order-list"></div>
     </section>
 
@@ -183,12 +221,13 @@
 
   <footer class="commercial-footer">
     <span>© 道法自然 DAOFA</span>
-    <a href="mailto:jackshu68@gmail.com" data-zh="客服邮箱：jackshu68@gmail.com" data-en="Support: jackshu68@gmail.com">客服邮箱：jackshu68@gmail.com</a>
+    <a href="../support/" data-zh="客服邮箱与微信" data-en="Email & WeChat support">客服邮箱与微信</a>
   </footer>
 
   <script src="../js/ui.js?v=20260718-17"></script>
   <script src="../js/auth.js?v=20260720-1"></script>
-  <script src="../js/billing.js?v=20260720-1"></script>
+  <script src="../js/support.js?v=20260720-2"></script>
+  <script src="../js/billing.js?v=20260720-2"></script>
   <script src="../js/ambient.js?v=20260718-14"></script>
 </body>
 </html>

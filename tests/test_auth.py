@@ -195,6 +195,42 @@ class AuthServiceTests(unittest.TestCase):
         self.assertEqual(renewed["plan"], "yearly")
         self.assertEqual(renewed["plan_expires"], self.now[0] + (30 + 365) * 86400)
 
+    def test_owner_can_grant_membership_by_registered_phone(self):
+        member = self.register()
+        with self.assertRaises(AuthError) as context:
+            self.service.grant_membership(
+                member["session_token"], "17606669594", "monthly", "不应成功",
+            )
+        self.assertEqual(context.exception.code, "OWNER_REQUIRED")
+
+        owner = self.register(phone="13800138000")
+        first = self.service.grant_membership(
+            owner["session_token"], "176-0666-9594", "monthly", "微信截图已核对",
+        )
+        self.assertEqual(first["account"]["plan"], "monthly")
+        self.assertEqual(first["account"]["plan_expires"], self.now[0] + 30 * 86400)
+        self.assertEqual(first["grant"]["phone_hint"], "176****9594")
+        self.assertEqual(first["grant"]["note"], "微信截图已核对")
+
+        second = self.service.grant_membership(
+            owner["session_token"], "+86 176 0666 9594", "yearly", "续期",
+        )
+        self.assertEqual(second["account"]["plan"], "yearly")
+        self.assertEqual(second["account"]["plan_expires"], self.now[0] + (30 + 365) * 86400)
+
+        owner_view = self.service.list_membership_orders(owner["session_token"])
+        self.assertEqual(len(owner_view["grants"]), 2)
+        self.assertEqual(owner_view["grants"][0]["plan"], "yearly")
+        self.assertEqual(owner_view["grants"][0]["phone_hint"], "176****9594")
+        self.assertEqual(self.service.list_membership_orders(member["session_token"])["grants"], [])
+
+        with self.assertRaises(AuthError) as context:
+            self.service.grant_membership(owner["session_token"], "13900139000", "monthly")
+        self.assertEqual(context.exception.code, "ACCOUNT_NOT_FOUND")
+        with self.assertRaises(AuthError) as context:
+            self.service.grant_membership(owner["session_token"], "13800138000", "monthly")
+        self.assertEqual(context.exception.code, "OWNER_ALREADY_ACTIVE")
+
     def test_password_hash_is_not_plaintext(self):
         result = self.register(password="Password8")
         connection = sqlite3.connect(self.database)
