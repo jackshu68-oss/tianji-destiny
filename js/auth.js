@@ -3,6 +3,7 @@
   'use strict';
 
   let accountState = { authenticated: false, account: null, trial: null, sms_enabled: false };
+  let statusChecked = false;
   let expiryTimer = 0;
 
   function isEnglish() {
@@ -38,6 +39,7 @@
   async function status() {
     const payload = await request('/api/auth/status');
     accountState = payload;
+    statusChecked = true;
     applyAccessState(payload);
     root.dispatchEvent(new CustomEvent('tianji:auth-changed', { detail: payload }));
     return payload;
@@ -108,14 +110,17 @@
     gate.className = 'auth-access-gate';
     gate.setAttribute('role', 'dialog');
     gate.setAttribute('aria-modal', 'true');
-    gate.innerHTML = '<div class="auth-access-gate-panel"><span class="auth-access-kicker"></span><h2></h2><p></p><div class="auth-access-actions"><a data-access-login></a><a data-access-register></a></div><small></small></div>';
+    gate.innerHTML = '<div class="auth-access-gate-panel"><button type="button" class="auth-access-close" data-access-close aria-label="关闭" title="关闭">×</button><span class="auth-access-kicker"></span><h2></h2><p></p><div class="auth-access-actions"><a data-access-login></a><a data-access-register></a></div><small></small></div>';
     document.body.appendChild(gate);
+    gate.querySelector('[data-access-close]').addEventListener('click', hideExpiredGate);
     return gate;
   }
 
   function showExpiredGate() {
     if (document.querySelector('[data-auth-page]')) return;
     const gate = accessGate();
+    gate.dataset.accessMode = 'expired';
+    gate.querySelector('[data-access-close]').hidden = true;
     const next = encodeURIComponent(`${root.location.pathname}${root.location.search}${root.location.hash}`);
     gate.querySelector('.auth-access-kicker').textContent = copy('1 天体验已结束', '1-DAY TRIAL ENDED');
     gate.querySelector('h2').textContent = copy('登录后继续使用', 'Sign in to continue');
@@ -137,10 +142,66 @@
     document.body.classList.add('auth-access-locked');
   }
 
+  function showFullAccessGate(code) {
+    if (document.querySelector('[data-auth-page]')) return;
+    if (code === 'AUTH_REQUIRED') {
+      showExpiredGate();
+      return;
+    }
+    const gate = accessGate();
+    const signedIn = Boolean(accountState && accountState.authenticated);
+    const next = encodeURIComponent(`${root.location.pathname}${root.location.search}${root.location.hash}`);
+    gate.dataset.accessMode = 'detail';
+    const closeButton = gate.querySelector('[data-access-close]');
+    closeButton.hidden = false;
+    closeButton.setAttribute('aria-label', copy('关闭', 'Close'));
+    closeButton.title = copy('关闭', 'Close');
+    gate.querySelector('.auth-access-kicker').textContent = copy('完整内容', 'FULL CONTENT');
+    gate.querySelector('h2').textContent = signedIn
+      ? copy('详细报告需要会员', 'Detailed reports require membership')
+      : copy('登录后查看详细报告', 'Sign in for detailed reports');
+    gate.querySelector('p').textContent = signedIn
+      ? copy('当前账号仍可使用基础查询；AI 详解、专业细盘和完整报告仅向有效会员开放。', 'Your account can continue using basic queries. AI interpretations, professional details and full reports require active membership.')
+      : copy('首日可免登录使用基础查询；详细内容需要使用手机号注册或登录。', 'Basic queries are available without sign-in on the first day. Sign in or register with a phone number for detailed content.');
+    const primary = gate.querySelector('[data-access-login]');
+    primary.textContent = signedIn ? copy('查看会员方案', 'View membership plans') : copy('手机号登录', 'Phone sign-in');
+    primary.href = signedIn ? '/pricing/' : `/account/?mode=login&next=${next}`;
+    const secondary = gate.querySelector('[data-access-register]');
+    secondary.textContent = signedIn ? copy('联系客服', 'Contact support') : copy('注册账号', 'Create account');
+    secondary.href = signedIn ? '/support/' : `/account/?mode=register&next=${next}`;
+    gate.querySelector('small').textContent = signedIn
+      ? copy('会员到期后详细内容会由服务器自动关闭，基础查询不受影响。', 'The server closes detailed access automatically when membership expires; basic queries remain available.')
+      : copy('注册只在首次验证或找回密码时发送短信，以后使用手机号和密码登录。', 'SMS is only used for first verification or password recovery. Future sign-ins use your phone number and password.');
+    gate.hidden = false;
+    document.body.classList.add('auth-access-locked');
+  }
+
   function hideExpiredGate() {
     const gate = document.getElementById('auth-access-gate');
     if (gate) gate.hidden = true;
     document.body.classList.remove('auth-access-locked');
+  }
+
+  function hasFullAccess() {
+    return Boolean(accountState && accountState.authenticated && accountState.account && accountState.account.active);
+  }
+
+  async function requireFullAccess() {
+    if (!statusChecked) {
+      try { await status(); }
+      catch (_error) { /* The access prompt below remains the safe default. */ }
+    }
+    if (hasFullAccess()) return accountState.account;
+    const trial = accountState && accountState.trial;
+    const code = accountState && accountState.authenticated
+      ? 'MEMBERSHIP_REQUIRED'
+      : (trial && trial.started && !trial.active ? 'AUTH_REQUIRED' : 'DETAIL_LOGIN_REQUIRED');
+    showFullAccessGate(code);
+    const error = new Error(code === 'MEMBERSHIP_REQUIRED'
+      ? copy('详细报告需要会员。', 'Detailed reports require membership.')
+      : copy('请先注册或登录。', 'Please sign in or register.'));
+    error.code = code;
+    throw error;
   }
 
   function applyAccessState(payload) {
@@ -289,9 +350,11 @@
         accountPhone.textContent = payload.account.phone_hint || '';
         accountPlan.textContent = payload.account.is_owner
           ? copy('站主 · 永久会员', 'Owner · permanent membership')
+          : (payload.account.active && payload.account.plan === 'free'
+            ? copy('账号已登录', 'Signed in')
           : (payload.account.active
             ? (payload.account.plan === 'yearly' ? copy('365 天会员', '365-day membership') : copy('30 天会员', '30-day membership'))
-            : copy('免费版', 'Free'));
+            : copy('免费版', 'Free')));
       }
     }).catch(error => setNotice(notice, error.message, 'error'));
 
@@ -303,14 +366,20 @@
 
   function initGlobalAccess() {
     if (document.querySelector('[data-auth-page]')) return;
-    status().catch(() => {});
+    status().then(payload => {
+      const trial = payload && payload.trial;
+      if (document.getElementById('compute') && !payload.authenticated && trial && !trial.started) {
+        return startTrial();
+      }
+      return payload;
+    }).catch(() => {});
     document.addEventListener('tianji:language-changed', () => applyAccessState(accountState));
   }
 
   root.TianjiAuth = {
     status, startTrial, ensureTrialAccess, startOtp, register, login, resetPassword, logout,
     snapshot: () => accountState,
-    showExpiredGate
+    hasFullAccess, requireFullAccess, showExpiredGate, showFullAccessGate
   };
   if (typeof document !== 'undefined') {
     const init = () => { initAccountPage(); initGlobalAccess(); };

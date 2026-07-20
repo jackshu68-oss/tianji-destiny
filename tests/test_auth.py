@@ -45,6 +45,7 @@ class AuthServiceTests(unittest.TestCase):
             environ={
                 "TIANJI_AUTH_SECRET": "test-secret-that-is-long-enough",
                 "TIANJI_TRIAL_HOURS": "24",
+                "TIANJI_WELCOME_TRIAL_DAYS": "3",
                 "TIANJI_TRIAL_MARKER_DAYS": "365",
                 "TIANJI_AUTH_SESSION_DAYS": "30",
                 "TIANJI_OWNER_PHONE": "13800138000",
@@ -108,10 +109,12 @@ class AuthServiceTests(unittest.TestCase):
 
     def test_anonymous_trial_then_account_membership_gate(self):
         access = self.service.authorise_ai("", "")
-        self.assertEqual(access["tier"], "trial")
+        self.assertEqual(access["tier"], "guest")
+        self.assertFalse(access["allowed"])
+        self.assertEqual(access["code"], "DETAIL_LOGIN_REQUIRED")
         trial_token = access["trial_token"]
         self.assertTrue(self.service.status("", trial_token)["trial"]["active"])
-        self.assertEqual(self.service.authorise_ai("", trial_token)["tier"], "trial")
+        self.assertFalse(self.service.authorise_ai("", trial_token)["allowed"])
         self.now[0] += 24 * 3600 + 1
         expired = self.service.status("", trial_token)["trial"]
         self.assertTrue(expired["started"])
@@ -125,6 +128,16 @@ class AuthServiceTests(unittest.TestCase):
 
         registration = self.register()
         session = registration["session_token"]
+        self.assertTrue(registration["account"]["active"])
+        self.assertEqual(registration["account"]["plan"], "free")
+        self.assertEqual(registration["account"]["plan_expires"], 0)
+        connection = sqlite3.connect(self.database)
+        stored_plan = connection.execute("SELECT plan,plan_expires FROM auth_users WHERE id=1").fetchone()
+        connection.close()
+        self.assertEqual(stored_plan, ("welcome", self.now[0] + 3 * 86400))
+        self.assertEqual(self.service.authorise_ai(session, "")["tier"], "pro")
+
+        self.now[0] += 3 * 86400 + 1
         with self.assertRaises(AuthError) as context:
             self.service.authorise_ai(session, "")
         self.assertEqual(context.exception.code, "MEMBERSHIP_REQUIRED")
@@ -181,7 +194,7 @@ class AuthServiceTests(unittest.TestCase):
         account = self.service.status(member["session_token"], "")["account"]
         self.assertTrue(account["active"])
         self.assertEqual(account["plan"], "monthly")
-        self.assertEqual(account["plan_expires"], self.now[0] + 30 * 86400)
+        self.assertEqual(account["plan_expires"], self.now[0] + (3 + 30) * 86400)
         self.assertEqual(self.service.authorise_ai(member["session_token"], "")["tier"], "pro")
         with self.assertRaises(AuthError) as context:
             self.service.review_membership_order(owner["session_token"], order["id"], False)
@@ -193,7 +206,7 @@ class AuthServiceTests(unittest.TestCase):
         self.service.review_membership_order(owner["session_token"], renewal["id"], True)
         renewed = self.service.status(member["session_token"], "")["account"]
         self.assertEqual(renewed["plan"], "yearly")
-        self.assertEqual(renewed["plan_expires"], self.now[0] + (30 + 365) * 86400)
+        self.assertEqual(renewed["plan_expires"], self.now[0] + (3 + 30 + 365) * 86400)
 
     def test_owner_can_grant_membership_by_registered_phone(self):
         member = self.register()
@@ -208,7 +221,7 @@ class AuthServiceTests(unittest.TestCase):
             owner["session_token"], "176-0666-9594", "monthly", "微信截图已核对",
         )
         self.assertEqual(first["account"]["plan"], "monthly")
-        self.assertEqual(first["account"]["plan_expires"], self.now[0] + 30 * 86400)
+        self.assertEqual(first["account"]["plan_expires"], self.now[0] + (3 + 30) * 86400)
         self.assertEqual(first["grant"]["phone_hint"], "176****9594")
         self.assertEqual(first["grant"]["note"], "微信截图已核对")
 
@@ -216,7 +229,7 @@ class AuthServiceTests(unittest.TestCase):
             owner["session_token"], "+86 176 0666 9594", "yearly", "续期",
         )
         self.assertEqual(second["account"]["plan"], "yearly")
-        self.assertEqual(second["account"]["plan_expires"], self.now[0] + (30 + 365) * 86400)
+        self.assertEqual(second["account"]["plan_expires"], self.now[0] + (3 + 30 + 365) * 86400)
 
         owner_view = self.service.list_membership_orders(owner["session_token"])
         self.assertEqual(len(owner_view["grants"]), 2)

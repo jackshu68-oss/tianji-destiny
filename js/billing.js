@@ -22,6 +22,8 @@
       proDetail: '方案：{plan} · 账户：{identity}',
       owner: '站主 · 永久会员',
       ownerDetail: '站主账号已永久开放全部功能，不会产生会员费用。',
+      accountReady: '账号已登录',
+      accountReadyDetail: '可继续使用当前账户功能。',
       monthly: '月付',
       yearly: '年付',
       ready: '会员购买通道已开放。',
@@ -74,6 +76,8 @@
       proDetail: 'Plan: {plan} · Account: {identity}',
       owner: 'Owner · permanent membership',
       ownerDetail: 'The owner account has permanent full access and is never charged.',
+      accountReady: 'Signed in',
+      accountReadyDetail: 'Your current account features are available.',
       monthly: 'Monthly',
       yearly: 'Annual',
       ready: 'Membership purchasing is available.',
@@ -301,6 +305,7 @@
 
   function planDisplay(plan) {
     if (plan === 'owner') return copy('owner');
+    if (plan === 'free') return copy('accountReady');
     return plan === 'yearly' ? copy('currentYearly') : copy('currentMonthly');
   }
 
@@ -327,6 +332,11 @@
       statusTitle.textContent = copy('owner');
       statusDetail.textContent = copy('ownerDetail');
       statusBand.classList.add('is-pro');
+      manageButton.hidden = true;
+    } else if (entitlement.active && entitlement.plan === 'free') {
+      statusTitle.textContent = copy('accountReady');
+      statusDetail.textContent = copy('accountReadyDetail');
+      statusBand.classList.remove('is-pro');
       manageButton.hidden = true;
     } else if (entitlement.active) {
       statusTitle.textContent = copy('pro');

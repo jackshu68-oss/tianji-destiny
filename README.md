@@ -45,6 +45,8 @@ DEEPSEEK_API_KEY=... python3 server/ai_service.py
 
 服务默认只监听 `127.0.0.1:8788`，由同域反向代理转发 `/api/ai/*`、`/api/share/*`、`/api/sync/*` 与 `/api/billing/*`。密钥必须放在服务器环境变量或权限为 `600` 的环境文件里，不能写进网页。匿名分享、同步密文、账户、人工核验订单及会员状态使用 SQLite 保存；收款码由站主登录后上传至受保护的服务器状态目录，不进入公开仓库。生产环境由 systemd 的 `StateDirectory=tianji-ai` 提供持久目录。商业配置模板见 [deploy/tianji-ai.env.example](deploy/tianji-ai.env.example)，上线步骤见 [docs/commercial-launch.md](docs/commercial-launch.md)。
 
+访问控制由服务端执行：匿名基础功能从首次进入主页起开放 24 小时；之后必须登录。新注册账号默认获得 3 天完整功能，期满自动回到免费版；AI 详解、专业细盘与完整报告只接受有效的欢迎期、付费会员期或站主权限。
+
 ## 私隐边界
 
 - 默认命盘、资料库、日历与回测只在当前浏览器保存。

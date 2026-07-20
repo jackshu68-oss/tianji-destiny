@@ -330,6 +330,7 @@ test('会员页列出免费与会员方案并使用登录后人工付款核验',
   const pricing = fs.readFileSync(new URL('../pricing/index.html', import.meta.url), 'utf8');
   const account = fs.readFileSync(new URL('../account/index.html', import.meta.url), 'utf8');
   const auth = fs.readFileSync(new URL('../js/auth.js', import.meta.url), 'utf8');
+  const app = fs.readFileSync(new URL('../js/app.js', import.meta.url), 'utf8');
   const terms = fs.readFileSync(new URL('../terms/index.html', import.meta.url), 'utf8');
   const privacy = fs.readFileSync(new URL('../privacy.html', import.meta.url), 'utf8');
   const billing = fs.readFileSync(new URL('../js/billing.js', import.meta.url), 'utf8');
@@ -386,4 +387,8 @@ test('会员页列出免费与会员方案并使用登录后人工付款核验',
   assert.match(account, /autocomplete="current-password"/);
   assert.match(auth, /\/api\/auth\/otp\/start/);
   assert.match(auth, /\/api\/auth\/password\/reset/);
+  assert.match(auth, /requireFullAccess/);
+  assert.match(app, /TianjiAuth\.requireFullAccess/);
+  assert.match(aiService, /DETAIL_LOGIN_REQUIRED/);
+  assert.doesNotMatch(account, /3 天(?:完整|试用|体验)/);
 });

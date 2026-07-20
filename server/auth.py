@@ -20,6 +20,8 @@ PHONE_PATTERN = re.compile(r"^1[3-9]\d{9}$")
 PASSWORD_LETTER = re.compile(r"[A-Za-z]")
 PASSWORD_DIGIT = re.compile(r"\d")
 ACTIVE_PLANS = {"monthly", "yearly"}
+WELCOME_PLAN = "welcome"
+FULL_ACCESS_PLANS = ACTIVE_PLANS | {WELCOME_PLAN}
 PLAN_DAYS = {"monthly": 30, "yearly": 365}
 PLAN_PRICES_CNY = {"monthly": 39, "yearly": 299}
 PAYMENT_PROVIDERS = {"wechat", "alipay"}
@@ -247,6 +249,7 @@ class AuthService:
         self.secret = str(env.get("TIANJI_AUTH_SECRET", "")).strip() or secrets.token_urlsafe(48)
         self.session_seconds = max(3600, int(env.get("TIANJI_AUTH_SESSION_DAYS", "30")) * 86400)
         self.trial_seconds = max(3600, int(env.get("TIANJI_TRIAL_HOURS", "24")) * 3600)
+        self.welcome_seconds = max(86400, int(env.get("TIANJI_WELCOME_TRIAL_DAYS", "3")) * 86400)
         self.trial_marker_seconds = max(
             self.trial_seconds,
             int(env.get("TIANJI_TRIAL_MARKER_DAYS", "365")) * 86400,
@@ -496,8 +499,8 @@ class AuthService:
                 raise AuthError(409, "ACCOUNT_EXISTS", "该手机号已注册，请直接登录。")
             self._consume_otp(connection, phone, "register", raw_code, now)
             cursor = connection.execute(
-                "INSERT INTO auth_users(phone,password_hash,plan,plan_expires,created,updated,last_login) VALUES(?,?,'free',0,?,?,?)",
-                (phone, password_hash(password), now, now, now),
+                "INSERT INTO auth_users(phone,password_hash,plan,plan_expires,created,updated,last_login) VALUES(?,?,?,?,?,?,?)",
+                (phone, password_hash(password), WELCOME_PLAN, now + self.welcome_seconds, now, now, now),
             )
             token = self._new_session(connection, cursor.lastrowid, now)
             connection.commit()
@@ -591,14 +594,15 @@ class AuthService:
         owner = str(user["phone"] or "") == self.owner_phone
         plan = "owner" if owner else str(user["plan"] or "free")
         expires = 0 if owner else int(user["plan_expires"] or 0)
-        active = owner or (plan in ACTIVE_PLANS and expires > now)
+        active = owner or (plan in FULL_ACCESS_PLANS and expires > now)
+        welcome = not owner and plan == WELCOME_PLAN and active
         return {
             "id": int(user["id"]),
             "phone_hint": self._phone_hint(user["phone"]),
-            "plan": plan if active else "free",
+            "plan": "free" if welcome else (plan if active else "free"),
             "active": active,
-            "plan_expires": expires if active else 0,
-            "role": "owner" if owner else ("member" if active else "free"),
+            "plan_expires": expires if active and not welcome else 0,
+            "role": "owner" if owner else ("member" if active and not welcome else "free"),
             "is_owner": owner,
         }
 
@@ -683,8 +687,10 @@ class AuthService:
         trial = self._trial(trial_token)
         if trial:
             return {
-                "allowed": True,
-                "tier": "trial",
+                "allowed": False,
+                "tier": "guest",
+                "code": "DETAIL_LOGIN_REQUIRED",
+                "message": "详细解读需要先使用手机号注册或登录。",
                 "account": None,
                 "trial_token": "",
                 "trial_expires": int(trial["expires"]),
@@ -695,8 +701,10 @@ class AuthService:
         token = started["trial_token"]
         expires = int(started["trial"]["expires"])
         return {
-            "allowed": True,
-            "tier": "trial",
+            "allowed": False,
+            "tier": "guest",
+            "code": "DETAIL_LOGIN_REQUIRED",
+            "message": "详细解读需要先使用手机号注册或登录。",
             "account": None,
             "trial_token": token,
             "trial_expires": expires,
@@ -844,7 +852,7 @@ class AuthService:
             if not target:
                 raise AuthError(404, "ACCOUNT_NOT_FOUND", "没有找到这个手机号对应的已注册账号。")
             previous_expires = int(target["plan_expires"] or 0)
-            base = max(now, previous_expires if str(target["plan"] or "") in ACTIVE_PLANS else 0)
+            base = max(now, previous_expires if str(target["plan"] or "") in FULL_ACCESS_PLANS else 0)
             days = PLAN_DAYS[plan]
             new_expires = base + days * 86400
             connection.execute(
@@ -899,7 +907,7 @@ class AuthService:
                 if not target:
                     raise AuthError(404, "ACCOUNT_NOT_FOUND", "申请账号已经不存在。")
                 current_expires = int(target["plan_expires"] or 0)
-                base = max(now, current_expires if str(target["plan"] or "") in ACTIVE_PLANS else 0)
+                base = max(now, current_expires if str(target["plan"] or "") in FULL_ACCESS_PLANS else 0)
                 expires = base + PLAN_DAYS[str(order["plan"])] * 86400
                 connection.execute(
                     "UPDATE auth_users SET plan=?,plan_expires=?,updated=? WHERE id=?",

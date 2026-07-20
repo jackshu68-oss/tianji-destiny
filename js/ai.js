@@ -159,22 +159,27 @@
   }
 
   function renderAccessPrompt(output, error) {
-    if (!error || !['AUTH_REQUIRED', 'MEMBERSHIP_REQUIRED'].includes(error.code)) return false;
+    if (!error || !['AUTH_REQUIRED', 'DETAIL_LOGIN_REQUIRED', 'MEMBERSHIP_REQUIRED'].includes(error.code)) return false;
     output.replaceChildren();
     output.className = 'ai-output error ai-access-required';
+    const needsAccount = error.code === 'AUTH_REQUIRED' || error.code === 'DETAIL_LOGIN_REQUIRED';
     const title = error.code === 'AUTH_REQUIRED'
       ? copy('免费体验已结束', 'Your free trial has ended')
-      : copy('当前为免费版', 'Free plan active');
+      : (error.code === 'DETAIL_LOGIN_REQUIRED'
+        ? copy('登录后查看详细解读', 'Sign in for detailed interpretations')
+        : copy('当前为免费版', 'Free plan active'));
     const detail = error.code === 'AUTH_REQUIRED'
       ? copy('请先使用手机号注册或登录。', 'Register or sign in with your phone number.')
-      : copy('免费版可继续使用基础查询，详细解读需要会员。', 'Basic queries remain available. Detailed interpretations require membership.');
+      : (error.code === 'DETAIL_LOGIN_REQUIRED'
+        ? copy('首日免登录体验仅包括基础查询；完整报告需要使用手机号注册或登录。', 'The first-day guest experience includes basic queries. Sign in or register for complete reports.')
+        : copy('免费版可继续使用基础查询，详细解读需要会员。', 'Basic queries remain available. Detailed interpretations require membership.'));
     output.appendChild(element('b', '', title));
     output.appendChild(element('p', '', detail));
     const actions = element('div', 'ai-access-actions');
-    const target = error.code === 'AUTH_REQUIRED'
+    const target = needsAccount
       ? `/account/?next=${encodeURIComponent(`${location.pathname}${location.search}${location.hash}`)}`
       : '/pricing/';
-    const link = element('a', '', error.code === 'AUTH_REQUIRED' ? copy('登录或注册', 'Sign in or register') : copy('查看会员方案', 'View membership plans'));
+    const link = element('a', '', needsAccount ? copy('登录或注册', 'Sign in or register') : copy('查看会员方案', 'View membership plans'));
     link.href = target;
     actions.appendChild(link);
     output.appendChild(actions);

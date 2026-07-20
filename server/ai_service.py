@@ -893,6 +893,13 @@ class Handler(BaseHTTPRequestHandler):
                     "Set-Cookie",
                     self.cookie_header("tianji_trial", access["trial_token"], AUTH.trial_marker_seconds),
                 ))
+            if not access.get("allowed"):
+                self.send_json(401, {
+                    "ok": False,
+                    "code": access.get("code") or "DETAIL_LOGIN_REQUIRED",
+                    "message": access.get("message") or "详细解读需要先注册或登录。",
+                }, response_headers)
+                return
         module = module_for(title)
         digest = hashlib.sha256(f"{MODEL}\0{module}\0{title}\0{context}".encode("utf-8")).hexdigest()
         now = time.time()

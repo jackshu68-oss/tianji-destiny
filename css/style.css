@@ -2189,6 +2189,7 @@ body.auth-access-locked { overflow: hidden; }
 }
 .auth-access-gate[hidden] { display: none; }
 .auth-access-gate-panel {
+  position: relative;
   width: min(520px,100%);
   padding: 34px;
   color: var(--ink);
@@ -2197,6 +2198,23 @@ body.auth-access-locked { overflow: hidden; }
   border-radius: 8px;
   box-shadow: 0 28px 90px rgba(8,11,9,.36);
 }
+.auth-access-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--panel-line);
+  border-radius: 50%;
+  color: var(--ink);
+  background: transparent;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+.auth-access-close[hidden] { display: none; }
 .auth-access-kicker { color: var(--gold-soft); font-size: 10px; letter-spacing: 2px; }
 .auth-access-gate-panel h2 { margin-top: 9px; font: 700 30px/1.28 var(--serif); }
 .auth-access-gate-panel p { margin-top: 13px; color: var(--ink-soft); font-size: 14px; line-height: 1.8; }

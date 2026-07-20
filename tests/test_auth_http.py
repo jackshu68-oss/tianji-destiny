@@ -37,6 +37,7 @@ class AuthHttpTests(unittest.TestCase):
             environ={
                 "TIANJI_AUTH_SECRET": "http-test-secret-that-is-long-enough",
                 "TIANJI_TRIAL_HOURS": "24",
+                "TIANJI_WELCOME_TRIAL_DAYS": "3",
                 "TIANJI_TRIAL_MARKER_DAYS": "365",
                 "TIANJI_AUTH_SESSION_DAYS": "30",
                 "TIANJI_OWNER_PHONE": "13800138000",
@@ -123,6 +124,9 @@ class AuthHttpTests(unittest.TestCase):
         )
         self.assertEqual(status, 200)
         self.assertEqual(payload["account"]["phone_hint"], "176****9594")
+        self.assertTrue(payload["account"]["active"])
+        self.assertEqual(payload["account"]["plan"], "free")
+        self.assertEqual(payload["account"]["plan_expires"], 0)
         cookie = self.session_cookie(headers)
         self.assertTrue(cookie)
 
@@ -154,8 +158,8 @@ class AuthHttpTests(unittest.TestCase):
     def test_first_ai_request_starts_trial_and_expiry_requires_account(self):
         body = {"title": "综合全盘分析报告", "context": "这是一段长度足够的确定性排盘结果，用于测试匿名体验访问控制。"}
         status, payload, headers = self.request("POST", "/api/ai/interpret", body)
-        self.assertEqual(status, 202)
-        self.assertEqual(payload["access"], "trial")
+        self.assertEqual(status, 401)
+        self.assertEqual(payload["code"], "DETAIL_LOGIN_REQUIRED")
         trial_cookie = self.session_cookie(headers, "tianji_trial")
         self.assertTrue(trial_cookie)
         trial_set_cookie = next(
@@ -171,6 +175,15 @@ class AuthHttpTests(unittest.TestCase):
         status, payload, _headers = self.request("POST", "/api/auth/trial/start", {}, cookie=trial_cookie)
         self.assertEqual(status, 401)
         self.assertEqual(payload["code"], "AUTH_REQUIRED")
+
+        _member, member_cookie = self.register("17606669594")
+        status, payload, _headers = self.request("POST", "/api/ai/interpret", body, cookie=member_cookie)
+        self.assertEqual(status, 202)
+        self.assertEqual(payload["access"], "pro")
+        self.now[0] += 3 * 86400 + 1
+        status, payload, _headers = self.request("POST", "/api/ai/interpret", body, cookie=member_cookie)
+        self.assertEqual(status, 402)
+        self.assertEqual(payload["code"], "MEMBERSHIP_REQUIRED")
 
     def test_manual_payment_routes_require_login_and_owner_review(self):
         status, payload, _headers = self.request(
@@ -242,7 +255,7 @@ class AuthHttpTests(unittest.TestCase):
         status, payload, _headers = self.request("GET", "/api/auth/status", cookie=member_cookie)
         self.assertEqual(status, 200)
         self.assertTrue(payload["account"]["active"])
-        self.assertEqual(payload["account"]["plan_expires"], self.now[0] + 365 * 86400)
+        self.assertEqual(payload["account"]["plan_expires"], self.now[0] + (3 + 365) * 86400)
 
         status, payload, _headers = self.request("GET", "/api/billing/manual/orders", cookie=owner_cookie)
         self.assertEqual(status, 200)

@@ -651,8 +651,12 @@
       navigator.clipboard.writeText(url).then(() => toast('链接已复制，不含出生资料')).catch(() => toast('复制失败，请手动复制网址'));
     } else { toast('当前环境不支持自动复制，请手动复制网址'); }
   }
-  function shareFullReport(toWechat) {
+  async function shareFullReport(toWechat) {
     if (!chart || !window.TianjiReportShare) return;
+    if (window.TianjiAuth && TianjiAuth.requireFullAccess) {
+      try { await TianjiAuth.requireFullAccess(); }
+      catch (_error) { return; }
+    }
     const title = isEnglish() ? 'Complete Personal Insight Report' : '完整命盘与个人洞察报告';
     const method = toWechat ? TianjiReportShare.share : TianjiReportShare.save;
     method($('#result'), { title });
@@ -1055,12 +1059,17 @@
     return body + (window.TianjiKnowledge ? TianjiKnowledge.sourceBadge('bazi') : '');
   }
 
-  function openCustomDetail(title, body) {
+  async function openCustomDetail(title, body) {
+    if (window.TianjiAuth && TianjiAuth.requireFullAccess) {
+      try { await TianjiAuth.requireFullAccess(); }
+      catch (_error) { return false; }
+    }
     $('#detail-modal .dm-title').textContent = title || '详解';
     $('#detail-modal .dm-body').innerHTML = body || '<p class="dm-empty">暂无详解。</p>';
     if (window.TianjiAI) window.TianjiAI.mount($('#detail-modal .dm-body'), { title, body });
     $('#detail-modal').classList.remove('hidden');
     document.body.style.overflow = 'hidden';
+    return true;
   }
 
   function openDetail(type) {
@@ -1097,6 +1106,19 @@
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDetail(); });
   }
 
+  function initProfessionalDetailGate() {
+    $$('.professional-details > summary').forEach(summary => {
+      summary.addEventListener('click', async event => {
+        if (!window.TianjiAuth || !TianjiAuth.requireFullAccess || TianjiAuth.hasFullAccess()) return;
+        event.preventDefault();
+        try {
+          await TianjiAuth.requireFullAccess();
+          summary.parentElement.open = true;
+        } catch (_error) { /* The account or membership prompt is already visible. */ }
+      });
+    });
+  }
+
   function initQuickNav() {
     $$('.quick-nav [data-jump]').forEach(b => b.addEventListener('click', () => {
       const id = b.dataset.jump;
@@ -1126,7 +1148,7 @@
   /* ---------- 启动 ---------- */
   window.addEventListener('DOMContentLoaded', () => {
     initStars(); initForm(); initDateNav(); initShare(); initZeji(); initFloat(); initHehun();
-    injectDetailButtons(); initDetailModal(); initQuickNav();
+    injectDetailButtons(); initDetailModal(); initProfessionalDetailGate(); initQuickNav();
     refreshSavedBar();
     if (loadProfile()) autoLoad();
   });
