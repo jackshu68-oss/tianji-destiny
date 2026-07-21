@@ -825,7 +825,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path in ("/healthz", "/api/report/health", "/api/ai/health"):
-            self.send_json(200, {"ok": True, "configured": bool(API_KEY), "model": MODEL})
+            self.send_json(200, {"ok": True, "configured": bool(API_KEY)})
             return
         if not self.valid_host():
             self.send_json(404, {"ok": False, "error": "NOT_FOUND"})
