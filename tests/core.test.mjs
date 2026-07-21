@@ -409,7 +409,9 @@ test('面向用户的全站文案不显示模型、接口或相关技术字样',
   const reportControl = fs.readFileSync(new URL('../js/ai.js', import.meta.url), 'utf8');
   const home = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
   const caddy = fs.readFileSync(new URL('../deploy/Caddyfile.snippet', import.meta.url), 'utf8');
+  const nginx = fs.readFileSync(new URL('../deploy/nginx.conf', import.meta.url), 'utf8');
   assert.match(reportControl, /生成详细报告/);
   assert.match(home, /app-build" content="20260720-4"/);
   assert.match(caddy, /Cache-Control "no-cache, no-store, must-revalidate"/);
+  assert.match(nginx, /Cache-Control "no-cache, no-store, must-revalidate" always/);
 });
