@@ -157,7 +157,7 @@ class AuthHttpTests(unittest.TestCase):
 
     def test_first_ai_request_starts_trial_and_expiry_requires_account(self):
         body = {"title": "综合全盘分析报告", "context": "这是一段长度足够的确定性排盘结果，用于测试匿名体验访问控制。"}
-        status, payload, headers = self.request("POST", "/api/ai/interpret", body)
+        status, payload, headers = self.request("POST", "/api/report/interpret", body)
         self.assertEqual(status, 401)
         self.assertEqual(payload["code"], "DETAIL_LOGIN_REQUIRED")
         trial_cookie = self.session_cookie(headers, "tianji_trial")
@@ -169,7 +169,7 @@ class AuthHttpTests(unittest.TestCase):
         self.assertIn("Max-Age=31536000", trial_set_cookie)
 
         self.now[0] += 24 * 3600 + 1
-        status, payload, _headers = self.request("POST", "/api/ai/interpret", body, cookie=trial_cookie)
+        status, payload, _headers = self.request("POST", "/api/report/interpret", body, cookie=trial_cookie)
         self.assertEqual(status, 401)
         self.assertEqual(payload["code"], "AUTH_REQUIRED")
         status, payload, _headers = self.request("POST", "/api/auth/trial/start", {}, cookie=trial_cookie)
@@ -177,11 +177,11 @@ class AuthHttpTests(unittest.TestCase):
         self.assertEqual(payload["code"], "AUTH_REQUIRED")
 
         _member, member_cookie = self.register("17606669594")
-        status, payload, _headers = self.request("POST", "/api/ai/interpret", body, cookie=member_cookie)
+        status, payload, _headers = self.request("POST", "/api/report/interpret", body, cookie=member_cookie)
         self.assertEqual(status, 202)
         self.assertEqual(payload["access"], "pro")
         self.now[0] += 3 * 86400 + 1
-        status, payload, _headers = self.request("POST", "/api/ai/interpret", body, cookie=member_cookie)
+        status, payload, _headers = self.request("POST", "/api/report/interpret", body, cookie=member_cookie)
         self.assertEqual(status, 402)
         self.assertEqual(payload["code"], "MEMBERSHIP_REQUIRED")
 

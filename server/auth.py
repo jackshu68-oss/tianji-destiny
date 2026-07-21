@@ -677,20 +677,20 @@ class AuthService:
             "trial_token": token,
         }
 
-    def authorise_ai(self, session_token, trial_token):
+    def authorise_report(self, session_token, trial_token):
         user = self._session_user(session_token)
         account = self._public_account(user)
         if account:
             if account["active"]:
                 return {"allowed": True, "tier": "pro", "account": account, "trial_token": ""}
-            raise AuthError(402, "MEMBERSHIP_REQUIRED", "免费版可使用基础查询；详细解读需要会员。")
+            raise AuthError(402, "MEMBERSHIP_REQUIRED", "免费版可使用基础查询；详细报告需要会员。")
         trial = self._trial(trial_token)
         if trial:
             return {
                 "allowed": False,
                 "tier": "guest",
                 "code": "DETAIL_LOGIN_REQUIRED",
-                "message": "详细解读需要先使用手机号注册或登录。",
+                "message": "详细报告需要先使用手机号注册或登录。",
                 "account": None,
                 "trial_token": "",
                 "trial_expires": int(trial["expires"]),
@@ -704,7 +704,7 @@ class AuthService:
             "allowed": False,
             "tier": "guest",
             "code": "DETAIL_LOGIN_REQUIRED",
-            "message": "详细解读需要先使用手机号注册或登录。",
+            "message": "详细报告需要先使用手机号注册或登录。",
             "account": None,
             "trial_token": token,
             "trial_expires": expires,

@@ -860,7 +860,7 @@
     `;
   }
 
-  /* ---------- 全站「详解」弹层 ---------- */
+  /* ---------- 全站详细报告弹层 ---------- */
   const TEN_GOD_DESC = {
     比肩: '与日主同五行、同阴阳，常用来观察自主意识、同辈协作与边界。',
     劫财: '与日主同五行、异阴阳，常用来观察竞争、合作与资源分配。',
@@ -1023,7 +1023,7 @@
         + sec('分数如何阅读', `<p>≥80 表示结构协调度较高；≥65 表示有多项可协作优势；≥50 表示优势与摩擦并存；≥35 表示需要重点讨论差异；&lt;35 表示结构分歧较多。分数不判断关系成败，真实相处、沟通和共同选择始终优先。</p>`);
     },
     hehun(data) {
-      if (!data) return Detail.hehunPrinciple() + sec('本次结果', '<p>请先填写甲乙双方生辰并完成测算，随后这里会显示双方逐项详解。</p>');
+      if (!data) return Detail.hehunPrinciple() + sec('本次结果', '<p>请先填写甲乙双方生辰并完成测算，随后这里会显示双方逐项报告。</p>');
       const A = TianjiEngine.analyze(data.a), B = TianjiEngine.analyze(data.b), result = data.result;
       const label = good => good > 0 ? '有利' : good < 0 ? '需磨合' : '中性';
       const factors = result.factors.map(f => {
@@ -1043,7 +1043,7 @@
 
   function buildDetail(type) {
     if (type === 'hehun') return Detail.hehun(lastHehun) + (window.TianjiKnowledge ? TianjiKnowledge.sourceBadge('bazi') : '');
-    if (!chart) return '<p class="dm-empty">请先生成命盘后再查看详解。</p>';
+    if (!chart) return '<p class="dm-empty">请先生成命盘后再查看详细报告。</p>';
     const a = TianjiEngine.analyze(chart);
     const map = {
       overview: () => Detail.overview(chart, a),
@@ -1055,7 +1055,7 @@
       dayun: () => Detail.dayun(chart),
       liunian: () => Detail.liunian(chart)
     };
-    const body = (map[type] && map[type]()) || '<p class="dm-empty">暂无详解。</p>';
+    const body = (map[type] && map[type]()) || '<p class="dm-empty">暂无详细报告。</p>';
     return body + (window.TianjiKnowledge ? TianjiKnowledge.sourceBadge('bazi') : '');
   }
 
@@ -1064,9 +1064,9 @@
       try { await TianjiAuth.requireFullAccess(); }
       catch (_error) { return false; }
     }
-    $('#detail-modal .dm-title').textContent = title || '详解';
-    $('#detail-modal .dm-body').innerHTML = body || '<p class="dm-empty">暂无详解。</p>';
-    if (window.TianjiAI) window.TianjiAI.mount($('#detail-modal .dm-body'), { title, body });
+    $('#detail-modal .dm-title').textContent = title || '详细报告';
+    $('#detail-modal .dm-body').innerHTML = body || '<p class="dm-empty">暂无详细报告。</p>';
+    if (window.TianjiReport) window.TianjiReport.mount($('#detail-modal .dm-body'), { title, body });
     $('#detail-modal').classList.remove('hidden');
     document.body.style.overflow = 'hidden';
     return true;
@@ -1074,13 +1074,13 @@
 
   function openDetail(type) {
     const titles = {
-      overview: '命主概览 · 详解', bazi: '四柱八字 · 详解', profound: '八字精批 · 详解',
-      ziwei: '紫微斗数 · 详解', wuxing: '五行分布 · 详解', daily: '每日运势 · 详解',
-      dayun: '大运流转 · 详解', liunian: '流年运程 · 详解', hehun: '关系图谱 · 计算原理'
+      overview: '命主概览 · 详细报告', bazi: '四柱八字 · 详细报告', profound: '八字精批 · 详细报告',
+      ziwei: '紫微斗数 · 详细报告', wuxing: '五行分布 · 详细报告', daily: '每日运势 · 详细报告',
+      dayun: '大运流转 · 详细报告', liunian: '流年运程 · 详细报告', hehun: '关系图谱 · 计算原理'
     };
     const body = buildDetail(type);
     if (body === null) return;
-    openCustomDetail(titles[type] || '详解', body);
+    openCustomDetail(titles[type] || '详细报告', body);
   }
   function closeDetail() {
     $('#detail-modal').classList.add('hidden');
@@ -1095,7 +1095,7 @@
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'dm-trigger';
-      btn.textContent = '查看详解 ›';
+      btn.textContent = '查看详细报告 ›';
       btn.addEventListener('click', (e) => { e.stopPropagation(); openDetail(sec.dataset.detail); });
       sec.appendChild(btn);
     });

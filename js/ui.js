@@ -186,7 +186,7 @@
     '奇门遁甲': 'Qimen Dunjia', '时家转盘 · 九宫观局': 'Rotating Qimen · Nine-Palace View', '起局时间': 'Chart time', '问事类别': 'Question category', '综合': 'General', '事业': 'Career', '财运': 'Wealth', '感情': 'Relationships', '出行': 'Travel', '健康': 'Wellbeing', '生成奇门局 ✦': 'Create Qimen Chart ✦',
     '塔罗牌': 'Tarot', '静心抽牌 · 看见当下线索': 'Draw With Intention · See the Present Pattern', '选择牌阵': 'Choose a spread', '洗牌并抽取 ✦': 'Shuffle and Draw ✦',
     '吉卜赛雷诺曼': 'Lenormand', '三十六象 · 连线读牌': 'Thirty-Six Symbols · Read the Connections', '洗牌并展开 ✦': 'Shuffle and Reveal ✦',
-    '关于 · 道法自然': 'ABOUT · DAOFA', '隐私政策': 'Privacy', '使用条款': 'Terms', '更新记录': 'Updates', '分析': 'Analysis', '我的': 'My Data', '关闭': 'Close', '详解': 'Details', '查看详解 ›': 'View details ›',
+    '关于 · 道法自然': 'ABOUT · DAOFA', '隐私政策': 'Privacy', '使用条款': 'Terms', '更新记录': 'Updates', '分析': 'Analysis', '我的': 'My Data', '关闭': 'Close', '详细报告': 'Detailed report', '查看详细报告 ›': 'View detailed report ›',
     '依据': 'Evidence', '现实表现': 'In practice', '行动建议': 'Action', '财富': 'Wealth', '风险': 'Risk', '当前阶段': 'Current phase', '关系优势': 'Relationship strength', '主要摩擦': 'Main friction', '个人工作台': 'Personal workspace', '手机工作台导航': 'Mobile workspace navigation'
   };
 

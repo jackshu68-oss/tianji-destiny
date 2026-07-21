@@ -225,7 +225,7 @@ test('页面包含新增排盘、现代摘要、隐私入口和本地脚本', ()
   assert.match(html, /id="theme-toggle"/);
   assert.match(html, /id="life-timeline-list"/);
   assert.match(html, /id="rhythm-calendar-grid"/);
-  assert.match(html, /id="ai-question-panel"/);
+  assert.match(html, /id="report-question-panel"/);
   assert.match(html, /id="astrology-insight"/);
   assert.match(html, /id="astrology-result"/);
   assert.match(html, /id="integrated-report-panel"/);
@@ -242,7 +242,7 @@ test('页面包含新增排盘、现代摘要、隐私入口和本地脚本', ()
   assert.match(html, /js\/profile\.js/);
   assert.match(html, /js\/ui\.js/);
   assert.match(html, /js\/billing\.js/);
-  assert.match(html, /js\/ai\.js/);
+  assert.match(html, /js\/report\.js/);
   assert.match(html, /js\/planner\.js/);
   assert.match(html, /js\/astrology\.js/);
   assert.match(html, /js\/workspace\.js/);
@@ -253,13 +253,13 @@ test('页面包含新增排盘、现代摘要、隐私入口和本地脚本', ()
   assert.doesNotMatch(html, /class="workspace-mode"|class="mode-btn/);
   const ids = [...html.matchAll(/\sid="([^"]+)"/g)].map(match => match[1]);
   assert.deepEqual(ids.filter((id, index) => ids.indexOf(id) !== index), []);
-  const aiSource = fs.readFileSync(new URL('../js/ai.js', import.meta.url), 'utf8');
-  assert.match(aiSource, /\/api\/ai\/interpret/);
-  assert.match(aiSource, /\/api\/ai\/result\//);
-  assert.match(aiSource, /payload\.pending/);
-  assert.match(aiSource, /mountReport/);
-  assert.match(aiSource, /综合全盘分析报告/);
-  assert.doesNotMatch(aiSource, /Bearer\s|DEEPSEEK_API_KEY|api\.deepseek\.com/);
+  const reportSource = fs.readFileSync(new URL('../js/report.js', import.meta.url), 'utf8');
+  assert.match(reportSource, /\/api\/report\/interpret/);
+  assert.match(reportSource, /\/api\/report\/result\//);
+  assert.match(reportSource, /payload\.pending/);
+  assert.match(reportSource, /mountReport/);
+  assert.match(reportSource, /综合全盘分析报告/);
+  assert.doesNotMatch(reportSource, /Bearer\s|DEEPSEEK_API_KEY|api\.deepseek\.com/);
   const workspaceSource = fs.readFileSync(new URL('../js/workspace.js', import.meta.url), 'utf8');
   assert.match(workspaceSource, /has-active-profile/);
   assert.match(workspaceSource, /setActiveProfileId/);
@@ -315,7 +315,7 @@ test('报告分享组件覆盖全部结果并优先分享图片文件', () => {
   for (const id of ['astrology-result', 'rectify-result', 'comparison-result', 'backtest-result', 'zj-result', 'hh-result', 'mh-result', 'qm-result', 'tarot-result', 'lenormand-result', 'shared-result']) {
     assert.match(source, new RegExp(`#${id}`));
   }
-  assert.match(source, /\.ai-output\.ready/);
+  assert.match(source, /\.report-output\.ready/);
   assert.match(source, /\.dm-body/);
   assert.match(source, /html2canvas/);
   assert.match(source, /navigator\.canShare/);
@@ -398,20 +398,22 @@ test('面向用户的全站文案不显示模型、接口或相关技术字样',
     '../index.html', '../privacy.html', '../privacy/index.html', '../terms/index.html',
     '../guide/index.html', '../about/index.html', '../account/index.html',
     '../pricing/index.html', '../support/index.html', '../share.html',
-    '../js/ai.js', '../js/auth.js', '../js/app.js', '../js/ui.js',
+    '../js/report.js', '../js/auth.js', '../js/app.js', '../js/ui.js',
     '../js/divination.js', '../js/oracle.js', '../js/report-share.js'
   ];
   const publicCopy = files.map(file => fs.readFileSync(new URL(file, import.meta.url), 'utf8')).join('\n');
   assert.doesNotMatch(publicCopy, /deepseek/i);
   assert.doesNotMatch(publicCopy, /DTC|接口|智能详解|智能解读|让 AI|生成 AI|(^|[^A-Za-z])AI([^A-Za-z]|$)/m);
-  assert.doesNotMatch(publicCopy, /完整解读|详细解读/);
+  assert.doesNotMatch(publicCopy, /详解|完整解读|详细解读/);
 
-  const reportControl = fs.readFileSync(new URL('../js/ai.js', import.meta.url), 'utf8');
+  const reportControl = fs.readFileSync(new URL('../js/report.js', import.meta.url), 'utf8');
   const home = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
   const caddy = fs.readFileSync(new URL('../deploy/Caddyfile.snippet', import.meta.url), 'utf8');
   const nginx = fs.readFileSync(new URL('../deploy/nginx.conf', import.meta.url), 'utf8');
   assert.match(reportControl, /生成详细报告/);
-  assert.match(home, /app-build" content="20260720-4"/);
+  assert.match(home, /app-build" content="20260720-6"/);
+  assert.match(home, /js\/report\.js\?v=20260720-6/);
+  assert.doesNotMatch(home, /js\/ai\.js/);
   assert.match(caddy, /Cache-Control "no-cache, no-store, must-revalidate"/);
   assert.match(nginx, /Cache-Control "no-cache, no-store, must-revalidate" always/);
 });

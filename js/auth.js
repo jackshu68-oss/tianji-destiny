@@ -156,13 +156,13 @@
     closeButton.hidden = false;
     closeButton.setAttribute('aria-label', copy('关闭', 'Close'));
     closeButton.title = copy('关闭', 'Close');
-    gate.querySelector('.auth-access-kicker').textContent = copy('完整内容', 'FULL CONTENT');
+    gate.querySelector('.auth-access-kicker').textContent = copy('详细报告', 'DETAILED REPORT');
     gate.querySelector('h2').textContent = signedIn
       ? copy('详细报告需要会员', 'Detailed reports require membership')
       : copy('登录后查看详细报告', 'Sign in for detailed reports');
     gate.querySelector('p').textContent = signedIn
       ? copy('当前账号仍可使用基础查询；详细报告、专业细盘和综合报告仅向有效会员开放。', 'Your account can continue using basic queries. Detailed reports, professional details and integrated reports require active membership.')
-      : copy('首日可免登录使用基础查询；详细内容需要使用手机号注册或登录。', 'Basic queries are available without sign-in on the first day. Sign in or register with a phone number for detailed content.');
+      : copy('首日可免登录使用基础查询；详细报告需要使用手机号注册或登录。', 'Basic queries are available without sign-in on the first day. Sign in or register with a phone number for detailed reports.');
     const primary = gate.querySelector('[data-access-login]');
     primary.textContent = signedIn ? copy('查看会员方案', 'View membership plans') : copy('手机号登录', 'Phone sign-in');
     primary.href = signedIn ? '/pricing/' : `/account/?mode=login&next=${next}`;
@@ -170,7 +170,7 @@
     secondary.textContent = signedIn ? copy('联系客服', 'Contact support') : copy('注册账号', 'Create account');
     secondary.href = signedIn ? '/support/' : `/account/?mode=register&next=${next}`;
     gate.querySelector('small').textContent = signedIn
-      ? copy('会员到期后详细内容会由服务器自动关闭，基础查询不受影响。', 'The server closes detailed access automatically when membership expires; basic queries remain available.')
+      ? copy('会员到期后详细报告会由服务器自动关闭，基础查询不受影响。', 'The server closes detailed reports automatically when membership expires; basic queries remain available.')
       : copy('注册只在首次验证或找回密码时发送短信，以后使用手机号和密码登录。', 'SMS is only used for first verification or password recovery. Future sign-ins use your phone number and password.');
     gate.hidden = false;
     document.body.classList.add('auth-access-locked');

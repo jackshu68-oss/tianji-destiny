@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <meta name="app-build" content="20260720-4" />
+  <meta name="app-build" content="20260720-6" />
   <title>道法自然｜看懂自己，把握时机</title>
   <meta name="description" content="输入出生资料，快速了解性格底层、事业财运、关系模式与目前人生阶段。结合八字、紫微与流年，以现代方式解读传统智慧。" />
   <meta name="theme-color" content="#f4f0e7" />
@@ -21,10 +21,11 @@
       document.documentElement.lang = localStorage.getItem('tianji_language_v1') === 'en' ? 'en-CA' : 'zh-CN';
     } catch (_error) { document.documentElement.dataset.theme = 'modern'; }
   </script>
+  <script src="js/version.js?v=20260720-6" defer></script>
   <link rel="icon" href="assets/daofa-mark.svg" type="image/svg+xml" />
   <link rel="manifest" href="manifest.webmanifest" />
   <!-- 字体使用系统字体栈（见 css/style.css），不依赖外部网络，大陆/离线均可秒开 -->
-  <link rel="stylesheet" href="css/style.css?v=20260720-4" />
+  <link rel="stylesheet" href="css/style.css?v=20260720-6" />
 </head>
 <body>
   <canvas id="stars"></canvas>
@@ -192,9 +193,9 @@
         <div class="workspace-band-head"><span>综合全盘分析</span><h3>把已生成的结果整合成一份报告</h3><p>系统会汇总八字、紫微、万年历、星座以及你已完成的占测结果，梳理共同主题、分歧与现实行动。</p></div>
         <div id="integrated-report-panel"></div>
       </section>
-      <section class="workspace-band ai-question-band">
+      <section class="workspace-band report-question-band">
         <div class="workspace-band-head"><span>命盘问答</span><h3>只根据你的命盘回答</h3><p>回答会引用日主、结构、大运和未来三个月窗口；资料不足时必须明确说明限制。</p></div>
-        <div id="ai-question-panel"></div>
+        <div id="report-question-panel"></div>
       </section>
     </div>
 
@@ -799,13 +800,13 @@
   <!-- 分享卡片（截图用，默认隐藏） -->
   <div id="share-stage" class="share-stage"></div>
 
-  <!-- 详解弹层 -->
+  <!-- 详细报告弹层 -->
   <div id="detail-modal" class="detail-modal hidden">
     <div class="dm-backdrop" data-close></div>
     <div class="dm-panel" role="dialog" aria-modal="true">
       <button class="dm-close" data-close aria-label="关闭">×</button>
       <div class="dm-head">
-        <span class="dm-kicker">详解</span>
+        <span class="dm-kicker">详细报告</span>
         <h3 class="dm-title"></h3>
       </div>
       <div class="dm-body"></div>
@@ -816,7 +817,7 @@
   <script src="js/vendor/qimen-core.min.js?v=20260718-14"></script>
   <script src="js/meihua.js?v=20260718-14"></script>
   <script src="js/knowledge.js?v=20260718-14"></script>
-  <script src="js/ui.js?v=20260720-4"></script>
+  <script src="js/ui.js?v=20260720-6"></script>
   <script src="js/profile.js?v=20260718-14"></script>
   <script src="js/ziwei-gt.global.js?v=20260718-14"></script>
   <script src="js/engine.js?v=20260718-14"></script>
@@ -824,14 +825,14 @@
   <script src="js/astrology.js?v=20260718-20"></script>
   <script src="js/ziwei.js?v=20260718-14"></script>
   <script src="js/html2canvas.min.js?v=20260718-14"></script>
-  <script src="js/report-share.js?v=20260720-4"></script>
-  <script src="js/app.js?v=20260720-4"></script>
-  <script src="js/divination.js?v=20260720-4"></script>
-  <script src="js/oracle.js?v=20260720-4"></script>
-  <script src="js/auth.js?v=20260720-4"></script>
+  <script src="js/report-share.js?v=20260720-6"></script>
+  <script src="js/app.js?v=20260720-6"></script>
+  <script src="js/divination.js?v=20260720-6"></script>
+  <script src="js/oracle.js?v=20260720-6"></script>
+  <script src="js/auth.js?v=20260720-6"></script>
   <script src="js/billing.js?v=20260720-4"></script>
-  <script src="js/ai.js?v=20260720-4"></script>
+  <script src="js/report.js?v=20260720-6"></script>
   <script src="js/ambient.js?v=20260718-14"></script>
-  <script src="js/workspace.js?v=20260718-20"></script>
+  <script src="js/workspace.js?v=20260720-6"></script>
 </body>
 </html>

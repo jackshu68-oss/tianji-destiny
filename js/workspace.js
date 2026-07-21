@@ -461,7 +461,7 @@
     }));
   }
 
-  function buildAiContext() {
+  function buildReportContext() {
     if (!state.chart) return '';
     const active = TianjiPlanner.currentDaYun(state.chart);
     const topics = TianjiPlanner.topicCards(state.chart);
@@ -568,14 +568,14 @@
     return sections.join('\n\n').slice(0, 12000);
   }
 
-  function mountAiQuestion() {
-    if (!window.TianjiAI || !TianjiAI.mountQuestion) return;
-    TianjiAI.mountQuestion($('#ai-question-panel'), { getContext: buildAiContext });
+  function mountReportQuestion() {
+    if (!window.TianjiReport || !TianjiReport.mountQuestion) return;
+    TianjiReport.mountQuestion($('#report-question-panel'), { getContext: buildReportContext });
   }
 
   function mountIntegratedReport() {
-    if (!window.TianjiAI || !TianjiAI.mountReport) return;
-    integratedReportControl = TianjiAI.mountReport($('#integrated-report-panel'), {
+    if (!window.TianjiReport || !TianjiReport.mountReport) return;
+    integratedReportControl = TianjiReport.mountReport($('#integrated-report-panel'), {
       getSources: integratedSources,
       getContext: buildIntegratedContext
     });
@@ -771,7 +771,7 @@
     $('#insight-workspace').classList.remove('hidden');
     $('#mobile-workspace-nav').classList.remove('hidden');
     renderDailyHome(); renderDashboard(); renderAstrology(); renderTopics(); renderTimeline(); renderCalendar(); renderProfiles();
-    renderRectification(); renderBacktests(); renderShareRecords(); mountIntegratedReport(); mountAiQuestion();
+    renderRectification(); renderBacktests(); renderShareRecords(); mountIntegratedReport(); mountReportQuestion();
   }
 
   function todayIso() {

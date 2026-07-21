@@ -97,21 +97,24 @@ def sanitize_public_text(value):
     if not text:
         return ""
     chinese = bool(re.search(r"[\u3400-\u9fff]", text))
-    provider = "分析服务" if chinese else "analysis service"
-    analysis = "分析" if chinese else "analysis"
+    provider = "报告服务" if chinese else "report service"
+    analysis = "本报告" if chinese else "this report"
     service = "服务" if chinese else "service"
     text = re.sub(r"deep\s*seek", provider, text, flags=re.IGNORECASE)
     text = re.sub(r"(?<![A-Za-z])DTC(?![A-Za-z])", provider, text, flags=re.IGNORECASE)
     text = re.sub(r"(?<![A-Za-z])AI(?![A-Za-z])", analysis, text, flags=re.IGNORECASE)
     text = re.sub(r"(?<![A-Za-z])API(?![A-Za-z])", service, text, flags=re.IGNORECASE)
     text = text.replace("接口", "服务")
+    text = text.replace("人工智能", analysis)
+    text = text.replace("智能详解", "详细报告").replace("智能解读", "详细报告")
+    text = text.replace("详细解读", "详细报告").replace("详解", "详细报告")
     return re.sub(r"[ \t]{2,}", " ", text).strip()
 
 
 def normalize_analysis(value):
     if not isinstance(value, dict):
         return {
-            "overview": sanitize_public_text(value or "暂未返回有效解读内容。"),
+            "overview": sanitize_public_text(value or "暂未返回有效报告内容。"),
             "evidence": [],
             "reality": [],
             "timing": [],
@@ -177,7 +180,7 @@ def call_deepseek(title, context, module):
             {"role": "system", "content": system_prompt(module)},
             {
                 "role": "user",
-                "content": f"详解标题：{title}\n\n以下是排盘引擎和本地知识层已经生成的结果：\n{context}",
+                "content": f"报告标题：{title}\n\n以下是排盘引擎和本地知识层已经生成的结果：\n{context}",
             },
         ],
         "stream": False,
@@ -234,9 +237,9 @@ def allow_request(client):
         recent = [stamp for stamp in IP_REQUESTS[client] if now - stamp < 3600]
         IP_REQUESTS[client] = recent
         if len(recent) >= PER_IP_HOUR:
-            return False, "本小时详细解读次数已用完，请稍后再试。"
+            return False, "本小时详细报告次数已用完，请稍后再试。"
         if GLOBAL_REQUESTS[day] >= GLOBAL_DAY:
-            return False, "今日详细解读额度已用完，请明天再试。"
+            return False, "今日详细报告额度已用完，请明天再试。"
         recent.append(now)
         GLOBAL_REQUESTS[day] += 1
     return True, ""
@@ -244,15 +247,15 @@ def allow_request(client):
 
 def public_error(code):
     if code == "AI_SERVICE_NOT_CONFIGURED":
-        return 503, {"ok": False, "code": code, "message": "解读服务尚未完成配置。"}
+        return 503, {"ok": False, "code": code, "message": "报告服务尚未完成配置。"}
     if code in ("UPSTREAM_HTTP_401", "UPSTREAM_HTTP_402", "UPSTREAM_HTTP_403"):
-        return 503, {"ok": False, "code": code, "message": "解读服务暂时不可用，管理员正在检查。"}
+        return 503, {"ok": False, "code": code, "message": "报告服务暂时不可用，管理员正在检查。"}
     if code == "UPSTREAM_HTTP_429":
-        return 503, {"ok": False, "code": code, "message": "解读服务当前繁忙，系统自动重试后仍未响应，请稍后再按一次。"}
+        return 503, {"ok": False, "code": code, "message": "报告服务当前繁忙，系统自动重试后仍未响应，请稍后再按一次。"}
     if code == "UPSTREAM_HTTP_400":
-        return 502, {"ok": False, "code": code, "message": "当前排盘内容未能完成解读，请换一个问题后重试。"}
+        return 502, {"ok": False, "code": code, "message": "当前排盘内容未能生成报告，请换一个问题后重试。"}
     if code == "INTERNAL_ERROR":
-        return 500, {"ok": False, "code": code, "message": "解读任务处理出现异常，请重新生成。"}
+        return 500, {"ok": False, "code": code, "message": "报告任务处理出现异常，请重新生成。"}
     return 502, {"ok": False, "code": code, "message": "网络出现短暂波动，系统自动重试后仍未返回，请稍后再按一次。"}
 
 
@@ -821,7 +824,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_json(404, {"ok": False, "error": "NOT_FOUND"})
 
     def do_GET(self):
-        if self.path in ("/healthz", "/api/ai/health"):
+        if self.path in ("/healthz", "/api/report/health", "/api/ai/health"):
             self.send_json(200, {"ok": True, "configured": bool(API_KEY), "model": MODEL})
             return
         if not self.valid_host():
@@ -837,22 +840,23 @@ class Handler(BaseHTTPRequestHandler):
         if self.path.startswith("/api/share/") or self.path.startswith("/api/sync/"):
             self.handle_storage_get()
             return
-        prefix = "/api/ai/result/"
-        if not self.path.startswith(prefix):
+        prefixes = ("/api/report/result/", "/api/ai/result/")
+        prefix = next((item for item in prefixes if path.startswith(item)), "")
+        if not prefix:
             self.send_json(404, {"ok": False, "error": "NOT_FOUND"})
             return
-        job_id = self.path[len(prefix):].split("?", 1)[0]
+        job_id = path[len(prefix):]
         with LOCK:
             cleanup_jobs(time.time())
             job = JOBS.get(job_id)
             snapshot = dict(job) if job else None
         if not snapshot:
-            self.send_json(404, {"ok": False, "code": "JOB_NOT_FOUND", "message": "解读任务已过期，请重新生成。"})
+            self.send_json(404, {"ok": False, "code": "JOB_NOT_FOUND", "message": "报告任务已过期，请重新生成。"})
             return
         if snapshot["status"] == "pending":
             self.send_json(202, {"ok": True, "pending": True, "job_id": job_id, "poll_after_ms": 1600})
             return
-        self.send_json(snapshot.get("status_code", 500), snapshot.get("payload") or {"ok": False, "message": "解读任务没有返回结果。"})
+        self.send_json(snapshot.get("status_code", 500), snapshot.get("payload") or {"ok": False, "message": "报告任务没有返回结果。"})
 
     def do_POST(self):
         path = self.path.split("?", 1)[0]
@@ -879,7 +883,7 @@ class Handler(BaseHTTPRequestHandler):
             if body is not None:
                 self.handle_storage_post(body)
             return
-        if self.path != "/api/ai/interpret":
+        if path not in ("/api/report/interpret", "/api/ai/interpret"):
             self.send_json(404, {"ok": False, "error": "NOT_FOUND"})
             return
         if not self.valid_host():
@@ -895,14 +899,14 @@ class Handler(BaseHTTPRequestHandler):
         title = str(body.get("title") or "").strip()[:120]
         context = str(body.get("context") or "").strip()[:MAX_CONTEXT_CHARS]
         if not title or len(context) < 20:
-            self.send_json(400, {"ok": False, "message": "请先完成排盘，再生成完整解读。"})
+            self.send_json(400, {"ok": False, "message": "请先完成排盘，再生成详细报告。"})
             return
         response_headers = []
         billing_entitlement = BILLING.status(self.bearer_token()).get("entitlement") or {}
         access_tier = "pro" if billing_entitlement.get("active") else ""
         if not access_tier:
             try:
-                access = AUTH.authorise_ai(self.session_token(), self.trial_token())
+                access = AUTH.authorise_report(self.session_token(), self.trial_token())
             except AuthError as error:
                 self.send_auth_error(error)
                 return
@@ -916,7 +920,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_json(401, {
                     "ok": False,
                     "code": access.get("code") or "DETAIL_LOGIN_REQUIRED",
-                    "message": access.get("message") or "详细解读需要先注册或登录。",
+                    "message": access.get("message") or "详细报告需要先注册或登录。",
                 }, response_headers)
                 return
         module = module_for(title)
@@ -946,7 +950,7 @@ class Handler(BaseHTTPRequestHandler):
         if billing_entitlement.get("active"):
             pro_allowed, pro_account_id = BILLING.consume_pro_usage(self.bearer_token())
             if pro_account_id and not pro_allowed:
-                self.send_json(429, {"ok": False, "message": "今日会员详细解读额度已用完，请明天再试。"})
+                self.send_json(429, {"ok": False, "message": "今日会员详细报告额度已用完，请明天再试。"})
                 return
         elif access_tier == "trial":
             allowed, message = allow_request(self.client_id())

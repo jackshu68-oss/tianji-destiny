@@ -108,13 +108,13 @@ class AuthServiceTests(unittest.TestCase):
             self.service.register("17606669594", code, "Password8")
 
     def test_anonymous_trial_then_account_membership_gate(self):
-        access = self.service.authorise_ai("", "")
+        access = self.service.authorise_report("", "")
         self.assertEqual(access["tier"], "guest")
         self.assertFalse(access["allowed"])
         self.assertEqual(access["code"], "DETAIL_LOGIN_REQUIRED")
         trial_token = access["trial_token"]
         self.assertTrue(self.service.status("", trial_token)["trial"]["active"])
-        self.assertFalse(self.service.authorise_ai("", trial_token)["allowed"])
+        self.assertFalse(self.service.authorise_report("", trial_token)["allowed"])
         self.now[0] += 24 * 3600 + 1
         expired = self.service.status("", trial_token)["trial"]
         self.assertTrue(expired["started"])
@@ -123,7 +123,7 @@ class AuthServiceTests(unittest.TestCase):
             self.service.start_trial("", trial_token)
         self.assertEqual(context.exception.code, "AUTH_REQUIRED")
         with self.assertRaises(AuthError) as context:
-            self.service.authorise_ai("", trial_token)
+            self.service.authorise_report("", trial_token)
         self.assertEqual(context.exception.code, "AUTH_REQUIRED")
 
         registration = self.register()
@@ -135,11 +135,11 @@ class AuthServiceTests(unittest.TestCase):
         stored_plan = connection.execute("SELECT plan,plan_expires FROM auth_users WHERE id=1").fetchone()
         connection.close()
         self.assertEqual(stored_plan, ("welcome", self.now[0] + 3 * 86400))
-        self.assertEqual(self.service.authorise_ai(session, "")["tier"], "pro")
+        self.assertEqual(self.service.authorise_report(session, "")["tier"], "pro")
 
         self.now[0] += 3 * 86400 + 1
         with self.assertRaises(AuthError) as context:
-            self.service.authorise_ai(session, "")
+            self.service.authorise_report(session, "")
         self.assertEqual(context.exception.code, "MEMBERSHIP_REQUIRED")
 
         connection = sqlite3.connect(self.database)
@@ -148,7 +148,7 @@ class AuthServiceTests(unittest.TestCase):
         )
         connection.commit()
         connection.close()
-        self.assertEqual(self.service.authorise_ai(session, "")["tier"], "pro")
+        self.assertEqual(self.service.authorise_report(session, "")["tier"], "pro")
 
     def test_owner_has_permanent_access_without_membership_charge(self):
         owner = self.register(phone="13800138000")
@@ -157,7 +157,7 @@ class AuthServiceTests(unittest.TestCase):
         self.assertTrue(account["is_owner"])
         self.assertEqual(account["plan"], "owner")
         self.assertEqual(account["plan_expires"], 0)
-        self.assertEqual(self.service.authorise_ai(owner["session_token"], "")["tier"], "pro")
+        self.assertEqual(self.service.authorise_report(owner["session_token"], "")["tier"], "pro")
         with self.assertRaises(AuthError) as context:
             self.service.create_membership_order(
                 owner["session_token"], "monthly", "wechat", "202607200001", "站主",
@@ -195,7 +195,7 @@ class AuthServiceTests(unittest.TestCase):
         self.assertTrue(account["active"])
         self.assertEqual(account["plan"], "monthly")
         self.assertEqual(account["plan_expires"], self.now[0] + (3 + 30) * 86400)
-        self.assertEqual(self.service.authorise_ai(member["session_token"], "")["tier"], "pro")
+        self.assertEqual(self.service.authorise_report(member["session_token"], "")["tier"], "pro")
         with self.assertRaises(AuthError) as context:
             self.service.review_membership_order(owner["session_token"], order["id"], False)
         self.assertEqual(context.exception.code, "ORDER_ALREADY_REVIEWED")

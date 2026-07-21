@@ -15,7 +15,7 @@
     '#tarot-result',
     '#lenormand-result',
     '#shared-result',
-    '.ai-output.ready',
+    '.report-output.ready',
     '.dm-body'
   ];
   const TITLES = {
@@ -54,8 +54,8 @@
       const modalTitle = document.querySelector('#detail-modal .dm-title');
       if (modalTitle && modalTitle.textContent.trim()) return modalTitle.textContent.trim();
     }
-    if (target.classList.contains('ai-output')) {
-      const panelTitle = target.closest('.ai-insight') && target.closest('.ai-insight').querySelector('h4');
+    if (target.classList.contains('report-output')) {
+      const panelTitle = target.closest('.report-panel') && target.closest('.report-panel').querySelector('h4');
       if (panelTitle && panelTitle.textContent.trim()) return panelTitle.textContent.trim();
       return phrase('完整详细报告', 'Complete Detailed Report');
     }
@@ -170,7 +170,7 @@
 
   function sanitiseClone(clone) {
     const selectors = [
-      '.report-share-actions', '.ai-intro', '.ai-privacy', '.ai-access-actions',
+      '.report-share-actions', '.report-intro', '.report-privacy', '.report-access-actions',
       '.dm-trigger', '.detail-action', '.res-toolbar', '.share-pop', '.date-nav',
       '.form-error', '.compute-loader', '[data-no-report-share]'
     ];
@@ -182,7 +182,7 @@
       button.tabIndex = -1;
     });
     clone.querySelectorAll('input, select, textarea').forEach(control => control.remove());
-    clone.querySelectorAll('.ai-insight').forEach(panel => {
+    clone.querySelectorAll('.report-panel').forEach(panel => {
       if (!(panel.textContent || '').replace(/\s+/g, '')) panel.remove();
     });
     clone.removeAttribute('id');

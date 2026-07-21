@@ -25,9 +25,9 @@
 
   function listSection(parent, title, items) {
     if (!Array.isArray(items) || !items.length) return;
-    const section = element('section', 'ai-result-section');
+    const section = element('section', 'report-section');
     section.appendChild(element('h5', '', title));
-    const list = element('ul', 'ai-result-list');
+    const list = element('ul', 'report-list');
     items.forEach(item => list.appendChild(element('li', '', String(item))));
     section.appendChild(list);
     parent.appendChild(section);
@@ -36,14 +36,14 @@
   function renderResult(target, payload) {
     target.replaceChildren();
     const analysis = payload.analysis || {};
-    const head = element('div', 'ai-result-head');
-    head.appendChild(element('span', 'ai-live-dot'));
+    const head = element('div', 'report-result-head');
+    head.appendChild(element('span', 'report-status-dot'));
     head.appendChild(element('b', '', copy('详细报告', 'DETAILED REPORT')));
     head.appendChild(element('em', '', payload.cached ? copy('已使用缓存，不重复消耗额度', 'Cached result, no duplicate token use') : copy('本次新生成', 'Newly generated')));
     target.appendChild(head);
 
     if (analysis.overview) {
-      const section = element('section', 'ai-result-section');
+      const section = element('section', 'report-section');
       section.appendChild(element('h5', '', copy('核心判断', 'Core view')));
       section.appendChild(element('p', '', analysis.overview));
       target.appendChild(section);
@@ -54,8 +54,8 @@
     listSection(target, copy('风险提示', 'Risks and limits'), analysis.risks);
     listSection(target, copy('行动建议', 'Actions'), analysis.actions);
 
-    if (analysis.caveat) target.appendChild(element('p', 'ai-caveat', analysis.caveat));
-    const meta = element('div', 'ai-result-meta');
+    if (analysis.caveat) target.appendChild(element('p', 'report-caveat', analysis.caveat));
+    const meta = element('div', 'report-meta');
     meta.textContent = copy('报告生成完成', 'Report complete');
     target.appendChild(meta);
   }
@@ -98,7 +98,7 @@
     while (Date.now() < deadline) {
       await wait(delay);
       try {
-        const response = await fetch(`/api/ai/result/${encodeURIComponent(jobId)}`, {
+        const response = await fetch(`/api/report/result/${encodeURIComponent(jobId)}`, {
           headers: billingHeaders(),
           credentials: 'same-origin',
           cache: 'no-store',
@@ -120,17 +120,17 @@
         delay = Math.min(3500, 1200 + transientFailures * 400);
       }
     }
-    throw requestError('解读仍在后台处理，但本页等待时间已到。请稍后再按一次，系统会优先读取已完成的结果。', false);
+    throw requestError('报告仍在后台处理，但本页等待时间已到。请稍后再按一次，系统会优先读取已完成的结果。', false);
   }
 
-  async function generateInterpretation(options, context, signal, output) {
-    const body = JSON.stringify({ title: options.title || '传统术数详解', context });
+  async function generateReport(options, context, signal, output) {
+    const body = JSON.stringify({ title: options.title || '传统文化详细报告', context });
     let payload;
     let lastError;
 
     for (let attempt = 0; attempt < 2; attempt += 1) {
       try {
-        const response = await fetch('/api/ai/interpret', {
+        const response = await fetch('/api/report/interpret', {
           method: 'POST',
           headers: Object.assign({ 'Content-Type': 'application/json' }, billingHeaders()),
           credentials: 'same-origin',
@@ -160,7 +160,7 @@
   function renderAccessPrompt(output, error) {
     if (!error || !['AUTH_REQUIRED', 'DETAIL_LOGIN_REQUIRED', 'MEMBERSHIP_REQUIRED'].includes(error.code)) return false;
     output.replaceChildren();
-    output.className = 'ai-output error ai-access-required';
+    output.className = 'report-output error report-access-required';
     const needsAccount = error.code === 'AUTH_REQUIRED' || error.code === 'DETAIL_LOGIN_REQUIRED';
     const title = error.code === 'AUTH_REQUIRED'
       ? copy('免费体验已结束', 'Your free trial has ended')
@@ -174,7 +174,7 @@
         : copy('免费版可继续使用基础查询，详细报告需要会员。', 'Basic queries remain available. Detailed reports require membership.'));
     output.appendChild(element('b', '', title));
     output.appendChild(element('p', '', detail));
-    const actions = element('div', 'ai-access-actions');
+    const actions = element('div', 'report-access-actions');
     const target = needsAccount
       ? `/account/?next=${encodeURIComponent(`${location.pathname}${location.search}${location.hash}`)}`
       : '/pricing/';
@@ -187,24 +187,24 @@
 
   function mount(container, options) {
     if (!container) return;
-    const existing = container.querySelector('.ai-insight');
+    const existing = container.querySelector('.report-panel');
     if (existing) existing.remove();
     const context = cleanText(options && options.body);
     if (context.length < 40 || /请先.+(?:生成|测算|加载)/.test(context)) return;
 
-    const panel = element('div', 'ai-insight');
-    const intro = element('div', 'ai-intro');
+    const panel = element('div', 'report-panel');
+    const intro = element('div', 'report-intro');
     const textBlock = element('div');
     textBlock.appendChild(element('h4', '', copy('生成详细报告', 'Generate Detailed Report')));
     textBlock.appendChild(element('p', '', copy('根据上面的结果，进一步整理关系、阶段与现实行动建议。', 'Build a clearer view of relationships, life stages and practical next steps from the results above.')));
     intro.appendChild(textBlock);
 
-    const button = element('button', 'ai-generate', copy('生成详细报告', 'Generate Detailed Report'));
+    const button = element('button', 'report-generate', copy('生成详细报告', 'Generate Detailed Report'));
     button.type = 'button';
     intro.appendChild(button);
     panel.appendChild(intro);
-    panel.appendChild(element('p', 'ai-privacy', copy('点击后，仅会处理生成本次报告所需的文字；不会读取或上传浏览器中的其他命盘。', 'Only the text needed for this report is processed. Other charts in your browser are never read or uploaded.')));
-    const output = element('div', 'ai-output');
+    panel.appendChild(element('p', 'report-privacy', copy('点击后，仅会处理生成本次报告所需的文字；不会读取或上传浏览器中的其他命盘。', 'Only the text needed for this report is processed. Other charts in your browser are never read or uploaded.')));
+    const output = element('div', 'report-output');
     output.setAttribute('aria-live', 'polite');
     panel.appendChild(output);
     container.appendChild(panel);
@@ -212,18 +212,18 @@
     button.addEventListener('click', async () => {
       button.disabled = true;
       button.textContent = copy('正在生成报告...', 'Generating report...');
-      output.className = 'ai-output loading';
+      output.className = 'report-output loading';
       output.textContent = copy('正在提交详细报告任务。', 'Submitting detailed report...');
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 115000);
       try {
-        const payload = await generateInterpretation(options, context, controller.signal, output);
-        output.className = 'ai-output ready';
+        const payload = await generateReport(options, context, controller.signal, output);
+        output.className = 'report-output ready';
         renderResult(output, payload);
         button.textContent = payload.cached ? '已生成 · 使用缓存' : '重新生成';
       } catch (error) {
         if (!renderAccessPrompt(output, error)) {
-          output.className = 'ai-output error';
+          output.className = 'report-output error';
           output.textContent = error.name === 'AbortError'
             ? '本页等待时间已到，但服务器任务不会因此中断。请稍后再按一次读取结果。'
             : (error.message || copy('报告服务暂时不可用，请稍后重试。', 'The report service is temporarily unavailable. Please try again shortly.'));
@@ -239,14 +239,14 @@
   function mountQuestion(container, options) {
     if (!container) return;
     container.replaceChildren();
-    const form = element('div', 'ai-question-form');
+    const form = element('div', 'report-question-form');
     const textarea = element('textarea');
     textarea.maxLength = 300;
     textarea.placeholder = copy('例如：未来三个月，我在工作上更适合主动争取，还是先整理现有项目？', 'For example: Over the next three months, should I actively pursue a new role or consolidate my current projects?');
     textarea.setAttribute('aria-label', copy('输入命盘问题', 'Enter a chart question'));
     form.appendChild(textarea);
 
-    const suggestions = element('div', 'ai-question-suggestions');
+    const suggestions = element('div', 'report-question-suggestions');
     (isEnglish() ? [
       'What should I prioritise at work over the next three months?',
       'What matters most in my relationship communication?',
@@ -263,11 +263,11 @@
     });
     form.appendChild(suggestions);
 
-    const button = element('button', 'ai-question-submit', copy('根据我的命盘回答', 'Answer from my chart'));
+    const button = element('button', 'report-question-submit', copy('根据我的命盘回答', 'Answer from my chart'));
     button.type = 'button';
     form.appendChild(button);
-    const privacy = element('p', 'ai-privacy', copy('只有本次问题及上方列明的命盘依据会发送至香港服务器；不会读取命盘库、日历备注或其他装置资料。', 'Only this question and the chart evidence listed above are sent to the Hong Kong server. Chart libraries, calendar notes and other device data are not read.'));
-    const output = element('div', 'ai-output');
+    const privacy = element('p', 'report-privacy', copy('只有本次问题及上方列明的命盘依据会发送至香港服务器；不会读取命盘库、日历备注或其他装置资料。', 'Only this question and the chart evidence listed above are sent to the Hong Kong server. Chart libraries, calendar notes and other device data are not read.'));
+    const output = element('div', 'report-output');
     output.setAttribute('aria-live', 'polite');
     container.appendChild(form);
     container.appendChild(privacy);
@@ -277,32 +277,32 @@
       const question = textarea.value.trim();
       const chartContext = options && typeof options.getContext === 'function' ? options.getContext() : '';
       if (question.length < 6) {
-        output.className = 'ai-output error';
+        output.className = 'report-output error';
         output.textContent = copy('请把问题写得更具体一些，例如说明时间范围或现实选项。', 'Make the question more specific by adding a time range or real-world options.');
         return;
       }
       if (String(chartContext).length < 40) {
-        output.className = 'ai-output error';
+        output.className = 'report-output error';
         output.textContent = copy('请先生成命盘，再使用命盘问答。', 'Create a chart before using chart Q&A.');
         return;
       }
       button.disabled = true;
       button.textContent = copy('正在根据命盘整理…', 'Reviewing your chart...');
-      output.className = 'ai-output loading';
+      output.className = 'report-output loading';
       output.textContent = copy('正在提交问题并检查命盘依据。', 'Submitting the question and checking chart evidence.');
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 115000);
       try {
         const requestOptions = { title: `命盘问答 · ${question}` };
         const context = `用户问题：${question}\n\n确定性命盘资料：\n${chartContext}`.slice(0, 12000);
-        const payload = await generateInterpretation(requestOptions, context, controller.signal, output);
-        output.className = 'ai-output ready';
+        const payload = await generateReport(requestOptions, context, controller.signal, output);
+        output.className = 'report-output ready';
         renderResult(output, payload);
         button.textContent = payload.cached ? copy('已回答 · 使用缓存', 'Answered · cached') : copy('重新提问', 'Ask again');
       } catch (error) {
         if (!renderAccessPrompt(output, error)) {
-          output.className = 'ai-output error';
-          output.textContent = error.name === 'AbortError' ? '等待时间已到，后台任务可能仍在处理。稍后再按一次会优先读取已完成结果。' : (error.message || '解读服务暂时不可用，请稍后重试。');
+          output.className = 'report-output error';
+          output.textContent = error.name === 'AbortError' ? '等待时间已到，后台任务可能仍在处理。稍后再按一次会优先读取已完成结果。' : (error.message || '报告服务暂时不可用，请稍后重试。');
         }
         button.textContent = copy('重新尝试', 'Try again');
       } finally {
@@ -316,26 +316,26 @@
     if (!container) return null;
     container.replaceChildren();
 
-    const panel = element('div', 'ai-insight ai-report-insight');
-    const sourceTitle = element('div', 'ai-report-source-title');
+    const panel = element('div', 'report-panel report-integrated-panel');
+    const sourceTitle = element('div', 'report-source-title');
     sourceTitle.appendChild(element('b', '', copy('本次报告资料', 'Sources for this report')));
     sourceTitle.appendChild(element('span', '', copy('已生成的结果会纳入，未生成的项目会清楚标示。', 'Generated results are included; unavailable modules are clearly marked.')));
     panel.appendChild(sourceTitle);
-    const sourcesNode = element('div', 'ai-report-sources');
+    const sourcesNode = element('div', 'report-sources');
     panel.appendChild(sourcesNode);
 
-    const intro = element('div', 'ai-intro ai-report-intro');
+    const intro = element('div', 'report-intro report-integrated-intro');
     const introCopy = element('div');
-    introCopy.appendChild(element('span', 'ai-label', copy('专业知识库 · 综合研判', 'PROFESSIONAL KNOWLEDGE · SYNTHESIS')));
+    introCopy.appendChild(element('span', 'report-label', copy('专业知识库 · 综合研判', 'PROFESSIONAL KNOWLEDGE · SYNTHESIS')));
     introCopy.appendChild(element('h4', '', copy('生成综合全盘报告', 'Generate an integrated chart report')));
     introCopy.appendChild(element('p', '', copy('只保留一种清晰报告格式：先列共同主题和依据，再说分歧、时机、风险与未来 30 天行动。', 'One clear format: shared themes and evidence first, followed by differences, timing, risks and 30-day actions.')));
     intro.appendChild(introCopy);
-    const button = element('button', 'ai-generate ai-report-generate', copy('生成综合全盘报告', 'Generate integrated report'));
+    const button = element('button', 'report-generate report-integrated-generate', copy('生成综合全盘报告', 'Generate integrated report'));
     button.type = 'button';
     intro.appendChild(button);
     panel.appendChild(intro);
-    panel.appendChild(element('p', 'ai-privacy', copy('点击后，仅会把上方已生成结果的摘要发送至香港服务器处理；不包含姓名、出生日期、城市、命盘库备注或其他浏览器资料。', 'After you click, only summaries of the generated results above are sent to the Hong Kong server for processing. Names, birth dates, cities, chart-library notes and unrelated browser data are excluded.')));
-    const output = element('div', 'ai-output ai-report-output');
+    panel.appendChild(element('p', 'report-privacy', copy('点击后，仅会把上方已生成结果的摘要发送至香港服务器处理；不包含姓名、出生日期、城市、命盘库备注或其他浏览器资料。', 'After you click, only summaries of the generated results above are sent to the Hong Kong server for processing. Names, birth dates, cities, chart-library notes and unrelated browser data are excluded.')));
+    const output = element('div', 'report-output report-integrated-output');
     output.setAttribute('aria-live', 'polite');
     panel.appendChild(output);
     container.appendChild(panel);
@@ -344,7 +344,7 @@
       const sources = options && typeof options.getSources === 'function' ? options.getSources() : [];
       sourcesNode.replaceChildren();
       sources.forEach(source => {
-        const item = element('span', `ai-source-chip ${source.ready ? 'ready' : 'missing'}`);
+        const item = element('span', `report-source-chip ${source.ready ? 'ready' : 'missing'}`);
         item.appendChild(element('i', '', source.ready ? '✓' : '−'));
         item.appendChild(element('b', '', source.label));
         item.appendChild(element('em', '', source.ready ? copy('已纳入', 'Included') : copy('未生成', 'Not generated')));
@@ -357,27 +357,27 @@
       refreshSources();
       const context = options && typeof options.getContext === 'function' ? String(options.getContext() || '') : '';
       if (context.length < 80) {
-        output.className = 'ai-output ai-report-output error';
+        output.className = 'report-output report-integrated-output error';
         output.textContent = copy('请先生成命盘，再建立综合报告。', 'Create a chart before generating an integrated report.');
         return;
       }
       button.disabled = true;
       button.textContent = copy('正在整合全盘…', 'Integrating all results...');
-      output.className = 'ai-output ai-report-output loading';
+      output.className = 'report-output report-integrated-output loading';
       output.textContent = copy('正在整理各模块的共同主题、分歧与时间尺度。', 'Organising shared themes, differences and time horizons across the available modules.');
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 115000);
       try {
-        const payload = await generateInterpretation({ title: '综合全盘分析报告' }, context.slice(0, 12000), controller.signal, output);
-        output.className = 'ai-output ai-report-output ready';
+        const payload = await generateReport({ title: '综合全盘分析报告' }, context.slice(0, 12000), controller.signal, output);
+        output.className = 'report-output report-integrated-output ready';
         renderResult(output, payload);
         button.textContent = payload.cached ? copy('已生成 · 使用缓存', 'Generated · cached') : copy('重新生成报告', 'Regenerate report');
       } catch (error) {
         if (!renderAccessPrompt(output, error)) {
-          output.className = 'ai-output ai-report-output error';
+          output.className = 'report-output report-integrated-output error';
           output.textContent = error.name === 'AbortError'
             ? copy('本页等待时间已到，但服务器任务不会因此中断。稍后再按一次即可读取结果。', 'This page stopped waiting, but the server task continues. Press again shortly to retrieve the result.')
-            : (error.message || copy('解读服务暂时不可用，请稍后重试。', 'The interpretation service is temporarily unavailable. Please try again shortly.'));
+            : (error.message || copy('报告服务暂时不可用，请稍后重试。', 'The report service is temporarily unavailable. Please try again shortly.'));
         }
         button.textContent = copy('重新尝试', 'Try again');
       } finally {
@@ -389,5 +389,5 @@
     return { refreshSources };
   }
 
-  window.TianjiAI = { mount, mountQuestion, mountReport };
+  window.TianjiReport = { mount, mountQuestion, mountReport };
 })();

@@ -207,7 +207,7 @@
       </div>
       <div class="oracle-spread oracle-count-${reading.draws.length}">${reading.draws.map((item, index) => oracleCard(item, reading.spread.positions[index], index, type)).join('')}</div>
       <div class="oracle-thread"><span>${tarot ? '牌阵主线' : '牌面连线'}</span><p>${esc(thread)}</p></div>
-      <button type="button" class="detail-action" data-oracle-detail>查看逐张依据与深度详解</button>
+      <button type="button" class="detail-action" data-oracle-detail>查看详细报告</button>
       ${source(type)}`;
     target.classList.remove('hidden');
     setTimeout(() => target.scrollIntoView({ behavior:'smooth', block:'start' }), 80);
@@ -283,12 +283,12 @@
     $('#tarot-result').addEventListener('click', event => {
       const card = event.target.closest('[data-oracle-card]');
       if (card && lastTarot) singleCardDetail(lastTarot, Number(card.dataset.oracleCard), 'tarot');
-      if (event.target.closest('[data-oracle-detail]') && lastTarot) detail('塔罗牌 · 完整牌阵详解', buildTarotDetail(lastTarot));
+      if (event.target.closest('[data-oracle-detail]') && lastTarot) detail('塔罗牌 · 详细报告', buildTarotDetail(lastTarot));
     });
     $('#lenormand-result').addEventListener('click', event => {
       const card = event.target.closest('[data-oracle-card]');
       if (card && lastLenormand) singleCardDetail(lastLenormand, Number(card.dataset.oracleCard), 'lenormand');
-      if (event.target.closest('[data-oracle-detail]') && lastLenormand) detail('雷诺曼 · 完整连线详解', buildLenormandDetail(lastLenormand));
+      if (event.target.closest('[data-oracle-detail]') && lastLenormand) detail('雷诺曼 · 详细报告', buildLenormandDetail(lastLenormand));
     });
   }
 
