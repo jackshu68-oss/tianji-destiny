@@ -15,7 +15,7 @@
     zh: {
       loading: '正在检查会员状态…',
       free: '当前为免费版',
-      freeDetail: '可使用基础查询，不含详细解读。',
+      freeDetail: '可使用基础查询，不含详细报告。',
       trial: '1 天免费体验',
       trialDetail: '本次免登录体验已开始。',
       pro: '会员已生效',
@@ -69,7 +69,7 @@
     en: {
       loading: 'Checking membership status…',
       free: 'Free plan active',
-      freeDetail: 'Basic queries are available without detailed interpretations.',
+      freeDetail: 'Basic queries are available without detailed reports.',
       trial: '1-day free trial',
       trialDetail: 'Your no-sign-in trial has started.',
       pro: 'Membership active',

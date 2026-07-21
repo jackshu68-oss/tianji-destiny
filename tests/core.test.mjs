@@ -355,7 +355,7 @@ test('会员页列出免费与会员方案并使用登录后人工付款核验',
   assert.match(pricing, /JACKSHU16888/);
   assert.match(pricing, /付款截图/);
   assert.match(pricing, /基础查询功能/);
-  assert.match(pricing, /不含详细解读/);
+  assert.match(pricing, /不含详细报告/);
   assert.match(pricing, /不限次数使用/);
   assert.match(pricing, /优先调用/);
   assert.match(pricing, /更详细的讲解/);
@@ -402,5 +402,14 @@ test('面向用户的全站文案不显示模型、接口或相关技术字样',
     '../js/divination.js', '../js/oracle.js', '../js/report-share.js'
   ];
   const publicCopy = files.map(file => fs.readFileSync(new URL(file, import.meta.url), 'utf8')).join('\n');
-  assert.doesNotMatch(publicCopy, /DeepSeek|DTC|接口|(^|[^A-Za-z])AI([^A-Za-z]|$)/m);
+  assert.doesNotMatch(publicCopy, /deepseek/i);
+  assert.doesNotMatch(publicCopy, /DTC|接口|智能详解|智能解读|让 AI|生成 AI|(^|[^A-Za-z])AI([^A-Za-z]|$)/m);
+  assert.doesNotMatch(publicCopy, /完整解读|详细解读/);
+
+  const reportControl = fs.readFileSync(new URL('../js/ai.js', import.meta.url), 'utf8');
+  const home = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const caddy = fs.readFileSync(new URL('../deploy/Caddyfile.snippet', import.meta.url), 'utf8');
+  assert.match(reportControl, /生成详细报告/);
+  assert.match(home, /app-build" content="20260720-4"/);
+  assert.match(caddy, /Cache-Control "no-cache, no-store, must-revalidate"/);
 });

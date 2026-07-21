@@ -1,4 +1,4 @@
-/* Same-origin detailed interpretation UI. Service credentials remain on the server. */
+/* Same-origin detailed report UI. Service credentials remain on the server. */
 (function () {
   'use strict';
 
@@ -38,7 +38,7 @@
     const analysis = payload.analysis || {};
     const head = element('div', 'ai-result-head');
     head.appendChild(element('span', 'ai-live-dot'));
-    head.appendChild(element('b', '', copy('完整解读', 'DETAILED INTERPRETATION')));
+    head.appendChild(element('b', '', copy('详细报告', 'DETAILED REPORT')));
     head.appendChild(element('em', '', payload.cached ? copy('已使用缓存，不重复消耗额度', 'Cached result, no duplicate token use') : copy('本次新生成', 'Newly generated')));
     target.appendChild(head);
 
@@ -56,7 +56,7 @@
 
     if (analysis.caveat) target.appendChild(element('p', 'ai-caveat', analysis.caveat));
     const meta = element('div', 'ai-result-meta');
-    meta.textContent = copy('解读完成', 'Interpretation complete');
+    meta.textContent = copy('报告生成完成', 'Report complete');
     target.appendChild(meta);
   }
 
@@ -85,7 +85,7 @@
       throw requestError('服务器连接被中途打断，正在尝试重新连接。', true);
     }
     if (!response.ok || !payload.ok) {
-      throw requestError(payload.message || `解读服务返回错误（${response.status}）`, response.status >= 500, payload.code, response.status);
+      throw requestError(payload.message || `报告服务返回错误（${response.status}）`, response.status >= 500, payload.code, response.status);
     }
     return payload;
   }
@@ -150,10 +150,10 @@
       }
     }
 
-    if (!payload) throw lastError || requestError('解读任务未能建立，请稍后重试。', false);
+    if (!payload) throw lastError || requestError('报告任务未能建立，请稍后重试。', false);
     if (!payload.pending) return payload;
 
-    output.textContent = '已开始生成完整解读。即使手机网络短暂中断，服务器也会继续处理。';
+    output.textContent = copy('已开始生成详细报告。即使手机网络短暂中断，服务器也会继续处理。', 'Your detailed report is being generated. The server will continue even if the mobile connection briefly drops.');
     return pollJob(payload.job_id, signal, output, payload.poll_after_ms);
   }
 
@@ -165,13 +165,13 @@
     const title = error.code === 'AUTH_REQUIRED'
       ? copy('免费体验已结束', 'Your free trial has ended')
       : (error.code === 'DETAIL_LOGIN_REQUIRED'
-        ? copy('登录后查看详细解读', 'Sign in for detailed interpretations')
+        ? copy('登录后生成详细报告', 'Sign in to generate detailed reports')
         : copy('当前为免费版', 'Free plan active'));
     const detail = error.code === 'AUTH_REQUIRED'
       ? copy('请先使用手机号注册或登录。', 'Register or sign in with your phone number.')
       : (error.code === 'DETAIL_LOGIN_REQUIRED'
         ? copy('首日免登录体验仅包括基础查询；完整报告需要使用手机号注册或登录。', 'The first-day guest experience includes basic queries. Sign in or register for complete reports.')
-        : copy('免费版可继续使用基础查询，详细解读需要会员。', 'Basic queries remain available. Detailed interpretations require membership.'));
+        : copy('免费版可继续使用基础查询，详细报告需要会员。', 'Basic queries remain available. Detailed reports require membership.'));
     output.appendChild(element('b', '', title));
     output.appendChild(element('p', '', detail));
     const actions = element('div', 'ai-access-actions');
@@ -194,17 +194,16 @@
 
     const panel = element('div', 'ai-insight');
     const intro = element('div', 'ai-intro');
-    const copy = element('div');
-    copy.appendChild(element('span', 'ai-label', '专业知识库 · 综合研判'));
-    copy.appendChild(element('h4', '', '查看这份结果的完整解读'));
-    copy.appendChild(element('p', '', '排盘数据不会重新计算。完整解读只依据上面的确定性结果，补充关系、阶段与现实行动建议。'));
-    intro.appendChild(copy);
+    const textBlock = element('div');
+    textBlock.appendChild(element('h4', '', copy('生成详细报告', 'Generate Detailed Report')));
+    textBlock.appendChild(element('p', '', copy('根据上面的结果，进一步整理关系、阶段与现实行动建议。', 'Build a clearer view of relationships, life stages and practical next steps from the results above.')));
+    intro.appendChild(textBlock);
 
-    const button = element('button', 'ai-generate', '生成完整解读');
+    const button = element('button', 'ai-generate', copy('生成详细报告', 'Generate Detailed Report'));
     button.type = 'button';
     intro.appendChild(button);
     panel.appendChild(intro);
-    panel.appendChild(element('p', 'ai-privacy', '点击后，仅会把本次解读所需文字发送至香港服务器处理；不会读取或上传浏览器中的其他命盘。'));
+    panel.appendChild(element('p', 'ai-privacy', copy('点击后，仅会处理生成本次报告所需的文字；不会读取或上传浏览器中的其他命盘。', 'Only the text needed for this report is processed. Other charts in your browser are never read or uploaded.')));
     const output = element('div', 'ai-output');
     output.setAttribute('aria-live', 'polite');
     panel.appendChild(output);
@@ -212,9 +211,9 @@
 
     button.addEventListener('click', async () => {
       button.disabled = true;
-      button.textContent = '正在综合分析...';
+      button.textContent = copy('正在生成报告...', 'Generating report...');
       output.className = 'ai-output loading';
-      output.textContent = '正在提交完整解读任务。';
+      output.textContent = copy('正在提交详细报告任务。', 'Submitting detailed report...');
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 115000);
       try {
@@ -227,7 +226,7 @@
           output.className = 'ai-output error';
           output.textContent = error.name === 'AbortError'
             ? '本页等待时间已到，但服务器任务不会因此中断。请稍后再按一次读取结果。'
-            : (error.message || '解读服务暂时不可用，请稍后重试。');
+            : (error.message || copy('报告服务暂时不可用，请稍后重试。', 'The report service is temporarily unavailable. Please try again shortly.'));
         }
         button.textContent = '重新尝试';
       } finally {

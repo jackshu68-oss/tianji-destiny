@@ -173,7 +173,7 @@
     '出生城市': 'Birth city', '输入城市，例如：佛山 / Toronto': 'Enter a city, e.g. Foshan / Toronto', '请选择搜索结果中的城市。': 'Choose a city from the suggestions.', '性别': 'Sex', '乾造 · 男': 'Male chart', '坤造 · 女': 'Female chart',
     '高级设置': 'Advanced settings', '出生时间校正': 'Birth-time correction', '标准时间': 'Civil time', '真太阳时': 'True solar time', '默认采用出生地当时的民用时间。': 'Civil time at the birthplace is used by default.',
     '生成我的命盘 ✦': 'Create My Chart ✦', '正在校正历法': 'Checking calendar data', '校正历法': 'Calendar check', '生成四柱': 'Build four pillars', '建立紫微十二宫': 'Build Zi Wei palaces', '分析五行与十神': 'Analyse elements and Ten Gods', '生成大运流年': 'Build timing cycles',
-    '资料只在当前浏览器计算并保存在本机。完整解读只会在你主动点击时处理当前文字内容。': 'Calculations and saved profiles stay in this browser. Detailed text is processed only when you explicitly request a complete interpretation.',
+    '资料只在当前浏览器计算并保存在本机。详细报告只会在你主动点击时处理当前文字内容。': 'Calculations and saved profiles stay in this browser. Report text is processed only when you explicitly request a detailed report.',
     '✓ 已保存到本机': '✓ Saved on this device', '↺ 重新排盘': '↺ New chart', '📅 去择吉': 'Date finder', '💞 去合婚': 'Compatibility', '📤 分享': 'Share', '清除存档': 'Clear saved chart',
     '30 秒看懂': '30-SECOND SUMMARY', '你是谁，你在哪，下一步看什么': 'Who You Are, Where You Are, What to Do Next', '先看结论，再按需要展开依据。': 'Read the conclusion first, then open the evidence when needed.',
     '展开专业细盘': 'Open Technical Chart', '四柱、十神、藏干、紫微十二宫与五行依据': 'Four pillars, Ten Gods, hidden stems, Zi Wei palaces and element evidence',

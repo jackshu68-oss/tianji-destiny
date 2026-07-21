@@ -20,6 +20,11 @@ daofainsight.com, www.daofainsight.com, tianji.47-86-31-98.sslip.io {
     }
 
     handle {
+        header {
+            Cache-Control "no-cache, no-store, must-revalidate"
+            Pragma "no-cache"
+            Expires "0"
+        }
         reverse_proxy 127.0.0.1:8081
     }
 }
